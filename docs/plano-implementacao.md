@@ -7,7 +7,7 @@ Convenção:
 - `[x]` feito no repositório (agente) e/ou confirmado pelo desenvolvedor na sessão.
 - `[ ]` pendente — **não implementar** sem o gate no `SESSION-HEADER.md` **e** pedido explícito.
 - A Fase 1 abaixo está **fechada**. N fences, Configurações, cores por fence, Sobre, iniciar com o Windows (portable), mutex.
-- A Fase 2 (idioma pt/en) está **fechada** (validada no Windows 11). MVP 2 = Fases 1 + 2, tag `v0.3.0`. A seguinte (arrastar item entre fences) só com pedido.
+- A Fase 2 (idioma pt/en) está **fechada** (validada no Windows 11). MVP 2 = Fases 1 + 2, tag `v0.3.1`. A seguinte (arrastar item entre fences) só com pedido.
 
 ---
 
@@ -211,7 +211,7 @@ Na Fase 7 o instalador pode passar a um path estável; até lá o portable atual
 
 ## Fase 2 — idioma (português / inglês)
 
-**Fechada.** Validada no Windows 11. Incluída no MVP 2 (`v0.3.0`).
+**Fechada.** Validada no Windows 11. Incluída no MVP 2 (`v0.3.1`).
 
 **Objetivo:** a UI do app (bandeja, fences, Configurações, Sobre) fala português **ou** inglês. O português de hoje continua o default satélite. Sem NuGet. Sem mexer em Native.
 
@@ -279,6 +279,10 @@ Diagnóstico: traduzir também (é janela do app), sem profundidade extra.
 - [x] `dotnet test` verde; publish ainda inclui satélites
 
 **Gate do desenvolvedor:** `[x]` — Windows em pt e em en; seletor Sistema / PT / EN; título antigo não muda; Pausar/Sair/drop como hoje.
+
+### Patch `v0.3.1` — ícones de sistema
+
+Lixeira / Este computador / Rede não são ficheiros. `SHGetFileInfo` no path de disco continua a ser o caminho dos atalhos e pastas. Só se o path **não existir** é que a Native resolve o PIDL no `IShellFolder` do desktop. Abrir esses itens só com `::{CLSID}` / `shell:` — não substitui o `Process.Start` de um `.lnk`. Hide/restore e drop inalterados. Validado no Windows 11.
 
 ---
 

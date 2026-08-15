@@ -964,7 +964,7 @@ public partial class FenceWindow : Window
         {
             Name = name,
             Path = resolved ?? desktopIcon?.Name ?? nameOrPath,
-            Icon = IconImageLoader.Load(resolved ?? nameOrPath),
+            Icon = IconImageLoader.Load(resolved ?? desktopIcon?.Name ?? nameOrPath),
             OriginalX = originalX ?? desktopIcon?.X,
             OriginalY = originalY ?? desktopIcon?.Y
         });
@@ -1054,7 +1054,8 @@ public partial class FenceWindow : Window
         var matches = new List<DesktopIcon>();
         foreach (FenceItemVm item in _items)
         {
-            DesktopIcon? match = DesktopIconMatcher.Find(snap.Icons, item.Path ?? item.Name);
+            DesktopIcon? match = DesktopIconMatcher.Find(snap.Icons, item.Path ?? item.Name)
+                                 ?? DesktopIconMatcher.Find(snap.Icons, item.Name);
             if (match is not null)
                 matches.Add(match);
         }
@@ -1070,6 +1071,10 @@ public partial class FenceWindow : Window
                          ?? DesktopPaths.ResolveExisting(item.Name)
                          ?? item.Name;
         if (string.IsNullOrWhiteSpace(target))
+            return;
+
+        bool onDisk = File.Exists(target) || Directory.Exists(target);
+        if (!onDisk && (ShellFileIcon.TryExecute(target) || ShellFileIcon.TryExecute(item.Name)))
             return;
 
         try

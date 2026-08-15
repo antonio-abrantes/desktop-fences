@@ -20,7 +20,7 @@ internal static class AppInfo
             if (string.IsNullOrWhiteSpace(info))
             {
                 Version? v = Assembly.GetExecutingAssembly().GetName().Version;
-                info = v is null ? "0.3.0" : $"{v.Major}.{v.Minor}.{v.Build}";
+                info = v is null ? "0.3.1" : $"{v.Major}.{v.Minor}.{v.Build}";
             }
 
             int plus = info.IndexOf('+');

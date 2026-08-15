@@ -2,7 +2,7 @@
 
 Mapa curto do ciclo. O detalhe operacional está em [`plano-implementacao.md`](plano-implementacao.md). Cada fase pede autorização no `SESSION-HEADER.md` **e** pedido explícito.
 
-**MVP 2** (`v0.3.0`) = Fases 1 + 2: N fences, Configurações (cores, idioma, iniciar com o Windows), hide/restore do MVP 1. A seguir: arrastar item entre fences (Fase 3).
+**MVP 2** (`v0.3.1`) = Fases 1 + 2: N fences, Configurações (cores, idioma, iniciar com o Windows), hide/restore do MVP 1. Ícones de sistema (Lixeira, Este computador, Rede) mostram o pictograma da Shell. A seguir: arrastar item entre fences (Fase 3).
 
 ---
 

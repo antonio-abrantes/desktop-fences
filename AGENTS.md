@@ -18,7 +18,7 @@ Documentos de apoio (ler quando o assunto for relevante):
 
 ## O que este projeto é
 
-App nativo Windows 11 (C# / .NET 8 / WPF) que agrupa ícones reais da área de trabalho em “fences” translúcidas, no espírito do Stardock Fences. O **MVP 2** (`v0.3.0`) entrega N fences, Configurações (cores, idioma pt/en, iniciar com o Windows) e o hide/restore do MVP 1. A seguinte (arrastar item entre fences) só com autorização no `SESSION-HEADER.md` e pedido explícito.
+App nativo Windows 11 (C# / .NET 8 / WPF) que agrupa ícones reais da área de trabalho em “fences” translúcidas, no espírito do Stardock Fences. O **MVP 2** (`v0.3.1`) entrega N fences, Configurações (cores, idioma pt/en, iniciar com o Windows) e o hide/restore do MVP 1. A seguinte (arrastar item entre fences) só com autorização no `SESSION-HEADER.md` e pedido explícito.
 
 Diferencial em relação aos clones open source: **esconder os ícones reais do `SysListView32` e desenhar a nossa grade por cima**. DeskFrame, NoFences e OpenFences não fazem isso — eles mostram atalhos/pastas em janelas flutuantes enquanto os ícones originais continuam no desktop.
 

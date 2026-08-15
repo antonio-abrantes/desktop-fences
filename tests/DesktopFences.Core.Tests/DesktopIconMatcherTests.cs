@@ -27,4 +27,17 @@ public sealed class DesktopIconMatcherTests
     {
         DesktopIconMatcher.Find(Icons, "zzz.exe").Should().BeNull();
     }
+
+    [Fact]
+    public void Find_MatchesVirtualDesktopDisplayName()
+    {
+        DesktopIcon[] icons =
+        [
+            new(0, "Lixeira", 0, 0),
+            new(1, "Este computador", 10, 10)
+        ];
+
+        DesktopIconMatcher.Find(icons, "Lixeira")!.Name.Should().Be("Lixeira");
+        DesktopIconMatcher.Find(icons, "Este computador")!.Name.Should().Be("Este computador");
+    }
 }

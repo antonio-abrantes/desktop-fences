@@ -29,7 +29,7 @@ O DesktopFences faz o que esses clones não fazem: esconde o ícone real do Expl
 O hide/restore do MVP 1, mais várias fences no mesmo desktop:
 
 - Vidro escuro translúcido (o wallpaper aparece atrás), cantos arredondados, atrás das janelas comuns.
-- Arrastar do desktop ou do Explorer para dentro: um ou vários ícones; somem de lá, entram na grade; o ponteiro permanece a seta. Arrastar para fora devolve o ícone; o ghost acompanha o cursor.
+- Arrastar do desktop ou do Explorer para dentro: um ou vários ícones; somem de lá, entram na grade; o ponteiro permanece a seta. Arrastar para fora devolve o ícone; o ghost acompanha o cursor. Ícones de sistema (Este computador, Lixeira, Rede) usam o pictograma da Shell.
 - Seleção, multi-seleção e reordenação dentro da fence.
 - Mover só pela alça **⋮⋮**; redimensionar pelas bordas; recolher para só a barra (▴); duplo clique no **texto** do título para renomear.
 - Sempre **pelo menos uma** fence. Nas Configurações: criar, remover (nunca a última), alinhar o título, **cores** (fundo, borda, header, texto; **aplicar a todas** ou só a selecionada; restaurar o vidro padrão).
@@ -71,8 +71,8 @@ dotnet test DesktopFences.sln
 O GitHub Action **não** roda em push de branch. Só em tag `v*`:
 
 ```powershell
-git tag v0.3.0
-git push origin v0.3.0
+git tag v0.3.1
+git push origin v0.3.1
 ```
 
 Isso publica um GitHub Release com zip portable `win-x64` e `win-arm64` (self-contained). Download: [Releases](https://github.com/antonio-abrantes/desktop-fences/releases).

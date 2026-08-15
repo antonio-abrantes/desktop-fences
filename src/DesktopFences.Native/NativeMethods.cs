@@ -221,6 +221,7 @@ internal static class NativeMethods
 
     public const uint SHGFI_ICON = 0x000000100;
     public const uint SHGFI_LARGEICON = 0x000000000;
+    public const uint SHGFI_PIDL = 0x000000008;
     public const uint SHGFI_ADDOVERLAYS = 0x000000020;
     public const uint SHGFI_LINKOVERLAY = 0x000000080;
 
@@ -239,6 +240,14 @@ internal static class NativeMethods
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     public static extern IntPtr SHGetFileInfo(
         string pszPath,
+        uint dwFileAttributes,
+        ref SHFILEINFO psfi,
+        uint cbFileInfo,
+        uint uFlags);
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    public static extern IntPtr SHGetFileInfo(
+        IntPtr pidl,
         uint dwFileAttributes,
         ref SHFILEINFO psfi,
         uint cbFileInfo,

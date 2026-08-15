@@ -7,7 +7,7 @@
 ## Contexto da Sessão ou fase
 
 **Projeto:** DesktopFences 1.0
-**Etapa atual:** Fase 2 **fechada** (idioma pt/en). MVP 2 = Fases 1 + 2 (`v0.3.0`).
+**Etapa atual:** Fase 2 **fechada** (idioma pt/en). MVP 2 = Fases 1 + 2 (`v0.3.1`).
 **Objetivo desta sessão:** não avançar para a Fase 3 (arrastar item entre fences) sem pedido.
 
 ---
@@ -57,7 +57,8 @@ FORA DO CICLO  : empurrar fence de baixo ao expandir
 - [x] Desenvolvedor validou no Windows 11: inbound drop, ghost e cursor (seta, não “proibido”)
 - [x] Fase 1 fechada (N fences, settings, cores, Sobre, iniciar com o Windows + mutex)
 - [x] Fase 2 fechada (UI pt/en, seletor Sistema/PT/EN, `uiLanguage` opcional)
-- [x] Desenvolvedor validou idioma no Windows 11 (Sistema / PT / EN; título antigo intacto; Pausar/Sair/drop iguais)
+- [x] Ícones de sistema (Este computador, Lixeira, Rede): ícone e abrir via namespace do desktop, não só path de ficheiro
+- [x] Desenvolvedor validou no Windows 11: Lixeira / Este computador / Rede visíveis na fence (patch `v0.3.1`)
 - [ ] Não implementar fases 3–7 (drag entre fences, snap, Explorer/DPI, duplo clique no desktop, instalador / packs de tema) sem pedido
 - [ ] Não implementar empurrar a fence de baixo ao expandir neste ciclo
 
