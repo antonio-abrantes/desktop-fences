@@ -9,7 +9,7 @@
         WindowStyle="None"
         ResizeMode="NoResize"
         AllowsTransparency="True"
-        Background="#020C0C12"
+        Background="Transparent"
         ShowInTaskbar="False"
         AllowDrop="False"
         PreviewDragOver="OnPreviewDragOver"
@@ -23,6 +23,9 @@
         Deactivated="OnDeactivated"
         Closed="OnClosed"
         PreviewMouseLeftButtonDown="OnWindowPreviewMouseDown">
+    <Window.Resources>
+        <SolidColorBrush x:Key="FenceLabelBrush" Color="#F2FFFFFF"/>
+    </Window.Resources>
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome x:Name="ChromeBehavior"
                             CaptionHeight="0"
@@ -34,16 +37,13 @@
 
     <Border x:Name="Chrome"
             CornerRadius="8"
-            BorderBrush="#4DFFFFFF"
-            BorderThickness="1"
+            BorderThickness="0"
             Background="#A80C0C12"
             ClipToBounds="True">
         <Border.ContextMenu>
             <ContextMenu>
                 <MenuItem Header="Recolher / expandir" Click="ToggleCollapse_Click"/>
                 <MenuItem Header="Diagnóstico" Click="BtnDiagnostics_Click"/>
-                <Separator/>
-                <MenuItem Header="Fechar fence" Click="BtnClose_Click"/>
             </ContextMenu>
         </Border.ContextMenu>
 
@@ -69,7 +69,8 @@
                         ToolTip="Arrastar"
                         shell:WindowChrome.IsHitTestVisibleInChrome="True"
                         PreviewMouseLeftButtonDown="MoveGrip_MouseDown">
-                    <TextBlock Text="⋮⋮"
+                    <TextBlock x:Name="MoveGripGlyph"
+                               Text="⋮⋮"
                                FontSize="14"
                                FontWeight="Bold"
                                Foreground="#AAFFFFFF"
@@ -175,7 +176,7 @@
                                                IsHitTestVisible="False"
                                                RenderOptions.BitmapScalingMode="HighQuality"/>
                                         <TextBlock Text="{Binding DisplayName}"
-                                                   Foreground="#F2FFFFFF"
+                                                   Foreground="{DynamicResource FenceLabelBrush}"
                                                    FontSize="11"
                                                    TextAlignment="Center"
                                                    TextTrimming="CharacterEllipsis"
@@ -191,6 +192,14 @@
                 </Grid>
             </ScrollViewer>
         </DockPanel>
+
+            <!-- Traço inset: Window.Clip no raio 8 comia a BorderThickness do Chrome. -->
+            <Border x:Name="ChromeStroke"
+                    IsHitTestVisible="False"
+                    BorderThickness="1"
+                    BorderBrush="#4DFFFFFF"
+                    CornerRadius="7"
+                    Margin="1"/>
 
             <Thumb x:Name="ResizeN" Style="{StaticResource ResizeThumb}" Tag="N" Height="6" HorizontalAlignment="Stretch" VerticalAlignment="Top" Cursor="SizeNS" DragDelta="ResizeThumb_DragDelta" DragCompleted="ResizeThumb_DragCompleted"/>
             <Thumb x:Name="ResizeS" Style="{StaticResource ResizeThumb}" Tag="S" Height="6" Margin="8,0,14,0" HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Cursor="SizeNS" DragDelta="ResizeThumb_DragDelta" DragCompleted="ResizeThumb_DragCompleted"/>

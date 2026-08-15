@@ -12,6 +12,8 @@ internal sealed class TrayService : IDisposable
 
     public event Action? PauseRequested;
     public event Action? ResumeRequested;
+    public event Action? SettingsRequested;
+    public event Action? AboutRequested;
     public event Action? ExitRequested;
 
     public TrayService()
@@ -28,6 +30,8 @@ internal sealed class TrayService : IDisposable
         {
             if (_paused)
                 ResumeRequested?.Invoke();
+            else
+                SettingsRequested?.Invoke();
         };
     }
 
@@ -54,6 +58,9 @@ internal sealed class TrayService : IDisposable
             menu.Items.Add("Pausar", null, (_, _) => PauseRequested?.Invoke());
 
         menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add("Configurações", null, (_, _) => SettingsRequested?.Invoke());
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add("Sobre", null, (_, _) => AboutRequested?.Invoke());
         menu.Items.Add("Sair", null, (_, _) => ExitRequested?.Invoke());
         return menu;
     }

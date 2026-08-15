@@ -1,0 +1,284 @@
+<Window x:Class="DesktopFences.App.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Configurações — DesktopFences"
+        Icon="pack://application:,,,/Assets/app.ico"
+        Width="460"
+        SizeToContent="Height"
+        MinWidth="400"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="True"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <Style x:Key="Swatch" TargetType="Border">
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="BorderBrush" Value="#66FFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#F2FFFFFF"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Width" Value="88"/>
+        </Style>
+        <Style x:Key="HintLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#B3FFFFFF"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+    </Window.Resources>
+    <Border CornerRadius="8"
+            BorderBrush="#4DFFFFFF"
+            BorderThickness="1"
+            Background="#F20C0C12"
+            ClipToBounds="True">
+        <DockPanel>
+            <Border DockPanel.Dock="Top"
+                    Height="44"
+                    Background="#33000000"
+                    MouseLeftButtonDown="TitleBar_MouseDown">
+                <Grid Margin="16,0,8,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Configurações"
+                                   Foreground="#F2FFFFFF"
+                                   FontSize="15"
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Text="  ·  fences"
+                                   Foreground="#73FFFFFF"
+                                   FontSize="13"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button Content="?"
+                                Width="36" Height="32"
+                                Style="{StaticResource GhostIconButton}"
+                                Click="About_Click"
+                                ToolTip="Sobre"/>
+                        <Button Content="✕"
+                                Width="36" Height="32"
+                                Style="{StaticResource GhostIconButton}"
+                                Click="Close_Click"
+                                ToolTip="Fechar"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <StackPanel DockPanel.Dock="Bottom" Margin="16,8,16,16" Orientation="Horizontal">
+                <Button Content="Nova fence"
+                        Style="{StaticResource FenceButton}"
+                        Click="AddFence_Click"/>
+                <Button x:Name="BtnRemove"
+                        Content="Remover"
+                        Style="{StaticResource FenceButton}"
+                        Click="RemoveFence_Click"
+                        ToolTip="A última fence não pode ser removida"/>
+                <Button Content="Restaurar padrão"
+                        Style="{StaticResource FenceButton}"
+                        Click="ResetTheme_Click"
+                        ToolTip="Volta às cores do MVP 1. Se “aplicar a todas” estiver marcado, vale para todas."/>
+            </StackPanel>
+
+            <StackPanel Margin="16,12,16,8">
+                    <CheckBox x:Name="StartWithWindows"
+                              Content="Iniciar com o Windows"
+                              Foreground="#F2FFFFFF"
+                              Margin="0,0,0,4"
+                              VerticalAlignment="Center"
+                              Checked="StartWithWindows_Changed"
+                              Unchecked="StartWithWindows_Changed"
+                              ToolTip="Abre este .exe ao entrar na conta. Se mover a pasta, abra o app uma vez no sítio novo."/>
+                    <TextBlock Text="Portable: o atalho aponta para esta pasta. Mover o programa e abrir de novo atualiza o caminho."
+                               Style="{StaticResource HintLabel}"
+                               Margin="0,0,0,16"/>
+
+                    <TextBlock Text="Fences nesta área de trabalho"
+                               Style="{StaticResource HintLabel}"
+                               Margin="0,0,0,8"/>
+                    <Grid MinHeight="72" MaxHeight="148">
+                    <ListBox x:Name="FenceList"
+                             Background="#22000000"
+                             BorderBrush="#33FFFFFF"
+                             BorderThickness="1"
+                             Foreground="#F2FFFFFF"
+                             Padding="4"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             SelectionChanged="FenceList_SelectionChanged">
+                        <ListBox.Resources>
+                            <Style TargetType="ScrollBar" BasedOn="{StaticResource FenceScrollBar}"/>
+                        </ListBox.Resources>
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding" Value="10,8"/>
+                                <Setter Property="Margin" Value="0,0,0,4"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="Bd"
+                                                    Background="#18FFFFFF"
+                                                    CornerRadius="6"
+                                                    Padding="{TemplateBinding Padding}"
+                                                    SnapsToDevicePixels="True">
+                                                <ContentPresenter/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="#28FFFFFF"/>
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="#335B8DEF"/>
+                                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#CC5B8DEF"/>
+                                                    <Setter TargetName="Bd" Property="BorderThickness" Value="1"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Title}"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding AlignmentLabel}"
+                                               Foreground="#73FFFFFF"
+                                               FontSize="11"
+                                               Margin="12,0,0,0"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    </Grid>
+
+                    <CheckBox x:Name="ApplyAllCheck"
+                              Content="Aplicar a todas as fences"
+                              Foreground="#F2FFFFFF"
+                              Margin="0,16,0,4"
+                              VerticalAlignment="Center"
+                              Checked="ApplyAllCheck_Changed"
+                              Unchecked="ApplyAllCheck_Changed"
+                              ToolTip="Marcado: cada mudança vale para todas. Desmarcado: só a selecionada."/>
+                    <TextBlock Text="Desmarcado: só a fence selecionada."
+                               Style="{StaticResource HintLabel}"
+                               Margin="0,0,0,12"/>
+
+                    <TextBlock Text="Alinhamento do título"
+                               Style="{StaticResource HintLabel}"
+                               Margin="0,0,0,8"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <RadioButton x:Name="AlignLeft"
+                                     Content="Esquerda"
+                                     GroupName="TitleAlign"
+                                     Foreground="#F2FFFFFF"
+                                     Margin="0,0,20,0"
+                                     VerticalAlignment="Center"
+                                     Checked="AlignLeft_Checked"/>
+                        <RadioButton x:Name="AlignCenter"
+                                     Content="Centro"
+                                     GroupName="TitleAlign"
+                                     Foreground="#F2FFFFFF"
+                                     VerticalAlignment="Center"
+                                     Checked="AlignCenter_Checked"/>
+                    </StackPanel>
+
+                    <TextBlock Text="Aparência"
+                               Style="{StaticResource HintLabel}"
+                               Margin="0,12,0,10"/>
+
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="88"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="40"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Fundo" Style="{StaticResource FieldLabel}"/>
+                        <Border x:Name="SwatchFill" Grid.Column="1" Style="{StaticResource Swatch}"
+                                MouseLeftButtonDown="SwatchFill_Click" ToolTip="Cor do vidro"/>
+                        <Slider x:Name="SliderFill"
+                                Grid.Column="2"
+                                Minimum="45" Maximum="85"
+                                SmallChange="1" LargeChange="5"
+                                VerticalAlignment="Center"
+                                Margin="12,0,8,0"
+                                ValueChanged="SliderFill_Changed"/>
+                        <TextBlock x:Name="LblFillPct" Grid.Column="3" Foreground="#73FFFFFF" FontSize="11"
+                                   VerticalAlignment="Center" Text="66%"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="88"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="40"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Borda" Style="{StaticResource FieldLabel}"/>
+                        <Border x:Name="SwatchBorder" Grid.Column="1" Style="{StaticResource Swatch}"
+                                MouseLeftButtonDown="SwatchBorder_Click" ToolTip="Cor da borda"/>
+                        <Slider x:Name="SliderBorder"
+                                Grid.Column="2"
+                                Minimum="15" Maximum="100"
+                                SmallChange="1" LargeChange="5"
+                                VerticalAlignment="Center"
+                                Margin="12,0,8,0"
+                                ValueChanged="SliderBorder_Changed"/>
+                        <TextBlock x:Name="LblBorderPct" Grid.Column="3" Foreground="#73FFFFFF" FontSize="11"
+                                   VerticalAlignment="Center" Text="30%"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="88"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="40"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Header" Style="{StaticResource FieldLabel}"/>
+                        <Border x:Name="SwatchHeader" Grid.Column="1" Style="{StaticResource Swatch}"
+                                MouseLeftButtonDown="SwatchHeader_Click" ToolTip="Cor da barra de título"/>
+                        <Slider x:Name="SliderHeader"
+                                Grid.Column="2"
+                                Minimum="15" Maximum="85"
+                                SmallChange="1" LargeChange="5"
+                                VerticalAlignment="Center"
+                                Margin="12,0,8,0"
+                                ValueChanged="SliderHeader_Changed"/>
+                        <TextBlock x:Name="LblHeaderPct" Grid.Column="3" Foreground="#73FFFFFF" FontSize="11"
+                                   VerticalAlignment="Center" Text="20%"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="88"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Texto" Style="{StaticResource FieldLabel}"/>
+                        <Border x:Name="SwatchText" Grid.Column="1" Style="{StaticResource Swatch}"
+                                MouseLeftButtonDown="SwatchText_Click"
+                                ToolTip="Título, ícones, ⋮⋮ e seta de recolher"/>
+                    </Grid>
+            </StackPanel>
+        </DockPanel>
+    </Border>
+</Window>

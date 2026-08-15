@@ -12,9 +12,7 @@ App Windows 11 que agrupa ícones **reais** da área de trabalho em fences retan
 | `DesktopFences.Native` | SysListView32, COM Shell, OLE drop, DWM, âncora | Sim, e só aqui |
 | `DesktopFences.App` | XAML, fence, bandeja, ghost | Só via serviços Native |
 
-O que os clones fazem de errado (e nós não): ver [analise-referencias.md](analise-referencias.md).
-
-**Estado:** MVP 1 fechado — uma fence. Várias fences e o resto: [pos-mvp1.md](pos-mvp1.md).
+**Estado:** Fase 1 fechada — N fences, Settings, cores, iniciar com o Windows. Próxima: idioma (Fase 2), só com pedido. Resto do ciclo: [plano-implementacao.md](plano-implementacao.md). Empurrar a fence de baixo ao expandir está **fora** deste ciclo.
 
 ---
 
@@ -52,7 +50,7 @@ Fluxo de hide (MVP 1):
 5. Desenhar a grade WPF (`SHGetFileInfo`).
 6. Restaurar no shutdown, no Pausar, ao remover o item e se o hide falhar.
 
-**Limitação:** “Auto organizar ícones” / “Alinhar à grade” no menu do desktop desfaz o hide. Detectar e avisar é pós-MVP 1. Não escrever no registry.
+**Limitação:** “Auto organizar ícones” / “Alinhar à grade” no menu do desktop desfaz o hide. Detectar e avisar não é Fase 1. Não escrever no registry.
 
 ---
 
@@ -65,7 +63,7 @@ Fluxo de hide (MVP 1):
 - Mover / esconder / restaurar.
 - `SHGetFileInfo` para bitmap PNG.
 - Resolver nome → path (`DesktopPaths`: Desktop do usuário + público).
-- Reconectar após restart do Explorer — pós-MVP 1.
+- Reconectar após restart do Explorer — Fase 5 do ciclo.
 - DPI: manifest Per-Monitor V2.
 
 ### 2.2 Native — chrome da janela
@@ -77,11 +75,11 @@ Ver [ADR-0003](adr/0003-ancoragem-desktop-e-acrylic.md).
 - Z-order: `HWND_BOTTOM` + `WS_EX_TOOLWINDOW`. **Não** `GWL_HWNDPARENT` → Progman (isso impedia o OLE drop).
 - Sem minimize/maximize box.
 
-### 2.3 App — fence (MVP 1)
+### 2.3 App — fence
 
-Uma janela: título editável (duplo clique **no texto**); Enter, LostFocus, clique fora do campo (barra, grade ou desktop) **grava** o que está no TextBox; Escape cancela e volta o título anterior. Alça ⋮⋮ para mover; roll-up ▴; resize ao vivo com thumbs (faixa leste some se a scrollbar vertical estiver visível); grade WrapPanel; scrollbar custom; menu de contexto (recolher, diagnóstico, fechar).
+Uma janela por fence: título editável (duplo clique **no texto**); Enter, LostFocus, clique fora do campo **grava**; Escape cancela. Alinhamento do título: esquerda (padrão) ou centro, nas Configurações — por fence, com checkbox para aplicar a todas (vale também para cores). Alça ⋮⋮ para mover; roll-up ▴; resize ao vivo; grade WrapPanel; scrollbar custom; menu de contexto (recolher, diagnóstico). Remover fence só nas Settings.
 
-Visual da fence está **travado** até pedido de tema: não alterar alfa, radius nem `AllowsTransparency` “para melhorar”.
+O `App` usa `FenceHost`: N instâncias de `FenceWindow`, um único `layout.json`. Visual da fence está **travado** até pedido de tema.
 
 ### 2.4 Drag & drop
 
@@ -92,11 +90,11 @@ Contrato vigente — [ADR-0004](adr/0004-ole-inbound-drop.md):
 - **Inbound:** `RegisterDragDrop` nativo + alvo OLE minúsculo no cursor; ghost WPF próprio (com `+N` se a seleção do desktop tiver vários ícones); cursor de “proibido” substituído pela seta só enquanto o ponteiro está sobre a fence. A seleção do `SysListView32` é lida no início do arraste (`LVM_GETNEXTITEM` / `LVNI_SELECTED`).
 - **Outbound / reorder:** não usamos `DoDragDrop` do Explorer; hook `WH_MOUSE_LL` + `DragGhostWindow` (click-through).
 - Soltar na fence esconde o ícone real e adiciona na grade; soltar fora restaura.
-- Entre fences: ainda não existe (uma fence só).
+- Entre fences: Fase 3. O MVP 1 e a Fase 1 ainda tratam cada fence como ilha.
 
 ### 2.5 Persistência
 
-Arquivo único `%AppData%\DesktopFences\layout.json` (`LayoutStore`). O schema **já aceita lista de fences**; o MVP 1 só instancia uma.
+Arquivo único `%AppData%\DesktopFences\layout.json` (`LayoutStore`). Lista de fences persistida pelo `FenceHost`. `titleAlignment`: `"left"` | `"center"` (ausente = `left`). `theme` opcional (ausente = vidro do MVP 1). Fundo da fence: alfa do fill limitado a 45–85%. Sempre ≥ 1 fence.
 
 ```json
 {
@@ -105,6 +103,13 @@ Arquivo único `%AppData%\DesktopFences\layout.json` (`LayoutStore`). O schema *
     {
       "id": "guid",
       "title": "Trabalho",
+      "titleAlignment": "left",
+      "theme": {
+        "fill": "#A80C0C12",
+        "border": "#4DFFFFFF",
+        "header": "#33000000",
+        "text": "#F2FFFFFF"
+      },
       "x": 100, "y": 100, "width": 420, "height": 280,
       "monitorDeviceName": "\\\\.\\DISPLAY1",
       "collapsed": false,
@@ -118,12 +123,16 @@ Arquivo único `%AppData%\DesktopFences\layout.json` (`LayoutStore`). O schema *
 
 Coordenadas da fence em **DIPs** WPF; posições de ícone em **pixels** do ListView. Conversão é responsabilidade da App (DPI). Core só persiste números.
 
-### 2.6 Ainda não são MVP 1
+### 2.6 Fora da Fase 1 (ciclo em `plano-implementacao.md`)
 
-- Várias fences; tela de configurações.
-- Duplo clique em vazio do desktop → cria fence.
-- Snap / empurrar fence de baixo ao expandir.
-- Auto-hide com fade; temas; iniciar com o Windows.
+- Fase 2: idioma da UI (português / inglês).
+- Fase 3: arrastar item entre fences.
+- Fase 4: snap a bordas e a outras fences.
+- Fase 5: Explorer reiniciado / DPI / Win+D.
+- Fase 6: duplo clique em vazio do desktop → cria fence.
+- Fase 7: instalador (ajustar o arranque com o Windows para path estável); temas só com pedido.
+- **Fora do ciclo:** empurrar a fence de baixo ao expandir.
+- **Reserva (reavaliar no fim):** Novo → Fence no Explorer. Não implementar até planejada e validada.
 
 ---
 
@@ -132,9 +141,9 @@ Coordenadas da fence em **DIPs** WPF; posições de ícone em **pixels** do List
 | Risco | Mitigação |
 |---|---|
 | Árvore Progman/WorkerW muda | 100% em Native; fallback duplo |
-| Auto-arrange desfaz hide | Avisar (pós-MVP 1); não desligar registry agora |
-| DPI por monitor | DIPs vs pixels documentados; `WM_DPICHANGED` depois |
-| Restart do Explorer | Redetectar handle e reaplicar hide (pós-MVP 1) |
+| Auto-arrange desfaz hide | Avisar mais tarde; não desligar registry agora |
+| DPI por monitor | DIPs vs pixels documentados; `WM_DPICHANGED` na Fase 5 |
+| Restart do Explorer | Redetectar handle e reaplicar hide (Fase 5) |
 | Defender / `WriteProcessMemory` | `asInvoker`; signing só quando houver release assinado |
 | Acrylic + WPF layered | ADR-0003: vidro alfa, sem composition attribute |
 | OLE inbound + janela layered | ADR-0004: alvo no cursor + override da seta |
@@ -157,7 +166,6 @@ DesktopFences/
 │   ├── SPEC.md
 │   ├── plano-implementacao.md
 │   ├── pos-mvp1.md
-│   ├── analise-referencias.md
 │   └── adr/
 ├── src/
 │   ├── DesktopFences.Core/

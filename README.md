@@ -35,11 +35,12 @@ Uma fence usável no dia a dia:
 - Mover só pela alça **⋮⋮**; redimensionar pelas bordas (a faixa direita some quando há barra de rolagem).
 - Recolher para só a barra (▴); duplo clique no **texto** do título para renomear (Enter ou clique fora grava; Escape cancela); duplo clique na barra vazia recolhe/expande.
 - Título longo com reticências; scrollbar fina escura.
-- Persistência em `%AppData%\DesktopFences\layout.json` (posição, tamanho, título, itens).
-- Bandeja: Pausar / Retomar / Sair. Pausar restaura os ícones reais.
+- Persistência em `%AppData%\DesktopFences\layout.json` (posição, tamanho, título, alinhamento, itens).
+- Bandeja: Pausar / Retomar / **Configurações** / **Sobre** / Sair. Pausar restaura os ícones reais.
 - Ícone próprio no `.exe`, atalho e bandeja.
+- Sempre **pelo menos uma** fence. Nas Configurações: criar, remover (nunca a última), alinhar o título, cores da fence, e **iniciar com o Windows** (o atalho usa o `.exe` desta pasta; se mover o programa, abra-o uma vez no sítio novo). **Restaurar padrão** volta ao vidro do MVP 1.
 
-Ainda é **uma** fence. Várias fences, tela de configurações e empurrar vizinhos ao expandir estão no [pós-MVP 1](docs/pos-mvp1.md).
+Arrastar um ícone **entre** fences ainda não existe — cada fence continua uma ilha até a Fase 3.
 
 ## Requisitos
 
@@ -72,8 +73,8 @@ dotnet test DesktopFences.sln
 O GitHub Action **não** roda em push de branch. Só em tag `v*`:
 
 ```powershell
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 Isso publica um GitHub Release com zip portable `win-x64` e `win-arm64` (self-contained). Download: [Releases](https://github.com/antonio-abrantes/desktop-fences/releases).

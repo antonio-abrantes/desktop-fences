@@ -14,7 +14,6 @@ using DesktopFences.App.ViewModels;
 using DesktopFences.Core;
 using DesktopFences.Core.Models;
 using DesktopFences.Core.Occupancy;
-using DesktopFences.Core.Persistence;
 using DesktopFences.Native;
 using DragEventArgs = System.Windows.DragEventArgs;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
@@ -26,18 +25,20 @@ namespace DesktopFences.App;
 public partial class FenceWindow : Window
 {
     private const double TitleBarHeight = 36;
+    private const double ChromeCornerRadius = 8;
     private const double DefaultExpandedHeight = 280;
     private const double TileWidth = 88;
     private const double TileHeight = 84;
 
     private readonly DesktopIconService _desktop = new();
     private readonly HiddenIconTracker _hidden = new();
-    private readonly LayoutStore _store = new();
     private readonly ObservableCollection<FenceItemVm> _items = [];
     private readonly Guid _fenceId;
+    private readonly FenceState? _bootState;
 
     private bool _collapsed;
     private double _expandedHeight = DefaultExpandedHeight;
+    private TitleAlignment _titleAlignment = TitleAlignment.Left;
     private FenceItemVm? _selected;
     private MouseButtonWatch? _mouseWatch;
     private ShellOleDropTarget? _oleDrop;
@@ -56,13 +57,26 @@ public partial class FenceWindow : Window
     private DragGhostWindow? _ghost;
     private DispatcherTimer? _cursorPump;
     private bool _renaming;
+    private bool _dropBorderLit;
+    private FenceTheme _theme = FenceTheme.Default();
 
-    public event Action? CloseToTray;
+    public event Action? LayoutChanged;
 
-    public FenceWindow()
+    public Guid FenceId => _fenceId;
+
+    public bool SuppressPersistOnClose { get; set; }
+
+    public FenceWindow() : this(null)
+    {
+    }
+
+    public FenceWindow(FenceState? state)
     {
         InitializeComponent();
-        _fenceId = LoadOrCreateId();
+        _bootState = state;
+        _fenceId = state?.Id ?? Guid.NewGuid();
+        _titleAlignment = state?.TitleAlignment ?? TitleAlignment.Left;
+        _theme = (state?.Theme ?? FenceTheme.Default()).Normalized();
         IconGrid.ItemsSource = _items;
         _items.CollectionChanged += (_, _) => UpdateEmptyHint();
     }
@@ -120,13 +134,32 @@ public partial class FenceWindow : Window
         HideDesktopCounterparts();
         UpdateEmptyHint();
         AttachDesktopDropIntake();
-        SizeChanged += (_, _) => UpdateEastResizeForScroll();
+        SizeChanged += OnFenceSizeChanged;
+        UpdateRoundedClip();
+    }
+
+    private void OnFenceSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdateEastResizeForScroll();
+        UpdateRoundedClip();
+    }
+
+    private void UpdateRoundedClip()
+    {
+        double width = ActualWidth;
+        double height = ActualHeight;
+        if (width < 1 || height < 1)
+            return;
+
+        // Só a Window: clip no Chrome comia o traço da borda.
+        Clip = new RectangleGeometry(new Rect(0, 0, width, height), ChromeCornerRadius, ChromeCornerRadius);
     }
 
     private void OnClosed(object sender, EventArgs e)
     {
         DetachDesktopDropIntake();
-        SaveLayout();
+        if (!SuppressPersistOnClose)
+            SaveLayout();
         RestoreHiddenIcons();
     }
 
@@ -238,7 +271,7 @@ public partial class FenceWindow : Window
             {
                 _inboundOle = false;
                 _ghost?.HideGhost();
-                Chrome.BorderBrush = new SolidColorBrush(Color.FromArgb(0x4D, 0xFF, 0xFF, 0xFF));
+                SetChromeBorder(drop: false);
                 EndInboundCursor();
             }
 
@@ -286,7 +319,7 @@ public partial class FenceWindow : Window
         _ghost ??= new DragGhostWindow();
         _ghost.ShowItems(icon, DesktopPaths.VisibleName(name), extra);
         _inboundOle = true;
-        Chrome.BorderBrush = new SolidColorBrush(Color.FromArgb(0xCC, 0xFF, 0xFF, 0xFF));
+        SetChromeBorder(drop: true);
         BeginInboundCursor();
     }
 
@@ -338,7 +371,7 @@ public partial class FenceWindow : Window
 
     private void OnScreenLeftUp(int x, int y)
     {
-        Chrome.BorderBrush = new SolidColorBrush(Color.FromArgb(0x4D, 0xFF, 0xFF, 0xFF));
+        SetChromeBorder(drop: false);
 
         if (_draggingItems is { Count: > 0 })
         {
@@ -386,7 +419,7 @@ public partial class FenceWindow : Window
         AddInboundDesktopIcons();
         HideDesktopCounterparts();
         SaveLayout();
-        Chrome.BorderBrush = new SolidColorBrush(Color.FromArgb(0x4D, 0xFF, 0xFF, 0xFF));
+        SetChromeBorder(drop: false);
     }
 
     private void AddInboundDesktopIcons()
@@ -537,18 +570,6 @@ public partial class FenceWindow : Window
         ToggleCollapse();
     }
 
-    private void BtnClose_Click(object sender, RoutedEventArgs e)
-    {
-        if (CloseToTray is not null)
-            CloseToTray.Invoke();
-        else
-        {
-            SaveLayout();
-            Hide();
-            RestoreHiddenIcons();
-        }
-    }
-
     private void BtnDiagnostics_Click(object sender, RoutedEventArgs e)
     {
         var diagnostics = new DiagnosticsWindow(_desktop);
@@ -580,14 +601,14 @@ public partial class FenceWindow : Window
     {
         e.Effects = ShellFileDrop.AcceptWhileDragging(e);
         e.Handled = true;
-        Chrome.BorderBrush = new SolidColorBrush(Color.FromArgb(0xCC, 0xFF, 0xFF, 0xFF));
+        SetChromeBorder(drop: true);
     }
 
     private void OnDragEnter(object sender, DragEventArgs e) => HandleDragOver(e);
 
     private void OnDragLeave(object sender, DragEventArgs e)
     {
-        Chrome.BorderBrush = new SolidColorBrush(Color.FromArgb(0x4D, 0xFF, 0xFF, 0xFF));
+        SetChromeBorder(drop: false);
     }
 
     private void OnPreviewDrop(object sender, DragEventArgs e) => HandleDrop(e);
@@ -596,7 +617,7 @@ public partial class FenceWindow : Window
 
     private void HandleDrop(DragEventArgs e)
     {
-        Chrome.BorderBrush = new SolidColorBrush(Color.FromArgb(0x4D, 0xFF, 0xFF, 0xFF));
+        SetChromeBorder(drop: false);
         IReadOnlyList<string> files = ShellFileDrop.ExtractPaths(e.Data);
         if (files.Count == 0)
             return;
@@ -790,11 +811,18 @@ public partial class FenceWindow : Window
 
     private void Collapse()
     {
+        Collapse(persist: true, captureExpandedSize: true);
+    }
+
+    private void Collapse(bool persist, bool captureExpandedSize)
+    {
         if (_collapsed)
             return;
 
         EndRename();
-        _expandedHeight = Math.Max(TitleBarHeight + 80, ActualHeight);
+        // No restore o ActualHeight ainda é o default do XAML — não pode substituir a altura gravada.
+        if (captureExpandedSize && ActualHeight > TitleBarHeight + 8)
+            _expandedHeight = Math.Max(TitleBarHeight + 80, ActualHeight);
         _collapsed = true;
         BtnCollapseGlyph.Text = "▾";
         BodyHost.Visibility = Visibility.Collapsed;
@@ -803,7 +831,8 @@ public partial class FenceWindow : Window
         MaxHeight = TitleBarHeight;
         Height = TitleBarHeight;
         ShowResizeHandles(false);
-        SaveLayout();
+        if (persist)
+            SaveLayout();
     }
 
     private void Expand()
@@ -1055,35 +1084,111 @@ public partial class FenceWindow : Window
         EmptyHint.Visibility = _items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private Guid LoadOrCreateId()
-    {
-        try
-        {
-            FenceState? existing = _store.LoadOrEmpty().Fences.FirstOrDefault();
-            if (existing is not null)
-                return existing.Id;
-        }
-        catch { }
+    public string DisplayTitle => CommittedTitle(_renaming ? TitleEdit.Text : TitleDisplay.Text);
 
-        return Guid.NewGuid();
+    public TitleAlignment CurrentTitleAlignment => _titleAlignment;
+
+    public FenceTheme CurrentTheme => _theme.Normalized();
+
+    public void SetTitleAlignment(TitleAlignment alignment, bool persist = true)
+    {
+        _titleAlignment = alignment;
+        ApplyTitleAlignment();
+        if (persist)
+            SaveLayout();
     }
+
+    public void SetTheme(FenceTheme theme, bool persist = true)
+    {
+        _theme = (theme ?? FenceTheme.Default()).Normalized();
+        ApplyTheme();
+        if (persist)
+            SaveLayout();
+    }
+
+    public FenceState CaptureState()
+    {
+        double height = _collapsed
+            ? _expandedHeight
+            : (ActualHeight > 0 ? ActualHeight : Height);
+        if (height <= TitleBarHeight + 8)
+            height = Math.Max(DefaultExpandedHeight, _expandedHeight);
+
+        return new FenceState
+        {
+            Id = _fenceId,
+            Title = DisplayTitle,
+            TitleAlignment = _titleAlignment,
+            Theme = _theme.Normalized(),
+            X = Left,
+            Y = Top,
+            Width = Width,
+            Height = height,
+            Collapsed = _collapsed,
+            Items = _items.Select(i => i.ToState()).ToList()
+        };
+    }
+
+    private void ApplyTitleAlignment()
+    {
+        var align = _titleAlignment == TitleAlignment.Center
+            ? System.Windows.HorizontalAlignment.Center
+            : System.Windows.HorizontalAlignment.Left;
+        TitleDisplay.HorizontalAlignment = align;
+        TitleEdit.HorizontalAlignment = align;
+    }
+
+    private void ApplyTheme()
+    {
+        FenceTheme theme = _theme.Normalized();
+        Chrome.Background = ToBrush(theme.FillArgb);
+        TitleBar.Background = ToBrush(theme.HeaderArgb);
+        TitleDisplay.Foreground = ToBrush(theme.TextArgb);
+        TitleEdit.Foreground = ToBrush(theme.TextArgb);
+        TitleEdit.CaretBrush = ToBrush(theme.TextArgb);
+        EmptyHint.Foreground = ToBrush(theme.MutedTextArgb);
+        MoveGripGlyph.Foreground = ToBrush(theme.GripTextArgb);
+        BtnCollapseGlyph.Foreground = ToBrush(theme.CollapseGlyphArgb);
+        // ResourceDictionary congela o brush; mutar Color derruba o processo antes de gravar.
+        Resources["FenceLabelBrush"] = ToBrush(theme.TextArgb);
+        SetChromeBorder(_dropBorderLit);
+    }
+
+    private void SetChromeBorder(bool drop)
+    {
+        _dropBorderLit = drop;
+        uint argb = drop ? _theme.Normalized().DropBorderArgb : _theme.Normalized().BorderArgb;
+        ChromeStroke.BorderBrush = ToBrush(argb);
+    }
+
+    private static SolidColorBrush ToBrush(uint argb) => new(FromArgb(argb));
+
+    private static Color FromArgb(uint argb) =>
+        Color.FromArgb(ArgbColor.A(argb), ArgbColor.R(argb), ArgbColor.G(argb), ArgbColor.B(argb));
 
     private void RestoreLayout()
     {
         try
         {
-            FenceState? state = _store.LoadOrEmpty().Fences.FirstOrDefault(f => f.Id == _fenceId)
-                                ?? _store.LoadOrEmpty().Fences.FirstOrDefault();
+            FenceState? state = _bootState;
             if (state is null)
+            {
+                ApplyTitleAlignment();
+                ApplyTheme();
                 return;
+            }
 
+            _titleAlignment = state.TitleAlignment;
+            _theme = (state.Theme ?? FenceTheme.Default()).Normalized();
             string title = string.IsNullOrWhiteSpace(state.Title) ? "Nova fence" : state.Title;
             TitleDisplay.Text = title;
             TitleEdit.Text = title;
+            ApplyTitleAlignment();
+            ApplyTheme();
             Width = Math.Max(180, state.Width);
             Left = state.X;
             Top = state.Y;
-            _expandedHeight = Math.Max(120, state.Height);
+            _expandedHeight = Math.Max(TitleBarHeight + 80, state.Height);
 
             foreach (FenceItemState item in state.Items)
             {
@@ -1099,7 +1204,7 @@ public partial class FenceWindow : Window
             }
 
             if (state.Collapsed)
-                Collapse();
+                Collapse(persist: false, captureExpandedSize: false);
             else
                 Height = _expandedHeight;
         }
@@ -1108,28 +1213,7 @@ public partial class FenceWindow : Window
 
     private void SaveLayout()
     {
-        try
-        {
-            double height = _collapsed ? _expandedHeight : (ActualHeight > 0 ? ActualHeight : Height);
-            var doc = new LayoutDocument
-            {
-                Fences =
-                [
-                    new FenceState
-                    {
-                        Id = _fenceId,
-                        Title = CommittedTitle(_renaming ? TitleEdit.Text : TitleDisplay.Text),
-                        X = Left,
-                        Y = Top,
-                        Width = Width,
-                        Height = height,
-                        Collapsed = _collapsed,
-                        Items = _items.Select(i => i.ToState()).ToList()
-                    }
-                ]
-            };
-            _store.Save(doc);
-        }
+        try { LayoutChanged?.Invoke(); }
         catch { }
     }
 }

@@ -1,0 +1,111 @@
+<Window x:Class="DesktopFences.App.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Sobre — DesktopFences"
+        Icon="pack://application:,,,/Assets/app.ico"
+        Width="380"
+        SizeToContent="Height"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="True"
+        WindowStartupLocation="CenterScreen"
+        KeyDown="Window_KeyDown">
+    <Border CornerRadius="8"
+            BorderBrush="#4DFFFFFF"
+            BorderThickness="1"
+            Background="#F20C0C12"
+            ClipToBounds="True">
+        <DockPanel>
+            <Border DockPanel.Dock="Top"
+                    Height="44"
+                    Background="#33000000"
+                    MouseLeftButtonDown="TitleBar_MouseDown">
+                <Grid Margin="16,0,8,0">
+                    <TextBlock Text="Sobre"
+                               Foreground="#F2FFFFFF"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                    <Button HorizontalAlignment="Right"
+                            Content="✕"
+                            Width="36" Height="32"
+                            Style="{StaticResource GhostIconButton}"
+                            Click="Close_Click"
+                            ToolTip="Fechar"/>
+                </Grid>
+            </Border>
+
+            <Button DockPanel.Dock="Bottom"
+                    Content="Fechar"
+                    Style="{StaticResource FenceButton}"
+                    HorizontalAlignment="Center"
+                    Margin="16,8,16,16"
+                    MinWidth="96"
+                    Click="Close_Click"/>
+
+            <StackPanel Margin="24,20,24,8" HorizontalAlignment="Center">
+                <Image Source="pack://application:,,,/Assets/app.png"
+                       Width="72" Height="72"
+                       RenderOptions.BitmapScalingMode="HighQuality"
+                       HorizontalAlignment="Center"/>
+                <TextBlock Text="DesktopFences"
+                           Foreground="#F2FFFFFF"
+                           FontSize="20"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"
+                           Margin="0,12,0,0"/>
+                <TextBlock x:Name="TxtVersion"
+                           Foreground="#73FFFFFF"
+                           FontSize="13"
+                           HorizontalAlignment="Center"
+                           Margin="0,2,0,12"/>
+
+                <TextBlock Text="Antônio Abrantes"
+                           Foreground="#F2FFFFFF"
+                           FontSize="13"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="Desenvolvedor"
+                           Foreground="#73FFFFFF"
+                           FontSize="11"
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,8"/>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,16">
+                    <Button Style="{StaticResource GhostIconButton}"
+                            Width="36" Height="36"
+                            ToolTip="Perfil no GitHub"
+                            Click="Profile_Click">
+                        <Viewbox Width="16" Height="16">
+                            <Path Fill="#F2FFFFFF" Stretch="Uniform"
+                                  Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        </Viewbox>
+                    </Button>
+                    <Button Style="{StaticResource GhostIconButton}"
+                            Width="36" Height="36"
+                            Margin="8,0,0,0"
+                            ToolTip="Repositório no GitHub"
+                            Click="Repo_Click">
+                        <Viewbox Width="16" Height="16">
+                            <Path Fill="#F2FFFFFF" Stretch="Uniform"
+                                  Data="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.28-.01-1.04-.02-2.04-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.49 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4s2.04.13 3 .4c2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.82 1.1.82 2.22 0 1.6-.01 2.89-.01 3.29 0 .32.22.69.83.57C20.56 21.8 24 17.3 24 12 24 5.37 18.63 0 12 0z"/>
+                        </Viewbox>
+                    </Button>
+                </StackPanel>
+
+                <TextBlock x:Name="TxtDescription"
+                           Foreground="#B3FFFFFF"
+                           FontSize="12"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxWidth="300"/>
+                <TextBlock x:Name="TxtYear"
+                           Foreground="#73FFFFFF"
+                           FontSize="11"
+                           HorizontalAlignment="Center"
+                           Margin="0,12,0,0"/>
+            </StackPanel>
+        </DockPanel>
+    </Border>
+</Window>
