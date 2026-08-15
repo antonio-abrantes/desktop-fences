@@ -6,7 +6,8 @@ Convenção:
 
 - `[x]` feito no repositório (agente) e/ou confirmado pelo desenvolvedor na sessão.
 - `[ ]` pendente — **não implementar** sem o gate no `SESSION-HEADER.md` **e** pedido explícito.
-- A Fase 1 abaixo está **fechada**. O fecho (iniciar com o Windows) está no código.
+- A Fase 1 abaixo está **fechada**. N fences, Configurações, cores por fence, Sobre, iniciar com o Windows (portable), mutex.
+- A Fase 2 (idioma pt/en) está **fechada** (validada no Windows 11). MVP 2 = Fases 1 + 2, tag `v0.3.0`. A seguinte (arrastar item entre fences) só com pedido.
 
 ---
 
@@ -86,7 +87,7 @@ Janela de configurações — tokens da fence, **não** o vidro layered no deskt
 
 - Fundo escuro `#0C0C12`, texto claro, acento gelo `#5B8DEF`, cantos 8 px, borda suave.
 - Janela WPF normal (`ShowInTaskbar=true`), acima das apps, arrastável, um único exemplar (reabrir foca a que já existe).
-- UI em português, como o menu da bandeja.
+- UI em português na Fase 1; a Fase 2 passou a pt/en.
 
 Conteúdo:
 
@@ -210,7 +211,7 @@ Na Fase 7 o instalador pode passar a um path estável; até lá o portable atual
 
 ## Fase 2 — idioma (português / inglês)
 
-**Não implementar agora.** Só com gate no `SESSION-HEADER.md` **e** pedido explícito.
+**Fechada.** Validada no Windows 11. Incluída no MVP 2 (`v0.3.0`).
 
 **Objetivo:** a UI do app (bandeja, fences, Configurações, Sobre) fala português **ou** inglês. O português de hoje continua o default satélite. Sem NuGet. Sem mexer em Native.
 
@@ -270,14 +271,14 @@ Diagnóstico: traduzir também (é janela do app), sem profundidade extra.
 
 ### Checklist (agente marca `[x]` só depois de implementar)
 
-- [ ] `.resx` pt + en; zero string de UI hardcoded na App
-- [ ] Seletor nas Settings; persistência opcional; default `system`
-- [ ] Bandeja, fence (menus/tooltips/hint), Settings, Sobre
-- [ ] Fence nova usa título do idioma atual; fences já gravadas intactas
-- [ ] Mudança de idioma não toca hide/restore, drop, clip, tema
-- [ ] `dotnet test` verde; publish ainda inclui satélites
+- [x] `.resx` pt + en; zero string de UI hardcoded na App
+- [x] Seletor nas Settings; persistência opcional; default `system`
+- [x] Bandeja, fence (menus/tooltips/hint), Settings, Sobre
+- [x] Fence nova usa título do idioma atual; fences já gravadas intactas
+- [x] Mudança de idioma não toca hide/restore, drop, clip, tema
+- [x] `dotnet test` verde; publish ainda inclui satélites
 
-**Gate do desenvolvedor:** `[ ]` no `SESSION-HEADER.md` — Windows em pt e em en; seletor Sistema / PT / EN; título antigo não muda; Pausar/Sair/drop como hoje.
+**Gate do desenvolvedor:** `[x]` — Windows em pt e em en; seletor Sistema / PT / EN; título antigo não muda; Pausar/Sair/drop como hoje.
 
 ---
 

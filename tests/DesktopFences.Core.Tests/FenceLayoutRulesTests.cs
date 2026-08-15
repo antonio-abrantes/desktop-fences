@@ -60,4 +60,26 @@ public sealed class FenceLayoutRulesTests
         created.X.Should().Be(FenceLayoutRules.DefaultX + FenceLayoutRules.PlaceOffset);
         created.Y.Should().Be(FenceLayoutRules.DefaultY + FenceLayoutRules.PlaceOffset);
     }
+
+    [Fact]
+    public void PlaceNew_UsesCallerTitle()
+    {
+        FenceState created = FenceLayoutRules.PlaceNew([], "New fence");
+        created.Title.Should().Be("New fence");
+    }
+
+    [Fact]
+    public void PlaceNew_KeepsStableDefault_WhenTitleMissing()
+    {
+        FenceLayoutRules.PlaceNew([]).Title.Should().Be(FenceLayoutRules.DefaultTitle);
+        FenceLayoutRules.PlaceNew([], "   ").Title.Should().Be(FenceLayoutRules.DefaultTitle);
+    }
+
+    [Fact]
+    public void EnsureAtLeastOne_UsesCallerTitle_WhenEmpty()
+    {
+        List<FenceState> fences = [];
+        FenceLayoutRules.EnsureAtLeastOne(fences, "New fence");
+        fences.Should().ContainSingle().Which.Title.Should().Be("New fence");
+    }
 }

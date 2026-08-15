@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
+using DesktopFences.App.Localization;
 using Application = System.Windows.Application;
 
 namespace DesktopFences.App.Services;
@@ -20,7 +21,7 @@ internal sealed class TrayService : IDisposable
     {
         _icon = new NotifyIcon
         {
-            Text = "DesktopFences",
+            Text = AppInfo.ProductName,
             Visible = true,
             Icon = LoadIcon()
         };
@@ -33,12 +34,20 @@ internal sealed class TrayService : IDisposable
             else
                 SettingsRequested?.Invoke();
         };
+        UiLocale.Changed += OnLanguageChanged;
     }
 
     public void SetPaused(bool paused)
     {
         _paused = paused;
-        _icon.Text = paused ? "DesktopFences (pausado)" : "DesktopFences";
+        ApplyChrome();
+    }
+
+    private void OnLanguageChanged() => ApplyChrome();
+
+    private void ApplyChrome()
+    {
+        _icon.Text = _paused ? Loc.T("TrayPaused") : AppInfo.ProductName;
         RebuildMenu();
     }
 
@@ -53,15 +62,15 @@ internal sealed class TrayService : IDisposable
     {
         var menu = new ContextMenuStrip();
         if (_paused)
-            menu.Items.Add("Retomar", null, (_, _) => ResumeRequested?.Invoke());
+            menu.Items.Add(Loc.T("Resume"), null, (_, _) => ResumeRequested?.Invoke());
         else
-            menu.Items.Add("Pausar", null, (_, _) => PauseRequested?.Invoke());
+            menu.Items.Add(Loc.T("Pause"), null, (_, _) => PauseRequested?.Invoke());
 
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add("Configurações", null, (_, _) => SettingsRequested?.Invoke());
+        menu.Items.Add(Loc.T("Settings"), null, (_, _) => SettingsRequested?.Invoke());
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add("Sobre", null, (_, _) => AboutRequested?.Invoke());
-        menu.Items.Add("Sair", null, (_, _) => ExitRequested?.Invoke());
+        menu.Items.Add(Loc.T("About"), null, (_, _) => AboutRequested?.Invoke());
+        menu.Items.Add(Loc.T("Exit"), null, (_, _) => ExitRequested?.Invoke());
         return menu;
     }
 
@@ -96,6 +105,7 @@ internal sealed class TrayService : IDisposable
 
     public void Dispose()
     {
+        UiLocale.Changed -= OnLanguageChanged;
         _icon.Visible = false;
         _icon.Dispose();
     }

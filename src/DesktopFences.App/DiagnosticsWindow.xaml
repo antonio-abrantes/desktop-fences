@@ -1,16 +1,16 @@
 <Window x:Class="DesktopFences.App.DiagnosticsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="DesktopFences — Diagnóstico"
+        Title="DesktopFences"
         Height="480" Width="640"
         Background="#FF1E1E1E"
         Foreground="#F2FFFFFF"
         FontFamily="Segoe UI">
     <DockPanel Margin="12">
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
-            <Button Style="{StaticResource FenceButton}" Content="Ler todos os ícones" Click="BtnRefresh_Click"/>
-            <Button Style="{StaticResource FenceButton}" Content="Mover 1º ícone (+80px)" Click="BtnMoveTest_Click"/>
-            <Button Style="{StaticResource FenceButton}" Content="Restaurar 1º ícone" Click="BtnRestore_Click" Margin="0"/>
+            <Button x:Name="BtnRefresh" Style="{StaticResource FenceButton}" Click="BtnRefresh_Click"/>
+            <Button x:Name="BtnMoveTest" Style="{StaticResource FenceButton}" Click="BtnMoveTest_Click"/>
+            <Button x:Name="BtnRestore" Style="{StaticResource FenceButton}" Click="BtnRestore_Click" Margin="0"/>
         </StackPanel>
         <TextBlock DockPanel.Dock="Top" x:Name="TxtStatus" Margin="0,0,0,10" Foreground="#B3FFFFFF" TextWrapping="Wrap"/>
         <ListBox x:Name="ListIcons"

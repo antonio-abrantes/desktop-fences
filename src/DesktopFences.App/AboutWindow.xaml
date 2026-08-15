@@ -1,7 +1,7 @@
 <Window x:Class="DesktopFences.App.AboutWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Sobre — DesktopFences"
+        Title="DesktopFences"
         Icon="pack://application:,,,/Assets/app.ico"
         Width="380"
         SizeToContent="Height"
@@ -23,22 +23,22 @@
                     Background="#33000000"
                     MouseLeftButtonDown="TitleBar_MouseDown">
                 <Grid Margin="16,0,8,0">
-                    <TextBlock Text="Sobre"
+                    <TextBlock x:Name="TxtHeading"
                                Foreground="#F2FFFFFF"
                                FontSize="15"
                                FontWeight="SemiBold"
                                VerticalAlignment="Center"/>
-                    <Button HorizontalAlignment="Right"
+                    <Button x:Name="BtnCloseTitle"
+                            HorizontalAlignment="Right"
                             Content="✕"
                             Width="36" Height="32"
                             Style="{StaticResource GhostIconButton}"
-                            Click="Close_Click"
-                            ToolTip="Fechar"/>
+                            Click="Close_Click"/>
                 </Grid>
             </Border>
 
-            <Button DockPanel.Dock="Bottom"
-                    Content="Fechar"
+            <Button x:Name="BtnClose"
+                    DockPanel.Dock="Bottom"
                     Style="{StaticResource FenceButton}"
                     HorizontalAlignment="Center"
                     Margin="16,8,16,16"
@@ -66,26 +66,26 @@
                            Foreground="#F2FFFFFF"
                            FontSize="13"
                            HorizontalAlignment="Center"/>
-                <TextBlock Text="Desenvolvedor"
+                <TextBlock x:Name="TxtDeveloperRole"
                            Foreground="#73FFFFFF"
                            FontSize="11"
                            HorizontalAlignment="Center"
                            Margin="0,0,0,8"/>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,16">
-                    <Button Style="{StaticResource GhostIconButton}"
+                    <Button x:Name="BtnProfile"
+                            Style="{StaticResource GhostIconButton}"
                             Width="36" Height="36"
-                            ToolTip="Perfil no GitHub"
                             Click="Profile_Click">
                         <Viewbox Width="16" Height="16">
                             <Path Fill="#F2FFFFFF" Stretch="Uniform"
                                   Data="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                         </Viewbox>
                     </Button>
-                    <Button Style="{StaticResource GhostIconButton}"
+                    <Button x:Name="BtnRepo"
+                            Style="{StaticResource GhostIconButton}"
                             Width="36" Height="36"
                             Margin="8,0,0,0"
-                            ToolTip="Repositório no GitHub"
                             Click="Repo_Click">
                         <Viewbox Width="16" Height="16">
                             <Path Fill="#F2FFFFFF" Stretch="Uniform"

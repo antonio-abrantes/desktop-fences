@@ -24,21 +24,19 @@ A área de trabalho acumula atalhos, pastas e arquivos soltos. Os clones open so
 
 O DesktopFences faz o que esses clones não fazem: esconde o ícone real do Explorer (`SysListView32`), desenha a nossa grade por cima, e devolve o ícone ao desktop se você tirar o item da fence ou sair do app.
 
-## O que o MVP 1 entrega
+## O que o MVP 2 entrega
 
-Uma fence usável no dia a dia:
+O hide/restore do MVP 1, mais várias fences no mesmo desktop:
 
 - Vidro escuro translúcido (o wallpaper aparece atrás), cantos arredondados, atrás das janelas comuns.
-- Arrastar do desktop ou do Explorer para dentro: um ou vários ícones (seleção do Explorer); somem de lá, entram na grade; o ponteiro permanece a seta.
-- Arrastar para fora devolve o ícone ao desktop; o ghost acompanha o cursor nos dois sentidos.
+- Arrastar do desktop ou do Explorer para dentro: um ou vários ícones; somem de lá, entram na grade; o ponteiro permanece a seta. Arrastar para fora devolve o ícone; o ghost acompanha o cursor.
 - Seleção, multi-seleção e reordenação dentro da fence.
-- Mover só pela alça **⋮⋮**; redimensionar pelas bordas (a faixa direita some quando há barra de rolagem).
-- Recolher para só a barra (▴); duplo clique no **texto** do título para renomear (Enter ou clique fora grava; Escape cancela); duplo clique na barra vazia recolhe/expande.
-- Título longo com reticências; scrollbar fina escura.
-- Persistência em `%AppData%\DesktopFences\layout.json` (posição, tamanho, título, alinhamento, itens).
-- Bandeja: Pausar / Retomar / **Configurações** / **Sobre** / Sair. Pausar restaura os ícones reais.
-- Ícone próprio no `.exe`, atalho e bandeja.
-- Sempre **pelo menos uma** fence. Nas Configurações: criar, remover (nunca a última), alinhar o título, cores da fence, e **iniciar com o Windows** (o atalho usa o `.exe` desta pasta; se mover o programa, abra-o uma vez no sítio novo). **Restaurar padrão** volta ao vidro do MVP 1.
+- Mover só pela alça **⋮⋮**; redimensionar pelas bordas; recolher para só a barra (▴); duplo clique no **texto** do título para renomear.
+- Sempre **pelo menos uma** fence. Nas Configurações: criar, remover (nunca a última), alinhar o título, **cores** (fundo, borda, header, texto; **aplicar a todas** ou só a selecionada; restaurar o vidro padrão).
+- **Idioma:** Sistema / Português / Inglês. Troca ao vivo. Título já gravado não muda.
+- **Iniciar com o Windows** (o atalho usa o `.exe` desta pasta; se mover o programa, abra-o uma vez no sítio novo). Uma só instância.
+- Bandeja: Pausar / Retomar / Configurações / Sobre / Sair. Pausar restaura os ícones reais.
+- Persistência em `%AppData%\DesktopFences\layout.json`.
 
 Arrastar um ícone **entre** fences ainda não existe — cada fence continua uma ilha até a Fase 3.
 
@@ -73,8 +71,8 @@ dotnet test DesktopFences.sln
 O GitHub Action **não** roda em push de branch. Só em tag `v*`:
 
 ```powershell
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.3.0
+git push origin v0.3.0
 ```
 
 Isso publica um GitHub Release com zip portable `win-x64` e `win-arm64` (self-contained). Download: [Releases](https://github.com/antonio-abrantes/desktop-fences/releases).

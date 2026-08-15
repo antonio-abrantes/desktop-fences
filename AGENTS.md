@@ -18,7 +18,7 @@ Documentos de apoio (ler quando o assunto for relevante):
 
 ## O que este projeto é
 
-App nativo Windows 11 (C# / .NET 8 / WPF) que agrupa ícones reais da área de trabalho em “fences” translúcidas, no espírito do Stardock Fences. O MVP 1 entregou **uma** fence usável. A Fase 1 (N fences + settings + iniciar com o Windows) está **fechada**; a seguinte só com autorização no `SESSION-HEADER.md` e pedido explícito.
+App nativo Windows 11 (C# / .NET 8 / WPF) que agrupa ícones reais da área de trabalho em “fences” translúcidas, no espírito do Stardock Fences. O **MVP 2** (`v0.3.0`) entrega N fences, Configurações (cores, idioma pt/en, iniciar com o Windows) e o hide/restore do MVP 1. A seguinte (arrastar item entre fences) só com autorização no `SESSION-HEADER.md` e pedido explícito.
 
 Diferencial em relação aos clones open source: **esconder os ícones reais do `SysListView32` e desenhar a nossa grade por cima**. DeskFrame, NoFences e OpenFences não fazem isso — eles mostram atalhos/pastas em janelas flutuantes enquanto os ícones originais continuam no desktop.
 
@@ -59,7 +59,7 @@ Se uma feature precisa de Win32, a Native expõe um serviço com tipos de Core (
 
 ## Como gerenciar fases
 
-1. A etapa vigente está em `docs/SESSION-HEADER.md` e o detalhe operacional em `docs/plano-implementacao.md`. O MVP 1 está fechado. O ciclo seguinte (Fases 1–7) está no plano; o mapa curto é `docs/pos-mvp1.md`. Empurrar vizinhos ao expandir **não** entra neste ciclo.
+1. A etapa vigente está em `docs/SESSION-HEADER.md` e o detalhe operacional em `docs/plano-implementacao.md`. O MVP 1 e o MVP 2 (Fases 1–2) estão fechados. O ciclo restante (Fases 3–7) está no plano; o mapa curto é `docs/pos-mvp1.md`. Empurrar vizinhos ao expandir **não** entra neste ciclo.
 2. Cada passo tem um **gate de validação do desenvolvedor**. O agente marca `[x]` só o que **ele** implementou e testou no código; o gate `[ ]` do desenvolvedor permanece até o humano validar no Windows 11 real.
 3. Ao concluir uma etapa, o agente atualiza:
    - `docs/SESSION-HEADER.md` (contexto + checklist)

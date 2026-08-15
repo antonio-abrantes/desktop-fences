@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Pause" xml:space="preserve"><value>Pausar</value></data>
+  <data name="Resume" xml:space="preserve"><value>Retomar</value></data>
+  <data name="Settings" xml:space="preserve"><value>Configurações</value></data>
+  <data name="About" xml:space="preserve"><value>Sobre</value></data>
+  <data name="Exit" xml:space="preserve"><value>Sair</value></data>
+  <data name="TrayPaused" xml:space="preserve"><value>DesktopFences (pausado)</value></data>
+  <data name="SettingsTitle" xml:space="preserve"><value>Configurações — DesktopFences</value></data>
+  <data name="SettingsHeading" xml:space="preserve"><value>Configurações</value></data>
+  <data name="SettingsTitleSuffix" xml:space="preserve"><value>  ·  fences</value></data>
+  <data name="CloseTooltip" xml:space="preserve"><value>Fechar</value></data>
+  <data name="NewFence" xml:space="preserve"><value>Nova fence</value></data>
+  <data name="Remove" xml:space="preserve"><value>Remover</value></data>
+  <data name="RemoveLastTooltip" xml:space="preserve"><value>A última fence não pode ser removida</value></data>
+  <data name="ResetTheme" xml:space="preserve"><value>Restaurar padrão</value></data>
+  <data name="ResetThemeTooltip" xml:space="preserve"><value>Volta às cores do MVP 1. Se “aplicar a todas” estiver marcado, vale para todas.</value></data>
+  <data name="StartWithWindows" xml:space="preserve"><value>Iniciar com o Windows</value></data>
+  <data name="StartWithWindowsTooltip" xml:space="preserve"><value>Abre este .exe ao entrar na conta. Se mover a pasta, abra o app uma vez no sítio novo.</value></data>
+  <data name="StartupHint" xml:space="preserve"><value>Portable: o atalho aponta para esta pasta. Mover o programa e abrir de novo atualiza o caminho.</value></data>
+  <data name="Language" xml:space="preserve"><value>Idioma</value></data>
+  <data name="LanguageSystem" xml:space="preserve"><value>Sistema</value></data>
+  <data name="LanguagePortuguese" xml:space="preserve"><value>Português</value></data>
+  <data name="LanguageEnglish" xml:space="preserve"><value>Inglês</value></data>
+  <data name="FenceListLabel" xml:space="preserve"><value>Fences nesta área de trabalho</value></data>
+  <data name="ApplyAll" xml:space="preserve"><value>Aplicar a todas as fences</value></data>
+  <data name="ApplyAllTooltip" xml:space="preserve"><value>Marcado: cada mudança vale para todas. Desmarcado: só a selecionada.</value></data>
+  <data name="ApplyAllHint" xml:space="preserve"><value>Desmarcado: só a fence selecionada.</value></data>
+  <data name="TitleAlignment" xml:space="preserve"><value>Alinhamento do título</value></data>
+  <data name="AlignLeft" xml:space="preserve"><value>Esquerda</value></data>
+  <data name="AlignCenter" xml:space="preserve"><value>Centro</value></data>
+  <data name="AlignLeftShort" xml:space="preserve"><value>esquerda</value></data>
+  <data name="AlignCenterShort" xml:space="preserve"><value>centro</value></data>
+  <data name="Appearance" xml:space="preserve"><value>Aparência</value></data>
+  <data name="Fill" xml:space="preserve"><value>Fundo</value></data>
+  <data name="Border" xml:space="preserve"><value>Borda</value></data>
+  <data name="Header" xml:space="preserve"><value>Header</value></data>
+  <data name="Text" xml:space="preserve"><value>Texto</value></data>
+  <data name="FillTooltip" xml:space="preserve"><value>Cor do vidro</value></data>
+  <data name="BorderTooltip" xml:space="preserve"><value>Cor da borda</value></data>
+  <data name="HeaderTooltip" xml:space="preserve"><value>Cor da barra de título</value></data>
+  <data name="TextTooltip" xml:space="preserve"><value>Título, ícones, ⋮⋮ e seta de recolher</value></data>
+  <data name="DefaultFenceTitle" xml:space="preserve"><value>Nova fence</value></data>
+  <data name="CollapseExpand" xml:space="preserve"><value>Recolher / expandir</value></data>
+  <data name="Diagnostics" xml:space="preserve"><value>Diagnóstico</value></data>
+  <data name="Drag" xml:space="preserve"><value>Arrastar</value></data>
+  <data name="CollapseBarOnly" xml:space="preserve"><value>Recolher (só a barra)</value></data>
+  <data name="ExpandBarOnly" xml:space="preserve"><value>Expandir (só a barra)</value></data>
+  <data name="EmptyHint" xml:space="preserve"><value>Arraste ícones para cá</value></data>
+  <data name="RemoveFromFence" xml:space="preserve"><value>Remover da fence</value></data>
+  <data name="AboutTitle" xml:space="preserve"><value>Sobre — DesktopFences</value></data>
+  <data name="AboutHeading" xml:space="preserve"><value>Sobre</value></data>
+  <data name="Close" xml:space="preserve"><value>Fechar</value></data>
+  <data name="DeveloperRole" xml:space="preserve"><value>Desenvolvedor</value></data>
+  <data name="GitHubProfileTooltip" xml:space="preserve"><value>Perfil no GitHub</value></data>
+  <data name="GitHubRepoTooltip" xml:space="preserve"><value>Repositório no GitHub</value></data>
+  <data name="AboutDescription" xml:space="preserve"><value>Agrupa os ícones reais da área de trabalho em painéis translúcidos. Enquanto um item está numa fence, o atalho original some do desktop; ao sair do app, tudo volta ao lugar.</value></data>
+  <data name="DiagnosticsTitle" xml:space="preserve"><value>DesktopFences — Diagnóstico</value></data>
+  <data name="DiagReadAll" xml:space="preserve"><value>Ler todos os ícones</value></data>
+  <data name="DiagMoveFirst" xml:space="preserve"><value>Mover 1º ícone (+80px)</value></data>
+  <data name="DiagRestoreFirst" xml:space="preserve"><value>Restaurar 1º ícone</value></data>
+  <data name="DiagStatus" xml:space="preserve"><value>Handle {0}  |  {1} ícones.</value></data>
+  <data name="DiagNeedReadFirst" xml:space="preserve"><value>Clique em 'Ler todos os ícones' primeiro.</value></data>
+  <data name="DiagMoved" xml:space="preserve"><value>Movi '{0}' para ({1},{2}). Confira no desktop.</value></data>
+  <data name="DiagNothingToRestore" xml:space="preserve"><value>Nada para restaurar.</value></data>
+  <data name="DiagRestored" xml:space="preserve"><value>Restaurado para ({0},{1}).</value></data>
+</root>

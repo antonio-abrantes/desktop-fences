@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
+using DesktopFences.App.Localization;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace DesktopFences.App;
@@ -12,9 +13,9 @@ public partial class AboutWindow : Window
     public AboutWindow()
     {
         InitializeComponent();
-        TxtVersion.Text = AppInfo.VersionLabel;
-        TxtDescription.Text = AppInfo.Description;
-        TxtYear.Text = $"© {AppInfo.Year}";
+        UiLocale.Changed += OnLanguageChanged;
+        Closed += (_, _) => UiLocale.Changed -= OnLanguageChanged;
+        ApplyStrings();
     }
 
     public static void ShowOrActivate()
@@ -30,6 +31,22 @@ public partial class AboutWindow : Window
         _instance.Show();
         _instance.Activate();
         _instance.WindowState = WindowState.Normal;
+    }
+
+    private void OnLanguageChanged() => Dispatcher.Invoke(ApplyStrings);
+
+    private void ApplyStrings()
+    {
+        Title = Loc.T("AboutTitle");
+        TxtHeading.Text = Loc.T("AboutHeading");
+        BtnCloseTitle.ToolTip = Loc.T("CloseTooltip");
+        BtnClose.Content = Loc.T("Close");
+        TxtVersion.Text = AppInfo.VersionLabel;
+        TxtDeveloperRole.Text = Loc.T("DeveloperRole");
+        BtnProfile.ToolTip = Loc.T("GitHubProfileTooltip");
+        BtnRepo.ToolTip = Loc.T("GitHubRepoTooltip");
+        TxtDescription.Text = Loc.T("AboutDescription");
+        TxtYear.Text = $"© {AppInfo.Year}";
     }
 
     private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)

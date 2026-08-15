@@ -12,7 +12,7 @@ App Windows 11 que agrupa ícones **reais** da área de trabalho em fences retan
 | `DesktopFences.Native` | SysListView32, COM Shell, OLE drop, DWM, âncora | Sim, e só aqui |
 | `DesktopFences.App` | XAML, fence, bandeja, ghost | Só via serviços Native |
 
-**Estado:** Fase 1 fechada — N fences, Settings, cores, iniciar com o Windows. Próxima: idioma (Fase 2), só com pedido. Resto do ciclo: [plano-implementacao.md](plano-implementacao.md). Empurrar a fence de baixo ao expandir está **fora** deste ciclo.
+**Estado:** MVP 2 (`v0.3.0`) — N fences, Configurações (cores, idioma pt/en, iniciar com o Windows), hide/restore do MVP 1. Próxima: arrastar item entre fences (Fase 3), só com pedido. Resto do ciclo: [plano-implementacao.md](plano-implementacao.md). Empurrar a fence de baixo ao expandir está **fora** deste ciclo.
 
 ---
 
@@ -79,7 +79,7 @@ Ver [ADR-0003](adr/0003-ancoragem-desktop-e-acrylic.md).
 
 Uma janela por fence: título editável (duplo clique **no texto**); Enter, LostFocus, clique fora do campo **grava**; Escape cancela. Alinhamento do título: esquerda (padrão) ou centro, nas Configurações — por fence, com checkbox para aplicar a todas (vale também para cores). Alça ⋮⋮ para mover; roll-up ▴; resize ao vivo; grade WrapPanel; scrollbar custom; menu de contexto (recolher, diagnóstico). Remover fence só nas Settings.
 
-O `App` usa `FenceHost`: N instâncias de `FenceWindow`, um único `layout.json`. Visual da fence está **travado** até pedido de tema.
+O `App` usa `FenceHost`: N instâncias de `FenceWindow`, um único `layout.json`. Aparência por fence (fundo, borda, header, texto + alfa); radius 8 e `AllowsTransparency` continuam fixos. Packs de tema nomeados, se existirem, são Fase 7.
 
 ### 2.4 Drag & drop
 
@@ -90,15 +90,16 @@ Contrato vigente — [ADR-0004](adr/0004-ole-inbound-drop.md):
 - **Inbound:** `RegisterDragDrop` nativo + alvo OLE minúsculo no cursor; ghost WPF próprio (com `+N` se a seleção do desktop tiver vários ícones); cursor de “proibido” substituído pela seta só enquanto o ponteiro está sobre a fence. A seleção do `SysListView32` é lida no início do arraste (`LVM_GETNEXTITEM` / `LVNI_SELECTED`).
 - **Outbound / reorder:** não usamos `DoDragDrop` do Explorer; hook `WH_MOUSE_LL` + `DragGhostWindow` (click-through).
 - Soltar na fence esconde o ícone real e adiciona na grade; soltar fora restaura.
-- Entre fences: Fase 3. O MVP 1 e a Fase 1 ainda tratam cada fence como ilha.
+- Entre fences: Fase 3. Cada fence continua uma ilha até lá.
 
 ### 2.5 Persistência
 
-Arquivo único `%AppData%\DesktopFences\layout.json` (`LayoutStore`). Lista de fences persistida pelo `FenceHost`. `titleAlignment`: `"left"` | `"center"` (ausente = `left`). `theme` opcional (ausente = vidro do MVP 1). Fundo da fence: alfa do fill limitado a 45–85%. Sempre ≥ 1 fence.
+Arquivo único `%AppData%\DesktopFences\layout.json` (`LayoutStore`). Lista de fences persistida pelo `FenceHost`. `titleAlignment`: `"left"` | `"center"` (ausente = `left`). `theme` opcional (ausente = vidro do MVP 1). `uiLanguage` opcional: `"system"` | `"pt"` | `"en"` (ausente = `system`; `version` permanece 1). Fundo da fence: alfa do fill limitado a 45–85%. Sempre ≥ 1 fence.
 
 ```json
 {
   "version": 1,
+  "uiLanguage": "system",
   "fences": [
     {
       "id": "guid",
@@ -123,14 +124,13 @@ Arquivo único `%AppData%\DesktopFences\layout.json` (`LayoutStore`). Lista de f
 
 Coordenadas da fence em **DIPs** WPF; posições de ícone em **pixels** do ListView. Conversão é responsabilidade da App (DPI). Core só persiste números.
 
-### 2.6 Fora da Fase 1 (ciclo em `plano-implementacao.md`)
+### 2.6 Fora do MVP 2 (ciclo em `plano-implementacao.md`)
 
-- Fase 2: idioma da UI (português / inglês).
 - Fase 3: arrastar item entre fences.
 - Fase 4: snap a bordas e a outras fences.
 - Fase 5: Explorer reiniciado / DPI / Win+D.
 - Fase 6: duplo clique em vazio do desktop → cria fence.
-- Fase 7: instalador (ajustar o arranque com o Windows para path estável); temas só com pedido.
+- Fase 7: instalador (ajustar o arranque com o Windows para path estável); packs de tema só com pedido.
 - **Fora do ciclo:** empurrar a fence de baixo ao expandir.
 - **Reserva (reavaliar no fim):** Novo → Fence no Explorer. Não implementar até planejada e validada.
 

@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using DesktopFences.App.Localization;
 using DesktopFences.App.Services;
 using DesktopFences.Core.Fences;
 using DesktopFences.Core.Models;
@@ -25,17 +27,98 @@ public partial class SettingsWindow : Window
         _host = host;
         FenceList.ItemsSource = _rows;
         _host.FencesChanged += OnFencesChanged;
+        UiLocale.Changed += OnLanguageChanged;
+        ApplyStrings();
         Loaded += (_, _) =>
         {
             SyncStartup();
+            SyncLanguageCombo();
             Reload(selectFirst: true);
         };
-        Closed += (_, _) => _host.FencesChanged -= OnFencesChanged;
+        Closed += (_, _) =>
+        {
+            _host.FencesChanged -= OnFencesChanged;
+            UiLocale.Changed -= OnLanguageChanged;
+        };
     }
 
     private void OnFencesChanged()
     {
         Dispatcher.Invoke(() => Reload(selectFirst: false));
+    }
+
+    private void OnLanguageChanged()
+    {
+        Dispatcher.Invoke(() =>
+        {
+            ApplyStrings();
+            Reload(selectFirst: false);
+        });
+    }
+
+    private void ApplyStrings()
+    {
+        Title = Loc.T("SettingsTitle");
+        TxtHeading.Text = Loc.T("SettingsHeading");
+        TxtTitleSuffix.Text = Loc.T("SettingsTitleSuffix");
+        BtnAbout.ToolTip = Loc.T("About");
+        BtnClose.ToolTip = Loc.T("CloseTooltip");
+        BtnNewFence.Content = Loc.T("NewFence");
+        BtnRemove.Content = Loc.T("Remove");
+        BtnRemove.ToolTip = Loc.T("RemoveLastTooltip");
+        BtnResetTheme.Content = Loc.T("ResetTheme");
+        BtnResetTheme.ToolTip = Loc.T("ResetThemeTooltip");
+        StartWithWindows.Content = Loc.T("StartWithWindows");
+        StartWithWindows.ToolTip = Loc.T("StartWithWindowsTooltip");
+        TxtStartupHint.Text = Loc.T("StartupHint");
+        TxtLanguage.Text = Loc.T("Language");
+        SetComboItem(0, Loc.T("LanguageSystem"));
+        SetComboItem(1, Loc.T("LanguagePortuguese"));
+        SetComboItem(2, Loc.T("LanguageEnglish"));
+        TxtFenceListLabel.Text = Loc.T("FenceListLabel");
+        ApplyAllCheck.Content = Loc.T("ApplyAll");
+        ApplyAllCheck.ToolTip = Loc.T("ApplyAllTooltip");
+        TxtApplyAllHint.Text = Loc.T("ApplyAllHint");
+        TxtAlignLabel.Text = Loc.T("TitleAlignment");
+        AlignLeft.Content = Loc.T("AlignLeft");
+        AlignCenter.Content = Loc.T("AlignCenter");
+        TxtAppearance.Text = Loc.T("Appearance");
+        TxtFill.Text = Loc.T("Fill");
+        TxtBorder.Text = Loc.T("Border");
+        TxtHeader.Text = Loc.T("Header");
+        TxtText.Text = Loc.T("Text");
+        SwatchFill.ToolTip = Loc.T("FillTooltip");
+        SwatchBorder.ToolTip = Loc.T("BorderTooltip");
+        SwatchHeader.ToolTip = Loc.T("HeaderTooltip");
+        SwatchText.ToolTip = Loc.T("TextTooltip");
+        SyncLanguageCombo();
+    }
+
+    private void SetComboItem(int index, string text)
+    {
+        if (CboLanguage.Items[index] is ComboBoxItem item)
+            item.Content = text;
+    }
+
+    private void SyncLanguageCombo()
+    {
+        _syncing = true;
+        foreach (object entry in CboLanguage.Items)
+        {
+            if (entry is ComboBoxItem item && item.Tag as string == _host.UiLanguage)
+            {
+                CboLanguage.SelectedItem = item;
+                break;
+            }
+        }
+        _syncing = false;
+    }
+
+    private void Language_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (_syncing || CboLanguage.SelectedItem is not ComboBoxItem { Tag: string code })
+            return;
+        _host.SetUiLanguage(code);
     }
 
     private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
@@ -335,6 +418,8 @@ public partial class SettingsWindow : Window
         public Guid Id { get; } = id;
         public string Title { get; } = title;
         public TitleAlignment Alignment { get; } = alignment;
-        public string AlignmentLabel => Alignment == TitleAlignment.Center ? "centro" : "esquerda";
+        public string AlignmentLabel => Alignment == TitleAlignment.Center
+            ? Loc.T("AlignCenterShort")
+            : Loc.T("AlignLeftShort");
     }
 }

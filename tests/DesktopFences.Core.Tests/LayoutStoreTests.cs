@@ -1,3 +1,4 @@
+using DesktopFences.Core.Fences;
 using DesktopFences.Core.Models;
 using DesktopFences.Core.Persistence;
 using FluentAssertions;
@@ -81,6 +82,37 @@ public sealed class LayoutStoreTests : IDisposable
         FenceState fence = new LayoutStore(_file).LoadOrEmpty().Fences.Should().ContainSingle().Subject;
         fence.Title.Should().Be("Old");
         fence.TitleAlignment.Should().Be(TitleAlignment.Left);
+    }
+
+    [Fact]
+    public void LoadOrEmpty_DefaultsUiLanguageSystem_WhenFieldMissing()
+    {
+        File.WriteAllText(_file, """
+            {"version":1,"fences":[{"id":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","title":"Old"}]}
+            """);
+
+        LayoutDocument loaded = new LayoutStore(_file).LoadOrEmpty();
+        loaded.UiLanguage.Should().BeNull();
+        UiLanguageCodes.Normalize(loaded.UiLanguage).Should().Be(UiLanguageCodes.System);
+    }
+
+    [Theory]
+    [InlineData("pt")]
+    [InlineData("en")]
+    [InlineData("system")]
+    public void Save_ThenLoad_RoundTripsUiLanguage(string code)
+    {
+        var store = new LayoutStore(_file);
+        store.Save(new LayoutDocument
+        {
+            UiLanguage = code,
+            Fences = [new FenceState { Title = "Trabalho" }]
+        });
+
+        string json = File.ReadAllText(_file);
+        json.Should().Contain($"\"uiLanguage\": \"{code}\"");
+        store.LoadOrEmpty().UiLanguage.Should().Be(code);
+        store.LoadOrEmpty().Version.Should().Be(1);
     }
 
     [Fact]

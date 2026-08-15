@@ -9,6 +9,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using DesktopFences.App.Localization;
 using DesktopFences.App.Services;
 using DesktopFences.App.ViewModels;
 using DesktopFences.Core;
@@ -79,6 +80,8 @@ public partial class FenceWindow : Window
         _theme = (state?.Theme ?? FenceTheme.Default()).Normalized();
         IconGrid.ItemsSource = _items;
         _items.CollectionChanged += (_, _) => UpdateEmptyHint();
+        UiLocale.Changed += OnUiLanguageChanged;
+        ApplyChromeStrings();
     }
 
     public void Pause()
@@ -130,6 +133,7 @@ public partial class FenceWindow : Window
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         RestoreLayout();
+        ApplyChromeStrings();
         ShowResizeHandles(!_collapsed);
         HideDesktopCounterparts();
         UpdateEmptyHint();
@@ -157,6 +161,7 @@ public partial class FenceWindow : Window
 
     private void OnClosed(object sender, EventArgs e)
     {
+        UiLocale.Changed -= OnUiLanguageChanged;
         DetachDesktopDropIntake();
         if (!SuppressPersistOnClose)
             SaveLayout();
@@ -556,7 +561,7 @@ public partial class FenceWindow : Window
     private static string CommittedTitle(string? text)
     {
         string title = (text ?? string.Empty).Trim();
-        return title.Length == 0 ? "Nova fence" : title;
+        return title.Length == 0 ? Loc.T("DefaultFenceTitle") : title;
     }
 
     private void ToggleCollapse_Click(object sender, RoutedEventArgs e) => ToggleCollapse();
@@ -831,6 +836,7 @@ public partial class FenceWindow : Window
         MaxHeight = TitleBarHeight;
         Height = TitleBarHeight;
         ShowResizeHandles(false);
+        ApplyChromeStrings();
         if (persist)
             SaveLayout();
     }
@@ -846,6 +852,7 @@ public partial class FenceWindow : Window
         MaxHeight = double.PositiveInfinity;
         MinHeight = 80;
         ShowResizeHandles(true);
+        ApplyChromeStrings();
         AnimateHeight(_expandedHeight);
         SaveLayout();
     }
@@ -1084,6 +1091,23 @@ public partial class FenceWindow : Window
         EmptyHint.Visibility = _items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    private void OnUiLanguageChanged() => Dispatcher.Invoke(ApplyChromeStrings);
+
+    private void ApplyChromeStrings()
+    {
+        MenuToggleCollapse.Header = Loc.T("CollapseExpand");
+        MenuDiagnostics.Header = Loc.T("Diagnostics");
+        MoveGrip.ToolTip = Loc.T("Drag");
+        BtnCollapse.ToolTip = _collapsed ? Loc.T("ExpandBarOnly") : Loc.T("CollapseBarOnly");
+        EmptyHint.Text = Loc.T("EmptyHint");
+    }
+
+    private void ItemContextMenu_Opened(object sender, RoutedEventArgs e)
+    {
+        if (sender is ContextMenu { Items.Count: > 0 } menu && menu.Items[0] is MenuItem item)
+            item.Header = Loc.T("RemoveFromFence");
+    }
+
     public string DisplayTitle => CommittedTitle(_renaming ? TitleEdit.Text : TitleDisplay.Text);
 
     public TitleAlignment CurrentTitleAlignment => _titleAlignment;
@@ -1180,7 +1204,7 @@ public partial class FenceWindow : Window
 
             _titleAlignment = state.TitleAlignment;
             _theme = (state.Theme ?? FenceTheme.Default()).Normalized();
-            string title = string.IsNullOrWhiteSpace(state.Title) ? "Nova fence" : state.Title;
+            string title = string.IsNullOrWhiteSpace(state.Title) ? Loc.T("DefaultFenceTitle") : state.Title;
             TitleDisplay.Text = title;
             TitleEdit.Text = title;
             ApplyTitleAlignment();

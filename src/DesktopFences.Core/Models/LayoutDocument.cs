@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace DesktopFences.Core.Models;
 
 public enum TitleAlignment
@@ -9,6 +11,10 @@ public enum TitleAlignment
 public sealed class LayoutDocument
 {
     public int Version { get; set; } = 1;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? UiLanguage { get; set; }
+
     public List<FenceState> Fences { get; set; } = [];
 }
 

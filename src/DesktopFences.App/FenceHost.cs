@@ -1,3 +1,4 @@
+using DesktopFences.App.Localization;
 using DesktopFences.Core.Fences;
 using DesktopFences.Core.Models;
 using DesktopFences.Core.Persistence;
@@ -15,17 +16,32 @@ public sealed class FenceHost
 
     public bool IsPaused => _paused;
 
+    public string UiLanguage { get; private set; } = UiLanguageCodes.System;
+
     public IReadOnlyList<FenceWindow> Windows => _windows;
 
     public void Start()
     {
         LayoutDocument doc = _store.LoadOrEmpty();
-        FenceLayoutRules.EnsureAtLeastOne(doc.Fences);
+        UiLanguage = UiLanguageCodes.Normalize(doc.UiLanguage);
+        UiLocale.Apply(UiLanguage);
+        FenceLayoutRules.EnsureAtLeastOne(doc.Fences, Loc.T("DefaultFenceTitle"));
         foreach (FenceState state in doc.Fences)
             Spawn(state);
 
         SaveAll();
         FencesChanged?.Invoke();
+    }
+
+    public void SetUiLanguage(string? code)
+    {
+        string next = UiLanguageCodes.Normalize(code);
+        if (next == UiLanguage)
+            return;
+
+        UiLanguage = next;
+        UiLocale.Apply(next);
+        SaveAll();
     }
 
     public void PauseAll()
@@ -65,7 +81,7 @@ public sealed class FenceHost
     public bool TryAddNew()
     {
         List<FenceState> current = _windows.Select(w => w.CaptureState()).ToList();
-        FenceState state = FenceLayoutRules.PlaceNew(current);
+        FenceState state = FenceLayoutRules.PlaceNew(current, Loc.T("DefaultFenceTitle"));
         FenceWindow window = Spawn(state);
         if (_paused)
             window.Pause();
@@ -160,10 +176,11 @@ public sealed class FenceHost
         {
             var doc = new LayoutDocument
             {
+                UiLanguage = UiLanguage,
                 Fences = _windows.Select(w => w.CaptureState()).ToList()
             };
             if (doc.Fences.Count == 0)
-                FenceLayoutRules.EnsureAtLeastOne(doc.Fences);
+                FenceLayoutRules.EnsureAtLeastOne(doc.Fences, Loc.T("DefaultFenceTitle"));
             _store.Save(doc);
         }
         catch { }
