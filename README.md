@@ -1,8 +1,22 @@
-# DesktopFences
+<p align="center">
+  <a href="https://antonio-abrantes.github.io/desktop-fences/">
+    <img src="src/DesktopFences.App/Assets/app.png" alt="DesktopFences" width="96" height="96">
+  </a>
+</p>
 
-App nativo para Windows 11 que agrupa os ícones **reais** da área de trabalho em painéis translúcidos — *fences* — no espírito do Stardock Fences. Não é afiliado à Stardock.
+<h1 align="center">DesktopFences</h1>
 
-Landing (MVP): [`docs/index.html`](docs/index.html) — abra no navegador.
+<p align="center">
+  App nativo para Windows 11 que agrupa os ícones <strong>reais</strong> da área de trabalho em painéis translúcidos — <em>fences</em> — no espírito do Stardock Fences. Não é afiliado à Stardock.
+</p>
+
+<p align="center">
+  <a href="https://antonio-abrantes.github.io/desktop-fences/">Site</a>
+  ·
+  <a href="https://github.com/antonio-abrantes/desktop-fences/releases">Download</a>
+  ·
+  <a href="https://github.com/antonio-abrantes/desktop-fences">GitHub</a>
+</p>
 
 ## O problema
 
@@ -62,7 +76,7 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-Isso publica um GitHub Release com zip portable `win-x64` e `win-arm64` (self-contained).
+Isso publica um GitHub Release com zip portable `win-x64` e `win-arm64` (self-contained). Download: [Releases](https://github.com/antonio-abrantes/desktop-fences/releases).
 
 ## Licença
 

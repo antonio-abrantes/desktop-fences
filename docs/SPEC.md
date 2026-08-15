@@ -152,6 +152,7 @@ DesktopFences/
 ├── README.md
 ├── .github/workflows/release.yml    ← somente tags v*
 ├── docs/
+│   ├── index.html                   ← landing; GitHub Pages em /docs
 │   ├── SESSION-HEADER.md
 │   ├── SPEC.md
 │   ├── plano-implementacao.md
