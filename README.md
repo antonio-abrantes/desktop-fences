@@ -31,14 +31,14 @@ O hide/restore do MVP 1, mais várias fences no mesmo desktop:
 - Vidro escuro translúcido (o wallpaper aparece atrás), cantos arredondados, atrás das janelas comuns.
 - Arrastar do desktop ou do Explorer para dentro: um ou vários ícones; somem de lá, entram na grade; o ponteiro permanece a seta. Arrastar para fora devolve o ícone; o ghost acompanha o cursor. Arrastar **entre** fences muda o dono sem reaparecer o ícone real. Ícones de sistema (Este computador, Lixeira, Rede) usam o pictograma da Shell.
 - Seleção, multi-seleção e reordenação dentro da fence.
-- Mover só pela alça **⋮⋮**; redimensionar pelas bordas; recolher para só a barra (▴); duplo clique no **texto** do título para renomear.
+- Mover só pela alça **⋮⋮** (ímã nas bordas da tela e nas outras fences ao soltar); redimensionar pelas bordas (ímã no fim do gesto); recolher para só a barra (▴); duplo clique no **texto** do título para renomear.
 - Sempre **pelo menos uma** fence. Nas Configurações: criar, remover (nunca a última), alinhar o título, **cores** (fundo, borda, header, texto; **aplicar a todas** ou só a selecionada; restaurar o vidro padrão).
 - **Idioma:** Sistema / Português / Inglês. Troca ao vivo. Título já gravado não muda.
 - **Iniciar com o Windows** (o atalho usa o `.exe` desta pasta; se mover o programa, abra-o uma vez no sítio novo). Uma só instância.
 - Bandeja: Pausar / Retomar / Configurações / Sobre / Sair. Pausar restaura os ícones reais.
 - Persistência em `%AppData%\DesktopFences\layout.json`.
 
-Snap (Fase 4) ainda não existe.
+Explorer reiniciado / DPI / Win+D (Fase 5) ainda não existe.
 
 ## Requisitos
 

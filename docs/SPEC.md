@@ -12,7 +12,7 @@ App Windows 11 que agrupa ícones **reais** da área de trabalho em fences retan
 | `DesktopFences.Native` | SysListView32, COM Shell, OLE drop, DWM, âncora | Sim, e só aqui |
 | `DesktopFences.App` | XAML, fence, bandeja, ghost | Só via serviços Native |
 
-**Estado:** MVP 2 (`v0.3.1`) + Fase 3 fechada (arrastar item entre fences, validada no Windows 11). N fences, Configurações (cores, idioma pt/en, iniciar com o Windows), hide/restore do MVP 1. Ícones virtuais do desktop (Lixeira, Este computador, Rede) usam o namespace da Shell, não um ficheiro. Próxima: snap (Fase 4), só com pedido. Resto do ciclo: [plano-implementacao.md](plano-implementacao.md). Empurrar a fence de baixo ao expandir está **fora** deste ciclo.
+**Estado:** MVP 2 (`v0.3.1`) + Fase 3 fechada + Fase 4 no código (snap; gate Windows 11 pendente). N fences, Configurações (cores, idioma pt/en, iniciar com o Windows), hide/restore do MVP 1. Ícones virtuais do desktop (Lixeira, Este computador, Rede) usam o namespace da Shell, não um ficheiro. Próxima: Explorer/DPI/Win+D (Fase 5), só com pedido. Resto do ciclo: [plano-implementacao.md](plano-implementacao.md). Empurrar a fence de baixo ao expandir está **fora** deste ciclo.
 
 ---
 
@@ -77,7 +77,7 @@ Ver [ADR-0003](adr/0003-ancoragem-desktop-e-acrylic.md).
 
 ### 2.3 App — fence
 
-Uma janela por fence: título editável (duplo clique **no texto**); Enter, LostFocus, clique fora do campo **grava**; Escape cancela. Alinhamento do título: esquerda (padrão) ou centro, nas Configurações — por fence, com checkbox para aplicar a todas (vale também para cores). Alça ⋮⋮ para mover; roll-up ▴; resize ao vivo; grade WrapPanel; scrollbar custom; menu de contexto (recolher, diagnóstico). Remover fence só nas Settings.
+Uma janela por fence: título editável (duplo clique **no texto**); Enter, LostFocus, clique fora do campo **grava**; Escape cancela. Alinhamento do título: esquerda (padrão) ou centro, nas Configurações — por fence, com checkbox para aplicar a todas (vale também para cores). Alça ⋮⋮ para mover; ao soltar (e ao terminar o resize), ímã nas bordas da área de trabalho e nas arestas de outras fences, sem empurrar vizinhos. Roll-up ▴; resize ao vivo; grade WrapPanel; scrollbar custom; menu de contexto (recolher, diagnóstico). Remover fence só nas Settings.
 
 O `App` usa `FenceHost`: N instâncias de `FenceWindow`, um único `layout.json`. Aparência por fence (fundo, borda, header, texto + alfa); radius 8 e `AllowsTransparency` continuam fixos. Packs de tema nomeados, se existirem, são Fase 7. Grade: atalho/pasta/ficheiro → `SHGetFileInfo` no path (igual ao MVP 1). Só se **não** existir no disco (Lixeira, Este computador, Rede) é que se usa o PIDL do `IShellFolder` do desktop. Abrir esses itens só via `::{CLSID}` / `shell:` — não se substitui o `Process.Start` de um `.lnk`.
 
@@ -126,7 +126,6 @@ Coordenadas da fence em **DIPs** WPF; posições de ícone em **pixels** do List
 
 ### 2.6 Fora do que já está no código (ciclo em `plano-implementacao.md`)
 
-- Fase 4: snap a bordas e a outras fences.
 - Fase 5: Explorer reiniciado / DPI / Win+D.
 - Fase 6: duplo clique em vazio do desktop → cria fence.
 - Fase 7: instalador (ajustar o arranque com o Windows para path estável); packs de tema só com pedido.

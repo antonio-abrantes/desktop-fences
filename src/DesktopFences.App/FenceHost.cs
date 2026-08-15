@@ -161,6 +161,42 @@ public sealed class FenceHost
     public IReadOnlyList<FenceSummary> Summaries() =>
         _windows.Select(w => new FenceSummary(w.FenceId, w.DisplayTitle, w.CurrentTitleAlignment)).ToList();
 
+    internal void SnapAfterMove(FenceWindow window)
+    {
+        SnapRect next = FenceSnap.Translate(
+            window.LayoutSnapRect(),
+            window.WorkAreaSnapRect(),
+            OtherSnapRects(window));
+        window.ApplySnapPosition(next.X, next.Y);
+    }
+
+    internal void SnapAfterResize(FenceWindow window)
+    {
+        if (window.IsRolledUp)
+            return;
+
+        SnapRect next = FenceSnap.Edges(
+            window.LayoutSnapRect(),
+            window.WorkAreaSnapRect(),
+            OtherSnapRects(window),
+            window.MinWidth,
+            window.MinHeight);
+        window.ApplySnapRect(next);
+    }
+
+    private IReadOnlyList<SnapRect> OtherSnapRects(FenceWindow source)
+    {
+        var others = new List<SnapRect>(_windows.Count);
+        foreach (FenceWindow window in _windows)
+        {
+            if (ReferenceEquals(window, source) || !window.IsVisible)
+                continue;
+            others.Add(window.LayoutSnapRect());
+        }
+
+        return others;
+    }
+
     internal void NotifyScreenLeftDown()
     {
         _blockDesktopInbound = false;

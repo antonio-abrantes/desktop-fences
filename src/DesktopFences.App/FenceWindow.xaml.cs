@@ -13,6 +13,7 @@ using DesktopFences.App.Localization;
 using DesktopFences.App.Services;
 using DesktopFences.App.ViewModels;
 using DesktopFences.Core;
+using DesktopFences.Core.Fences;
 using DesktopFences.Core.Models;
 using DesktopFences.Core.Occupancy;
 using DesktopFences.Native;
@@ -485,6 +486,7 @@ public partial class FenceWindow : Window
 
         e.Handled = true;
         DragMove();
+        _host?.SnapAfterMove(this);
         SaveLayout();
     }
 
@@ -948,6 +950,7 @@ public partial class FenceWindow : Window
     {
         if (!_collapsed)
             _expandedHeight = ActualHeight > 0 ? ActualHeight : Height;
+        _host?.SnapAfterResize(this);
         SaveLayout();
     }
 
@@ -1134,6 +1137,63 @@ public partial class FenceWindow : Window
     internal void ShowDropChrome(bool lit) => SetChromeBorder(lit);
 
     internal void PersistLayout() => SaveLayout();
+
+    internal bool IsRolledUp => _collapsed;
+
+    internal SnapRect LayoutSnapRect()
+    {
+        double width = Width > 0 ? Width : ActualWidth;
+        // ActualHeight: Height pode ainda estar na animação do recolher/expandir.
+        double height = ActualHeight > 0 ? ActualHeight : Height;
+        return new SnapRect(Left, Top, Math.Max(1, width), Math.Max(1, height));
+    }
+
+    internal SnapRect WorkAreaSnapRect()
+    {
+        IntPtr hwnd = new WindowInteropHelper(this).Handle;
+        MonitorWorkArea.Pixels px = MonitorWorkArea.ForWindow(hwnd);
+        if (px.Width <= 0 || px.Height <= 0)
+        {
+            // Sem HWND/monitor: só o ecrã principal, em DIP.
+            Rect work = SystemParameters.WorkArea;
+            return new SnapRect(work.X, work.Y, work.Width, work.Height);
+        }
+
+        PresentationSource? source = PresentationSource.FromVisual(this);
+        if (source?.CompositionTarget is null)
+        {
+            Rect work = SystemParameters.WorkArea;
+            return new SnapRect(work.X, work.Y, work.Width, work.Height);
+        }
+
+        Matrix toDip = source.CompositionTarget.TransformFromDevice;
+        System.Windows.Point topLeft = toDip.Transform(new System.Windows.Point(px.X, px.Y));
+        System.Windows.Point bottomRight = toDip.Transform(
+            new System.Windows.Point(px.X + px.Width, px.Y + px.Height));
+        return new SnapRect(
+            topLeft.X,
+            topLeft.Y,
+            Math.Max(1, bottomRight.X - topLeft.X),
+            Math.Max(1, bottomRight.Y - topLeft.Y));
+    }
+
+    internal void ApplySnapPosition(double x, double y)
+    {
+        Left = x;
+        Top = y;
+    }
+
+    internal void ApplySnapRect(SnapRect rect)
+    {
+        Left = rect.X;
+        Top = rect.Y;
+        Width = Math.Max(MinWidth, rect.Width);
+        if (_collapsed)
+            return;
+
+        Height = Math.Max(MinHeight, rect.Height);
+        _expandedHeight = Height;
+    }
 
     private static bool SameItem(FenceItemVm left, FenceItemVm right)
     {

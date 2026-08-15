@@ -7,7 +7,7 @@ Convenção:
 - `[x]` feito no repositório (agente) e/ou confirmado pelo desenvolvedor na sessão.
 - `[ ]` pendente — **não implementar** sem o gate no `SESSION-HEADER.md` **e** pedido explícito.
 - A Fase 1 abaixo está **fechada**. N fences, Configurações, cores por fence, Sobre, iniciar com o Windows (portable), mutex.
-- A Fase 2 (idioma pt/en) está **fechada** (validada no Windows 11). MVP 2 **fechado** = Fases 1 + 2 + patch ícones de sistema, tag `v0.3.1`. A Fase 3 (arrastar item entre fences) está **fechada** (validada no Windows 11). Snap (Fase 4) só com pedido.
+- A Fase 3 (arrastar item entre fences) está **fechada** (validada no Windows 11). A Fase 4 (snap) está **no código**; o gate do desenvolvedor no Windows 11 ainda está aberto. Explorer/DPI (Fase 5) só com pedido.
 
 ---
 
@@ -47,12 +47,12 @@ Convenção:
 | **1** | Várias fences + settings (bandeja, criar/remover, alinhamento do título) | Média | Sem host de N janelas e sem UI de criar, nada do resto existe. O JSON já tem lista; a App ainda abre uma janela e **grava só ela**. |
 | **2** | Idioma da UI: português e inglês | Baixa | Só texto da App. Não mexe em Native, hide/restore, drop nem no schema dos ícones. Quanto antes, menos string nova para extrair nas fases seguintes. |
 | **3** | Arrastar item de uma fence para outra | Média | **Fechada** (validada no Windows 11). Reusa o ghost; N fences sem isso são ilhas. |
-| **4** | Snap a bordas da tela e a outras fences | Média | Posicionamento livre estável primeiro (fase 1); ímã no soltar da alça. |
+| **4** | Snap a bordas da tela e a outras fences | Média | **No código** (gate Windows 11 pendente). Posicionamento livre estável primeiro (fase 1); ímã no soltar da alça. |
 | **5** | Explorer reiniciado / DPI / Win+D | Média–alta | Sobrevivência no Windows real. Piora com N fences. Antes de atalhos frágeis no desktop. |
 | **6** | Duplo clique no vazio do desktop cria fence | Média | Atalho. Settings (fase 1) continua sendo o caminho confiável. O hook já existe. |
 | **7** | Instalador. Temas só com pedido. | Baixa–média | Distribuição. Ajustar o “iniciar com o Windows” para o path do instalador (hoje é portable). Visual da fence **travado** até pedido de tema. |
 
-Não implementar 4–7 sem fechar o gate da fase anterior **e** pedido explícito.
+Não implementar 5–7 sem fechar o gate da fase anterior **e** pedido explícito.
 
 ### Fora deste ciclo (outra versão, se um dia)
 
@@ -308,9 +308,19 @@ Sem isto, várias fences são ilhas. Fora: snap.
 
 ## Fase 4 — snap
 
-**Não implementar agora.**
+**Status:** no código. Gate do desenvolvedor pendente.
 
-Ao soltar a alça ⋮⋮ (e talvez no resize): ímã em bordas da tela de trabalho e em arestas de outras fences, folga de poucos pixels. Não cria pilha automática nem empurra vizinhos.
+Ao soltar a alça ⋮⋮, e ao terminar o resize: ímã nas bordas da área de trabalho (`rcWork`, respeita a taskbar) e nas arestas de outras fences. Folga de captura: 12 DIP; alinhamento encostado (sem margem extra). Não cria pilha automática nem empurra vizinhos. Recolhida: só posição, não mexe na altura da barra.
+
+### Checklist (agente marca `[x]` só depois de implementar)
+
+- [x] Hit-test de domínio (`FenceSnap.Translate` / `Edges`) + testes
+- [x] Native: `MonitorFromWindow` + `GetMonitorInfo` (`rcWork`); App converte pixels → DIP
+- [x] Soltar a alça ⋮⋮ aplica o ímã; resize completed também
+- [x] Vizinhos não se mexem; fence recolhida não estica a barra
+- [x] `dotnet test` verde
+
+**Gate do desenvolvedor:** `[ ]` — arrastar uma fence até ~uma dúzia de pixels da borda da tela e de outra fence; soltar cola. Resize da aresta leste/sul perto de vizinho ou da tela cola. A outra fence não se desloca.
 
 ---
 

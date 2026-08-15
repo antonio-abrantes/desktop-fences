@@ -7,8 +7,8 @@
 ## Contexto da Sessão ou fase
 
 **Projeto:** DesktopFences 1.0
-**Etapa atual:** Fase 3 **fechada** (arrastar item entre fences, validada no Windows 11).
-**Objetivo desta sessão:** não avançar para a Fase 4 (snap) sem pedido.
+**Etapa atual:** Fase 4 — snap (**no código**; gate do desenvolvedor pendente).
+**Objetivo desta sessão:** validar o ímã no Windows 11. Não avançar para a Fase 5 (Explorer/DPI/Win+D) sem pedido.
 
 ---
 
@@ -18,7 +18,7 @@ Leia os seguintes arquivos integralmente, nesta ordem, antes de responder:
 
 1. `AGENTS.md` — regras de comportamento, o que pode e não pode fazer, como gerenciar fases
 2. `docs/SPEC.md` — arquitetura, stack, modelo de ícones, UI, persistência, riscos
-3. `docs/plano-implementacao.md` — estado atual **e** o detalhe da Fase 4 (próxima)
+3. `docs/plano-implementacao.md` — estado atual **e** o detalhe da Fase 5 (próxima)
 4. `README.md` — o que o produto é e como rodar
 
 Apoio (quando o assunto for relevante):
@@ -32,12 +32,12 @@ Apoio (quando o assunto for relevante):
 
 ## Instrução de Revisão
 
-A Fase 3 está **fechada** (validada no Windows 11). Não avançar para snap, Explorer/DPI, duplo clique no desktop, instalador nem empurrar vizinhos.
+A Fase 4 está **no repositório** (ímã no soltar da alça ⋮⋮ e no resize). Não empurra vizinhos nem empilha. Explorer/DPI, duplo clique no desktop, instalador e empurrar vizinhos continuam fechados.
 
 ```
-ETAPA ATUAL    : Fase 3 fechada
-ETAPA SEGUINTE : Fase 4 — snap (só com pedido)
-RESTANTES      : 5 Explorer/DPI/Win+D · 6 duplo clique no desktop · 7 instalador
+ETAPA ATUAL    : Fase 4 — snap (código pronto; validar no Windows 11)
+ETAPA SEGUINTE : Fase 5 — Explorer/DPI/Win+D (só com pedido)
+RESTANTES      : 6 duplo clique no desktop · 7 instalador
 FORA DO CICLO  : empurrar fence de baixo ao expandir
 ```
 
@@ -62,7 +62,9 @@ FORA DO CICLO  : empurrar fence de baixo ao expandir
 - [x] Desenvolvedor validou no Windows 11: Lixeira / Este computador / Rede visíveis na fence (patch `v0.3.1`)
 - [x] Fase 3 fechada: soltar no corpo de outra fence muda o dono; chrome/recolhida não ejetar; desktop ejetar; tracker de hide segue o item
 - [x] Desenvolvedor validou no Windows 11: arrastar um ou vários itens de uma fence para outra (ícone real continua escondido)
-- [ ] Não implementar fases 4–7 (snap, Explorer/DPI, duplo clique no desktop, instalador / packs de tema) sem pedido
+- [x] Fase 4 no código: ímã às bordas da área de trabalho e às arestas de outras fences ao soltar a alça e no resize; não empurra vizinhos
+- [ ] Desenvolvedor validou no Windows 11: soltar a alça ⋮⋮ perto da borda da tela / de outra fence cola; resize idem; vizinho não se mexe
+- [ ] Não implementar fases 5–7 (Explorer/DPI, duplo clique no desktop, instalador / packs de tema) sem pedido
 - [ ] Não implementar empurrar a fence de baixo ao expandir neste ciclo
 
 Se qualquer inconsistência for encontrada na revisão, reporte antes de sugerir qualquer ação.
