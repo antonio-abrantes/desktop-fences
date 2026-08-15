@@ -29,7 +29,7 @@ O DesktopFences faz o que esses clones não fazem: esconde o ícone real do Expl
 O hide/restore do MVP 1, mais várias fences no mesmo desktop:
 
 - Vidro escuro translúcido (o wallpaper aparece atrás), cantos arredondados, atrás das janelas comuns.
-- Arrastar do desktop ou do Explorer para dentro: um ou vários ícones; somem de lá, entram na grade; o ponteiro permanece a seta. Arrastar para fora devolve o ícone; o ghost acompanha o cursor. Ícones de sistema (Este computador, Lixeira, Rede) usam o pictograma da Shell.
+- Arrastar do desktop ou do Explorer para dentro: um ou vários ícones; somem de lá, entram na grade; o ponteiro permanece a seta. Arrastar para fora devolve o ícone; o ghost acompanha o cursor. Arrastar **entre** fences muda o dono sem reaparecer o ícone real. Ícones de sistema (Este computador, Lixeira, Rede) usam o pictograma da Shell.
 - Seleção, multi-seleção e reordenação dentro da fence.
 - Mover só pela alça **⋮⋮**; redimensionar pelas bordas; recolher para só a barra (▴); duplo clique no **texto** do título para renomear.
 - Sempre **pelo menos uma** fence. Nas Configurações: criar, remover (nunca a última), alinhar o título, **cores** (fundo, borda, header, texto; **aplicar a todas** ou só a selecionada; restaurar o vidro padrão).
@@ -38,7 +38,7 @@ O hide/restore do MVP 1, mais várias fences no mesmo desktop:
 - Bandeja: Pausar / Retomar / Configurações / Sobre / Sair. Pausar restaura os ícones reais.
 - Persistência em `%AppData%\DesktopFences\layout.json`.
 
-Arrastar um ícone **entre** fences ainda não existe — cada fence continua uma ilha até a Fase 3.
+Snap (Fase 4) ainda não existe.
 
 ## Requisitos
 

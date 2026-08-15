@@ -36,6 +36,7 @@ public partial class FenceWindow : Window
     private readonly ObservableCollection<FenceItemVm> _items = [];
     private readonly Guid _fenceId;
     private readonly FenceState? _bootState;
+    private readonly FenceHost? _host;
 
     private bool _collapsed;
     private double _expandedHeight = DefaultExpandedHeight;
@@ -71,10 +72,11 @@ public partial class FenceWindow : Window
     {
     }
 
-    public FenceWindow(FenceState? state)
+    public FenceWindow(FenceState? state, FenceHost? host = null)
     {
         InitializeComponent();
         _bootState = state;
+        _host = host;
         _fenceId = state?.Id ?? Guid.NewGuid();
         _titleAlignment = state?.TitleAlignment ?? TitleAlignment.Left;
         _theme = (state?.Theme ?? FenceTheme.Default()).Normalized();
@@ -221,6 +223,7 @@ public partial class FenceWindow : Window
 
     private void OnScreenLeftDown(int x, int y)
     {
+        _host?.NotifyScreenLeftDown();
         _dropConsumed = false;
         _pressOnFence = ContainsScreenPoint(x, y);
         _downX = x;
@@ -264,6 +267,8 @@ public partial class FenceWindow : Window
 
     private void UpdateInboundDesktopDrag(int x, int y, bool moved)
     {
+        if (ShouldIgnoreDesktopInbound())
+            return;
         if (_pressOnFence || _collapsed || _oleHit is null)
             return;
         if (!moved && _pressIcon is null)
@@ -356,7 +361,7 @@ public partial class FenceWindow : Window
 
     private void OnOleDragEntered()
     {
-        if (_draggingItems is { Count: > 0 })
+        if (_draggingItems is { Count: > 0 } || ShouldIgnoreDesktopInbound())
             return;
         ShowInboundGhost();
     }
@@ -365,6 +370,9 @@ public partial class FenceWindow : Window
     {
         // O hit window some ao sair da fence; o hook já esconde o ghost.
     }
+
+    private bool ShouldIgnoreDesktopInbound() =>
+        _host is { IsBlockingDesktopInbound: true } && _draggingItems is null;
 
     private int DragThresholdPx()
     {
@@ -400,7 +408,7 @@ public partial class FenceWindow : Window
         EndInboundCursor();
         _oleHit?.Withdraw();
 
-        if (!_dropConsumed && !_pressOnFence && ContainsScreenPoint(x, y))
+        if (!_dropConsumed && !_pressOnFence && ContainsScreenPoint(x, y) && !ShouldIgnoreDesktopInbound())
             AddInboundDesktopIcons();
 
         _pressIcon = null;
@@ -415,6 +423,9 @@ public partial class FenceWindow : Window
     private void OnOverlayFilesDropped(IReadOnlyList<string> files)
     {
         _dropConsumed = true;
+        if (ShouldIgnoreDesktopInbound())
+            return;
+
         if (files.Count > 0)
         {
             foreach (string file in files)
@@ -730,6 +741,7 @@ public partial class FenceWindow : Window
         FenceItemVm lead = selected[0];
         _ghost ??= new DragGhostWindow();
         _ghost.ShowItems(lead.Icon, lead.DisplayName, selected.Count - 1);
+        _host?.BeginFenceItemDrag(this);
     }
 
     private void UpdateItemDrag(int screenX, int screenY)
@@ -738,6 +750,7 @@ public partial class FenceWindow : Window
             return;
 
         _ghost?.FollowScreen(screenX, screenY, this);
+        _host?.UpdateFenceItemDrag(this, screenX, screenY);
         if (ContainsBodyScreenPoint(screenX, screenY))
             ReorderDraggingTo(screenX, screenY);
     }
@@ -752,7 +765,16 @@ public partial class FenceWindow : Window
         _draggingItems = null;
         _pendingSingleSelect = null;
 
-        if (dragged.Count > 0 && !ContainsScreenPoint(screenX, screenY))
+        if (dragged.Count == 0)
+            return;
+
+        if (_host is not null)
+        {
+            _host.CompleteItemDrag(this, dragged, screenX, screenY);
+            return;
+        }
+
+        if (!ContainsScreenPoint(screenX, screenY))
         {
             foreach (FenceItemVm eject in dragged)
                 EjectToDesktop(eject, screenX, screenY);
@@ -994,6 +1016,133 @@ public partial class FenceWindow : Window
         _hidden.ReleaseByName(item.Path ?? item.Name);
         _hidden.ReleaseByName(item.Name);
         UpdateEmptyHint();
+    }
+
+    internal void EjectItemsToDesktop(IReadOnlyList<FenceItemVm> items, int screenX, int screenY)
+    {
+        foreach (FenceItemVm item in items)
+            EjectToDesktop(item, screenX, screenY);
+    }
+
+    internal bool ContainsSameItem(FenceItemVm item) =>
+        _items.Any(existing => SameItem(existing, item));
+
+    internal IReadOnlyList<DesktopIcon> ReleaseTracked(IEnumerable<FenceItemVm> items)
+    {
+        var tracked = new List<DesktopIcon>();
+        foreach (FenceItemVm item in items)
+        {
+            DesktopIcon? remembered = _hidden.ReleaseByName(item.Path ?? item.Name)
+                                      ?? _hidden.ReleaseByName(item.Name);
+            if (remembered is not null)
+                tracked.Add(remembered);
+        }
+
+        return tracked;
+    }
+
+    internal List<FenceItemVm> DetachForTransfer(IReadOnlyList<FenceItemVm> items)
+    {
+        var moved = new List<FenceItemVm>(items.Count);
+        foreach (FenceItemVm item in items)
+        {
+            if (!_items.Remove(item))
+                continue;
+            item.IsDragging = false;
+            item.IsSelected = false;
+            moved.Add(item);
+        }
+
+        if (_selected is not null && !_items.Contains(_selected))
+            _selected = null;
+        UpdateEmptyHint();
+        return moved;
+    }
+
+    internal void AcceptTransferredItems(
+        IReadOnlyList<FenceItemVm> items,
+        IReadOnlyList<DesktopIcon> tracked,
+        int screenX,
+        int screenY)
+    {
+        foreach (DesktopIcon icon in tracked)
+            _hidden.Remember(icon);
+
+        int insert = InsertIndexAtScreen(screenX, screenY);
+        int inserted = 0;
+        foreach (FenceItemVm item in items)
+        {
+            if (ContainsSameItem(item))
+                continue;
+            item.IsDragging = false;
+            item.IsSelected = false;
+            _items.Insert(Math.Clamp(insert + inserted, 0, _items.Count), item);
+            inserted++;
+        }
+
+        UpdateEmptyHint();
+    }
+
+    private int InsertIndexAtScreen(int screenX, int screenY)
+    {
+        if (_collapsed || !IsVisible)
+            return _items.Count;
+
+        try
+        {
+            System.Windows.Point local = IconGrid.PointFromScreen(new System.Windows.Point(screenX, screenY));
+            double panelWidth = IconGrid.ActualWidth > 1 ? IconGrid.ActualWidth : BodyHost.ActualWidth;
+            return IconGridReorder.InsertIndex(_items.Count, local.X, local.Y, TileWidth, TileHeight, panelWidth);
+        }
+        catch (InvalidOperationException)
+        {
+            return _items.Count;
+        }
+    }
+
+    internal bool TryGetScreenTarget(out FenceScreenTarget target)
+    {
+        target = default;
+        if (!IsVisible || WindowState == WindowState.Minimized || ActualWidth < 1 || ActualHeight < 1)
+            return false;
+
+        try
+        {
+            System.Drawing.Rectangle window = FenceScreenRect();
+            System.Drawing.Rectangle body = _collapsed
+                ? new System.Drawing.Rectangle(window.X, window.Y, 0, 0)
+                : FenceBodyScreenRect();
+            target = new FenceScreenTarget(
+                _fenceId,
+                window.X,
+                window.Y,
+                window.Width,
+                window.Height,
+                body.X,
+                body.Y,
+                body.Width,
+                body.Height,
+                _collapsed);
+            return true;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
+    internal void ShowDropChrome(bool lit) => SetChromeBorder(lit);
+
+    internal void PersistLayout() => SaveLayout();
+
+    private static bool SameItem(FenceItemVm left, FenceItemVm right)
+    {
+        if (!string.IsNullOrWhiteSpace(left.Path)
+            && !string.IsNullOrWhiteSpace(right.Path)
+            && string.Equals(left.Path, right.Path, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return string.Equals(left.Name, right.Name, StringComparison.OrdinalIgnoreCase);
     }
 
     private bool RestoreTrackedIcon(FenceItemVm item)

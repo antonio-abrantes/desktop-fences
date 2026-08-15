@@ -7,8 +7,8 @@
 ## Contexto da Sessão ou fase
 
 **Projeto:** DesktopFences 1.0
-**Etapa atual:** Fase 2 **fechada** (idioma pt/en). MVP 2 = Fases 1 + 2 (`v0.3.1`).
-**Objetivo desta sessão:** não avançar para a Fase 3 (arrastar item entre fences) sem pedido.
+**Etapa atual:** Fase 3 **fechada** (arrastar item entre fences, validada no Windows 11).
+**Objetivo desta sessão:** não avançar para a Fase 4 (snap) sem pedido.
 
 ---
 
@@ -18,7 +18,7 @@ Leia os seguintes arquivos integralmente, nesta ordem, antes de responder:
 
 1. `AGENTS.md` — regras de comportamento, o que pode e não pode fazer, como gerenciar fases
 2. `docs/SPEC.md` — arquitetura, stack, modelo de ícones, UI, persistência, riscos
-3. `docs/plano-implementacao.md` — estado atual **e** o detalhe da Fase 3 (próxima)
+3. `docs/plano-implementacao.md` — estado atual **e** o detalhe da Fase 4 (próxima)
 4. `README.md` — o que o produto é e como rodar
 
 Apoio (quando o assunto for relevante):
@@ -32,11 +32,12 @@ Apoio (quando o assunto for relevante):
 
 ## Instrução de Revisão
 
-A Fase 2 está **fechada** (validada no Windows 11). Não avançar para drag entre fences, snap, Explorer/DPI, duplo clique no desktop, instalador nem empurrar vizinhos. Cores por fence já estão no MVP 2; “temas” da Fase 7 são packs nomeados / instalador — não reabrir o vidro sem pedido.
+A Fase 3 está **fechada** (validada no Windows 11). Não avançar para snap, Explorer/DPI, duplo clique no desktop, instalador nem empurrar vizinhos.
 
 ```
-ETAPA ATUAL    : Fase 2 fechada (MVP 2)
-ETAPA SEGUINTE : Fase 3 — arrastar item entre fences (só com pedido)
+ETAPA ATUAL    : Fase 3 fechada
+ETAPA SEGUINTE : Fase 4 — snap (só com pedido)
+RESTANTES      : 5 Explorer/DPI/Win+D · 6 duplo clique no desktop · 7 instalador
 FORA DO CICLO  : empurrar fence de baixo ao expandir
 ```
 
@@ -59,7 +60,9 @@ FORA DO CICLO  : empurrar fence de baixo ao expandir
 - [x] Fase 2 fechada (UI pt/en, seletor Sistema/PT/EN, `uiLanguage` opcional)
 - [x] Ícones de sistema (Este computador, Lixeira, Rede): ícone e abrir via namespace do desktop, não só path de ficheiro
 - [x] Desenvolvedor validou no Windows 11: Lixeira / Este computador / Rede visíveis na fence (patch `v0.3.1`)
-- [ ] Não implementar fases 3–7 (drag entre fences, snap, Explorer/DPI, duplo clique no desktop, instalador / packs de tema) sem pedido
+- [x] Fase 3 fechada: soltar no corpo de outra fence muda o dono; chrome/recolhida não ejetar; desktop ejetar; tracker de hide segue o item
+- [x] Desenvolvedor validou no Windows 11: arrastar um ou vários itens de uma fence para outra (ícone real continua escondido)
+- [ ] Não implementar fases 4–7 (snap, Explorer/DPI, duplo clique no desktop, instalador / packs de tema) sem pedido
 - [ ] Não implementar empurrar a fence de baixo ao expandir neste ciclo
 
 Se qualquer inconsistência for encontrada na revisão, reporte antes de sugerir qualquer ação.

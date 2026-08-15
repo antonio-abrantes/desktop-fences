@@ -1,6 +1,8 @@
 using DesktopFences.App.Localization;
+using DesktopFences.App.ViewModels;
 using DesktopFences.Core.Fences;
 using DesktopFences.Core.Models;
+using DesktopFences.Core.Occupancy;
 using DesktopFences.Core.Persistence;
 
 namespace DesktopFences.App;
@@ -11,6 +13,8 @@ public sealed class FenceHost
     private readonly List<FenceWindow> _windows = [];
     private bool _saving;
     private bool _paused;
+    private FenceWindow? _itemDragSource;
+    private bool _blockDesktopInbound;
 
     public event Action? FencesChanged;
 
@@ -19,6 +23,8 @@ public sealed class FenceHost
     public string UiLanguage { get; private set; } = UiLanguageCodes.System;
 
     public IReadOnlyList<FenceWindow> Windows => _windows;
+
+    public bool IsBlockingDesktopInbound => _blockDesktopInbound;
 
     public void Start()
     {
@@ -155,9 +161,90 @@ public sealed class FenceHost
     public IReadOnlyList<FenceSummary> Summaries() =>
         _windows.Select(w => new FenceSummary(w.FenceId, w.DisplayTitle, w.CurrentTitleAlignment)).ToList();
 
+    internal void NotifyScreenLeftDown()
+    {
+        _blockDesktopInbound = false;
+        _itemDragSource = null;
+        ClearDropHighlights();
+    }
+
+    internal void BeginFenceItemDrag(FenceWindow source)
+    {
+        _itemDragSource = source;
+        _blockDesktopInbound = true;
+        ClearDropHighlights();
+    }
+
+    internal void UpdateFenceItemDrag(FenceWindow source, int screenX, int screenY)
+    {
+        if (!ReferenceEquals(_itemDragSource, source))
+            return;
+
+        Guid? destId = FenceItemDrop.TransferTargetId(SnapshotScreenTargets(), source.FenceId, screenX, screenY);
+        foreach (FenceWindow window in _windows)
+            window.ShowDropChrome(destId is { } id && window.FenceId == id);
+    }
+
+    internal void CompleteItemDrag(FenceWindow source, IReadOnlyList<FenceItemVm> items, int screenX, int screenY)
+    {
+        ClearDropHighlights();
+        _itemDragSource = null;
+
+        FenceItemDropResult drop = FenceItemDrop.Evaluate(
+            SnapshotScreenTargets(), source.FenceId, screenX, screenY);
+        if (drop.Kind == FenceItemDropKind.Transfer && drop.TargetId is { } destId)
+        {
+            FenceWindow? dest = _windows.FirstOrDefault(w => w.FenceId == destId);
+            if (dest is not null && TransferItems(source, dest, items, screenX, screenY))
+            {
+                SaveAll();
+                return;
+            }
+        }
+
+        if (drop.Kind == FenceItemDropKind.Eject)
+            source.EjectItemsToDesktop(items, screenX, screenY);
+
+        source.PersistLayout();
+    }
+
+    private bool TransferItems(
+        FenceWindow source,
+        FenceWindow dest,
+        IReadOnlyList<FenceItemVm> items,
+        int screenX,
+        int screenY)
+    {
+        List<FenceItemVm> moving = items.Where(item => !dest.ContainsSameItem(item)).ToList();
+        if (moving.Count == 0)
+            return false;
+
+        IReadOnlyList<DesktopIcon> tracked = source.ReleaseTracked(moving);
+        dest.AcceptTransferredItems(source.DetachForTransfer(moving), tracked, screenX, screenY);
+        return true;
+    }
+
+    private IReadOnlyList<FenceScreenTarget> SnapshotScreenTargets()
+    {
+        var targets = new List<FenceScreenTarget>(_windows.Count);
+        foreach (FenceWindow window in _windows)
+        {
+            if (window.TryGetScreenTarget(out FenceScreenTarget target))
+                targets.Add(target);
+        }
+
+        return targets;
+    }
+
+    private void ClearDropHighlights()
+    {
+        foreach (FenceWindow window in _windows)
+            window.ShowDropChrome(false);
+    }
+
     private FenceWindow Spawn(FenceState state)
     {
-        var window = new FenceWindow(state);
+        var window = new FenceWindow(state, this);
         window.LayoutChanged += OnWindowLayoutChanged;
         _windows.Add(window);
         window.Show();

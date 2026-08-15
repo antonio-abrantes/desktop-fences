@@ -12,7 +12,7 @@ App Windows 11 que agrupa ícones **reais** da área de trabalho em fences retan
 | `DesktopFences.Native` | SysListView32, COM Shell, OLE drop, DWM, âncora | Sim, e só aqui |
 | `DesktopFences.App` | XAML, fence, bandeja, ghost | Só via serviços Native |
 
-**Estado:** MVP 2 (`v0.3.1`) — N fences, Configurações (cores, idioma pt/en, iniciar com o Windows), hide/restore do MVP 1. Ícones virtuais do desktop (Lixeira, Este computador, Rede) usam o namespace da Shell, não um ficheiro. Próxima: arrastar item entre fences (Fase 3), só com pedido. Resto do ciclo: [plano-implementacao.md](plano-implementacao.md). Empurrar a fence de baixo ao expandir está **fora** deste ciclo.
+**Estado:** MVP 2 (`v0.3.1`) + Fase 3 fechada (arrastar item entre fences, validada no Windows 11). N fences, Configurações (cores, idioma pt/en, iniciar com o Windows), hide/restore do MVP 1. Ícones virtuais do desktop (Lixeira, Este computador, Rede) usam o namespace da Shell, não um ficheiro. Próxima: snap (Fase 4), só com pedido. Resto do ciclo: [plano-implementacao.md](plano-implementacao.md). Empurrar a fence de baixo ao expandir está **fora** deste ciclo.
 
 ---
 
@@ -90,7 +90,7 @@ Contrato vigente — [ADR-0004](adr/0004-ole-inbound-drop.md):
 - **Inbound:** `RegisterDragDrop` nativo + alvo OLE minúsculo no cursor; ghost WPF próprio (com `+N` se a seleção do desktop tiver vários ícones); cursor de “proibido” substituído pela seta só enquanto o ponteiro está sobre a fence. A seleção do `SysListView32` é lida no início do arraste (`LVM_GETNEXTITEM` / `LVNI_SELECTED`).
 - **Outbound / reorder:** não usamos `DoDragDrop` do Explorer; hook `WH_MOUSE_LL` + `DragGhostWindow` (click-through).
 - Soltar na fence esconde o ícone real e adiciona na grade; soltar fora restaura.
-- Entre fences: Fase 3. Cada fence continua uma ilha até lá.
+- Entre fences: soltar no **corpo** de outra fence muda o dono (JSON). O hide do ícone real permanece; o tracker segue o item. Barra de título / fence recolhida não transfere nem ejetar.
 
 ### 2.5 Persistência
 
@@ -124,9 +124,8 @@ Arquivo único `%AppData%\DesktopFences\layout.json` (`LayoutStore`). Lista de f
 
 Coordenadas da fence em **DIPs** WPF; posições de ícone em **pixels** do ListView. Conversão é responsabilidade da App (DPI). Core só persiste números.
 
-### 2.6 Fora do MVP 2 (ciclo em `plano-implementacao.md`)
+### 2.6 Fora do que já está no código (ciclo em `plano-implementacao.md`)
 
-- Fase 3: arrastar item entre fences.
 - Fase 4: snap a bordas e a outras fences.
 - Fase 5: Explorer reiniciado / DPI / Win+D.
 - Fase 6: duplo clique em vazio do desktop → cria fence.

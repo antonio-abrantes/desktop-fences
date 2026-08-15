@@ -7,7 +7,7 @@ Convenção:
 - `[x]` feito no repositório (agente) e/ou confirmado pelo desenvolvedor na sessão.
 - `[ ]` pendente — **não implementar** sem o gate no `SESSION-HEADER.md` **e** pedido explícito.
 - A Fase 1 abaixo está **fechada**. N fences, Configurações, cores por fence, Sobre, iniciar com o Windows (portable), mutex.
-- A Fase 2 (idioma pt/en) está **fechada** (validada no Windows 11). MVP 2 = Fases 1 + 2, tag `v0.3.1`. A seguinte (arrastar item entre fences) só com pedido.
+- A Fase 2 (idioma pt/en) está **fechada** (validada no Windows 11). MVP 2 **fechado** = Fases 1 + 2 + patch ícones de sistema, tag `v0.3.1`. A Fase 3 (arrastar item entre fences) está **fechada** (validada no Windows 11). Snap (Fase 4) só com pedido.
 
 ---
 
@@ -46,13 +46,13 @@ Convenção:
 |---|---|---|---|
 | **1** | Várias fences + settings (bandeja, criar/remover, alinhamento do título) | Média | Sem host de N janelas e sem UI de criar, nada do resto existe. O JSON já tem lista; a App ainda abre uma janela e **grava só ela**. |
 | **2** | Idioma da UI: português e inglês | Baixa | Só texto da App. Não mexe em Native, hide/restore, drop nem no schema dos ícones. Quanto antes, menos string nova para extrair nas fases seguintes. |
-| **3** | Arrastar item de uma fence para outra | Média | Reusa o ghost; N fences sem isso são ilhas. |
+| **3** | Arrastar item de uma fence para outra | Média | **Fechada** (validada no Windows 11). Reusa o ghost; N fences sem isso são ilhas. |
 | **4** | Snap a bordas da tela e a outras fences | Média | Posicionamento livre estável primeiro (fase 1); ímã no soltar da alça. |
 | **5** | Explorer reiniciado / DPI / Win+D | Média–alta | Sobrevivência no Windows real. Piora com N fences. Antes de atalhos frágeis no desktop. |
 | **6** | Duplo clique no vazio do desktop cria fence | Média | Atalho. Settings (fase 1) continua sendo o caminho confiável. O hook já existe. |
 | **7** | Instalador. Temas só com pedido. | Baixa–média | Distribuição. Ajustar o “iniciar com o Windows” para o path do instalador (hoje é portable). Visual da fence **travado** até pedido de tema. |
 
-Não pular a fase 1. Não implementar 2–7 sem fechar o gate da fase anterior **e** pedido explícito.
+Não implementar 4–7 sem fechar o gate da fase anterior **e** pedido explícito.
 
 ### Fora deste ciclo (outra versão, se um dia)
 
@@ -288,11 +288,21 @@ Lixeira / Este computador / Rede não são ficheiros. `SHGetFileInfo` no path de
 
 ## Fase 3 — item de uma fence para outra
 
-**Não implementar agora.**
+**Status:** fechada (validada no Windows 11).
 
-Ghost já segue o cursor. No soltar, se o ponto está noutra fence, o item muda de dono (JSON + hide continua no mesmo ícone real). Hit-test: qual `FenceWindow` contém o ponto de ecrã.
+Ghost já segue o cursor. No soltar, se o ponto está no **corpo** de outra fence (não recolhida), o item muda de dono: sai da lista de origem, entra na de destino na célula sob o cursor. O hide no `SysListView32` **não** é restaurado nem refeito — o `HiddenIconTracker` passa o índice/posição original para a fence nova. Soltar no desktop continua a ejetar. Soltar na barra de título ou numa fence recolhida não transfere nem devolve o ícone ao desktop.
 
 Sem isto, várias fences são ilhas. Fora: snap.
+
+### Checklist (agente marca `[x]` só depois de implementar)
+
+- [x] Hit-test de domínio (`FenceItemDrop`): corpo = transferir; chrome/recolhida = ficar; desktop = ejetar
+- [x] `FenceHost` move o bloco (multi-select) sem `Restore` / `Hide` extra
+- [x] Destino acende a borda de drop enquanto o ghost está por cima
+- [x] Inbound OLE do desktop não consome o arraste entre fences
+- [x] `dotnet test` verde
+
+**Gate do desenvolvedor:** `[x]` — duas fences; arrastar um e vários ícones da A para a B; o original continua escondido no desktop; Pausar/Sair ainda restaura; soltar no vazio do desktop ainda ejetar.
 
 ---
 
