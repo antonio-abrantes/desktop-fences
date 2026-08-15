@@ -1,0 +1,62 @@
+## Build
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+publish/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+## Visual Studio / Rider
+.vs/
+.idea/
+*.rsuser
+*.ssc
+*.swo
+*.swp
+*~
+
+## NuGet
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## Test
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.VisualState.xml
+TestResult.xml
+coverage*.json
+coverage*.xml
+*.coverage
+*.coveragexml
+
+## Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+## Publish leftovers
+*.exe
+*.pdb
+*.dll
+!src/**/*.dll
+*.msi
+*.msix
+*.appx
+
+## Secrets / local
+*.pfx
+*.snk
+.env
+.env.*

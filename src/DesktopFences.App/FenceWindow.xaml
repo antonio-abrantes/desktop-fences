@@ -1,0 +1,205 @@
+<Window x:Class="DesktopFences.App.FenceWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="Nova fence"
+        Icon="pack://application:,,,/Assets/app.ico"
+        Width="380" Height="280"
+        MinWidth="180" MinHeight="40"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="True"
+        Background="#020C0C12"
+        ShowInTaskbar="False"
+        AllowDrop="False"
+        PreviewDragOver="OnPreviewDragOver"
+        PreviewDrop="OnPreviewDrop"
+        DragOver="OnDragOver"
+        DragEnter="OnDragEnter"
+        DragLeave="OnDragLeave"
+        Drop="OnDrop"
+        Loaded="OnLoaded"
+        SourceInitialized="OnSourceInitialized"
+        Deactivated="OnDeactivated"
+        Closed="OnClosed"
+        PreviewMouseLeftButtonDown="OnWindowPreviewMouseDown">
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome x:Name="ChromeBehavior"
+                            CaptionHeight="0"
+                            ResizeBorderThickness="0"
+                            GlassFrameThickness="0"
+                            CornerRadius="8"
+                            UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
+
+    <Border x:Name="Chrome"
+            CornerRadius="8"
+            BorderBrush="#4DFFFFFF"
+            BorderThickness="1"
+            Background="#A80C0C12"
+            ClipToBounds="True">
+        <Border.ContextMenu>
+            <ContextMenu>
+                <MenuItem Header="Recolher / expandir" Click="ToggleCollapse_Click"/>
+                <MenuItem Header="Diagnóstico" Click="BtnDiagnostics_Click"/>
+                <Separator/>
+                <MenuItem Header="Fechar fence" Click="BtnClose_Click"/>
+            </ContextMenu>
+        </Border.ContextMenu>
+
+        <Grid>
+        <DockPanel>
+            <Grid x:Name="TitleBar"
+                  DockPanel.Dock="Top"
+                  Height="36"
+                  Background="#33000000"
+                  shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                  PreviewMouseLeftButtonDown="TitleBar_PreviewMouseDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Border x:Name="MoveGrip"
+                        Grid.Column="0"
+                        Width="36"
+                        Cursor="SizeAll"
+                        Background="#01000000"
+                        ToolTip="Arrastar"
+                        shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                        PreviewMouseLeftButtonDown="MoveGrip_MouseDown">
+                    <TextBlock Text="⋮⋮"
+                               FontSize="14"
+                               FontWeight="Bold"
+                               Foreground="#AAFFFFFF"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               IsHitTestVisible="False"/>
+                </Border>
+
+                <Grid x:Name="TitleSlot"
+                      Grid.Column="1"
+                      VerticalAlignment="Stretch">
+                    <TextBlock x:Name="TitleDisplay"
+                               HorizontalAlignment="Left"
+                               VerticalAlignment="Center"
+                               Text="Nova fence"
+                               Foreground="#F2FFFFFF"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               TextWrapping="NoWrap"
+                               TextTrimming="CharacterEllipsis"
+                               Padding="4,8,4,8"
+                               MaxWidth="{Binding ActualWidth, ElementName=TitleSlot}"
+                               MouseLeftButtonDown="TitleDisplay_MouseLeftButtonDown"/>
+                    <TextBox x:Name="TitleEdit"
+                             HorizontalAlignment="Left"
+                             VerticalAlignment="Center"
+                             Visibility="Collapsed"
+                             Background="#22000000"
+                             BorderThickness="0"
+                             Foreground="#F2FFFFFF"
+                             FontSize="13"
+                             FontWeight="SemiBold"
+                             Padding="4,8,4,8"
+                             MinWidth="80"
+                             MaxWidth="{Binding ActualWidth, ElementName=TitleSlot}"
+                             CaretBrush="White"
+                             AllowDrop="False"
+                             LostFocus="TitleEdit_LostFocus"
+                             KeyDown="TitleEdit_KeyDown"/>
+                </Grid>
+
+                <Border Grid.Column="2"
+                        x:Name="BtnCollapse"
+                        Width="40"
+                        Height="36"
+                        Margin="0,0,2,0"
+                        Cursor="Hand"
+                        Background="#01000000"
+                        ToolTip="Recolher (só a barra)"
+                        shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                        PreviewMouseLeftButtonDown="ToggleCollapse_MouseDown">
+                    <TextBlock x:Name="BtnCollapseGlyph"
+                               Text="▴"
+                               FontSize="16"
+                               Foreground="#CCFFFFFF"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               IsHitTestVisible="False"/>
+                </Border>
+            </Grid>
+
+            <ScrollViewer x:Name="BodyHost"
+                          Background="#01000000"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Padding="10,4,10,12"
+                          ScrollChanged="OnBodyScrollChanged">
+                <ScrollViewer.Resources>
+                    <Style TargetType="ScrollBar" BasedOn="{StaticResource FenceScrollBar}"/>
+                </ScrollViewer.Resources>
+                <Grid Background="#01000000"
+                      PreviewMouseLeftButtonDown="Body_MouseDown">
+                    <TextBlock x:Name="EmptyHint"
+                               Text="Arraste ícones para cá"
+                               Foreground="#73FFFFFF"
+                               FontSize="13"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               IsHitTestVisible="False"/>
+
+                    <ItemsControl x:Name="IconGrid">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource IconTile}"
+                                        ToolTip="{Binding DisplayName}"
+                                        PreviewMouseLeftButtonDown="IconTile_PreviewMouseDown"
+                                        PreviewMouseMove="IconTile_PreviewMouseMove"
+                                        MouseLeftButtonUp="IconTile_MouseUp">
+                                    <Border.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Remover da fence" Click="RemoveItem_Click"/>
+                                        </ContextMenu>
+                                    </Border.ContextMenu>
+                                    <StackPanel Width="76" Margin="4">
+                                        <Image Source="{Binding Icon}"
+                                               Width="32" Height="32"
+                                               HorizontalAlignment="Center"
+                                               IsHitTestVisible="False"
+                                               RenderOptions.BitmapScalingMode="HighQuality"/>
+                                        <TextBlock Text="{Binding DisplayName}"
+                                                   Foreground="#F2FFFFFF"
+                                                   FontSize="11"
+                                                   TextAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   TextWrapping="Wrap"
+                                                   MaxHeight="32"
+                                                   IsHitTestVisible="False"
+                                                   Margin="0,6,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </ScrollViewer>
+        </DockPanel>
+
+            <Thumb x:Name="ResizeN" Style="{StaticResource ResizeThumb}" Tag="N" Height="6" HorizontalAlignment="Stretch" VerticalAlignment="Top" Cursor="SizeNS" DragDelta="ResizeThumb_DragDelta" DragCompleted="ResizeThumb_DragCompleted"/>
+            <Thumb x:Name="ResizeS" Style="{StaticResource ResizeThumb}" Tag="S" Height="6" Margin="8,0,14,0" HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Cursor="SizeNS" DragDelta="ResizeThumb_DragDelta" DragCompleted="ResizeThumb_DragCompleted"/>
+            <Thumb x:Name="ResizeW" Style="{StaticResource ResizeThumb}" Tag="W" Width="6" HorizontalAlignment="Left" VerticalAlignment="Stretch" Cursor="SizeWE" DragDelta="ResizeThumb_DragDelta" DragCompleted="ResizeThumb_DragCompleted"/>
+            <Thumb x:Name="ResizeE" Style="{StaticResource ResizeThumb}" Tag="E" Width="6" HorizontalAlignment="Right" VerticalAlignment="Stretch" Cursor="SizeWE" DragDelta="ResizeThumb_DragDelta" DragCompleted="ResizeThumb_DragCompleted"/>
+            <Thumb x:Name="ResizeNW" Style="{StaticResource ResizeThumb}" Tag="NW" Width="10" Height="10" HorizontalAlignment="Left" VerticalAlignment="Top" Cursor="SizeNWSE" DragDelta="ResizeThumb_DragDelta" DragCompleted="ResizeThumb_DragCompleted"/>
+            <Thumb x:Name="ResizeNE" Style="{StaticResource ResizeThumb}" Tag="NE" Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Top" Cursor="SizeNESW" DragDelta="ResizeThumb_DragDelta" DragCompleted="ResizeThumb_DragCompleted"/>
+            <Thumb x:Name="ResizeSW" Style="{StaticResource ResizeThumb}" Tag="SW" Width="10" Height="10" HorizontalAlignment="Left" VerticalAlignment="Bottom" Cursor="SizeNESW" DragDelta="ResizeThumb_DragDelta" DragCompleted="ResizeThumb_DragCompleted"/>
+            <Thumb x:Name="ResizeSE" Style="{StaticResource ResizeThumb}" Tag="SE" Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Bottom" Cursor="SizeNWSE" DragDelta="ResizeThumb_DragDelta" DragCompleted="ResizeThumb_DragCompleted"/>
+        </Grid>
+    </Border>
+</Window>

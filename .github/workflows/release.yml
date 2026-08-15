@@ -1,0 +1,84 @@
+# Gera o build para download SOMENTE quando uma tag v* é enviada.
+# Push de branch/commit não dispara este workflow.
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.rid }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [win-x64, win-arm64]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Compute version from tag
+        id: ver
+        shell: pwsh
+        run: |
+          $tag = '${{ github.ref_name }}'
+          $v = $tag.TrimStart('v')
+          if ([string]::IsNullOrWhiteSpace($v)) { throw "Tag inválida: $tag" }
+          "version=$v" >> $env:GITHUB_OUTPUT
+          Write-Host "Version = $v"
+
+      - name: Test
+        run: dotnet test DesktopFences.sln -c Release --nologo
+
+      - name: Publish self-contained
+        run: >
+          dotnet publish src/DesktopFences.App/DesktopFences.App.csproj
+          -c Release
+          -r ${{ matrix.rid }}
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:Version=${{ steps.ver.outputs.version }}
+          -p:DebugType=none
+          -o ${{ github.workspace }}/publish/${{ matrix.rid }}
+
+      - name: Pack zip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          $zip = "out/DesktopFences-${{ steps.ver.outputs.version }}-${{ matrix.rid }}.zip"
+          Compress-Archive -Path "publish/${{ matrix.rid }}/*" -DestinationPath $zip -Force
+          Get-ChildItem out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DesktopFences-${{ matrix.rid }}
+          path: out/*.zip
+          if-no-files-found: error
+
+  release:
+    name: GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.zip
+          generate_release_notes: true
+          fail_on_unmatched_files: true

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>DesktopFences.Native</RootNamespace>
+    <AssemblyName>DesktopFences.Native</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DesktopFences.Core\DesktopFences.Core.csproj" />
+  </ItemGroup>
+
+</Project>

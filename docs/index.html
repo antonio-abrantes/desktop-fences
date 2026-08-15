@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DesktopFences — real icons, one glass fence</title>
+  <meta name="description" content="A native Windows 11 app that groups real desktop icons into a translucent fence. The originals hide. Drag them out and they come back." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #07080c;
+      --glass: rgba(12, 12, 18, 0.66);
+      --stroke: rgba(255, 255, 255, 0.10);
+      --stroke-strong: rgba(255, 255, 255, 0.18);
+      --ice: #5b8def;
+      --ice-dim: rgba(91, 141, 239, 0.18);
+      --text: #f2f4f8;
+      --muted: #9aa3b5;
+      --radius: 8px;
+      --max: 1080px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: Outfit, system-ui, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    .wallpaper {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background:
+        radial-gradient(900px 500px at 12% 8%, #1a3a5c 0%, transparent 55%),
+        radial-gradient(700px 480px at 88% 18%, #3a1a28 0%, transparent 50%),
+        radial-gradient(800px 600px at 50% 100%, #0e2a24 0%, transparent 55%),
+        linear-gradient(165deg, #0b1220, #121018 55%, #0a0c10);
+    }
+
+    .wallpaper::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 72px 72px;
+      mask-image: radial-gradient(ellipse at 50% 20%, black 20%, transparent 75%);
+    }
+
+    a { color: var(--ice); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    header {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 28px 24px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .mark {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .mark:hover { text-decoration: none; }
+
+    .squircle {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(160deg, rgba(255,255,255,0.12), rgba(12,12,18,0.9));
+      border: 1px solid rgba(91, 141, 239, 0.55);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px;
+      padding: 7px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.06) inset;
+    }
+
+    .squircle span {
+      background: var(--ice);
+      border-radius: 2px;
+      opacity: 0.9;
+    }
+    .squircle span:nth-child(2) { opacity: 0.55; }
+    .squircle span:nth-child(3) { opacity: 0.4; }
+    .squircle span:nth-child(4) { opacity: 0.75; }
+
+    nav {
+      display: flex;
+      gap: 22px;
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+
+    nav a { color: var(--muted); }
+    nav a:hover { color: var(--text); text-decoration: none; }
+
+    .hero {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 72px 24px 40px;
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 56px;
+      align-items: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ice);
+      background: var(--ice-dim);
+      border: 1px solid rgba(91, 141, 239, 0.35);
+      border-radius: 999px;
+      padding: 6px 12px;
+      margin-bottom: 22px;
+    }
+
+    .badge i {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--ice);
+      box-shadow: 0 0 10px var(--ice);
+    }
+
+    h1 {
+      font-size: clamp(2.4rem, 5vw, 3.6rem);
+      font-weight: 700;
+      letter-spacing: -0.045em;
+      line-height: 1.05;
+      margin-bottom: 20px;
+    }
+
+    .lede {
+      font-family: Newsreader, Georgia, serif;
+      font-size: 1.28rem;
+      font-weight: 400;
+      color: #c9d0dc;
+      max-width: 34ch;
+      margin-bottom: 28px;
+    }
+
+    .cta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 18px;
+      border-radius: var(--radius);
+      font-weight: 600;
+      font-size: 0.95rem;
+      border: 1px solid transparent;
+      text-decoration: none;
+    }
+
+    .btn:hover { text-decoration: none; }
+
+    .btn-primary {
+      background: var(--ice);
+      color: #071018;
+    }
+
+    .btn-ghost {
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      border-color: var(--stroke-strong);
+    }
+
+    .note {
+      margin-top: 18px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    /* Fence mock */
+    .stage {
+      position: relative;
+      min-height: 420px;
+    }
+
+    .desk-icon {
+      position: absolute;
+      width: 64px;
+      text-align: center;
+      font-size: 0.68rem;
+      color: #e8edf5;
+      text-shadow: 0 1px 4px #000;
+      opacity: 0.22;
+      filter: blur(0.2px);
+    }
+
+    .desk-icon .tile {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 6px;
+      border-radius: 4px;
+      background: linear-gradient(180deg, #7aa0e8, #3d5a99);
+    }
+
+    .fence {
+      position: relative;
+      z-index: 2;
+      width: min(360px, 100%);
+      margin-left: auto;
+      background: var(--glass);
+      backdrop-filter: blur(18px) saturate(1.2);
+      -webkit-backdrop-filter: blur(18px) saturate(1.2);
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow:
+        0 24px 60px rgba(0,0,0,0.45),
+        0 0 0 1px rgba(255,255,255,0.04) inset;
+      overflow: hidden;
+    }
+
+    .titlebar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--stroke);
+    }
+
+    .grip {
+      color: #7d8696;
+      letter-spacing: -1px;
+      font-size: 0.85rem;
+      user-select: none;
+    }
+
+    .title {
+      flex: 1;
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: #dfe6f2;
+    }
+
+    .chevron {
+      color: var(--muted);
+      font-size: 0.75rem;
+      padding: 0 4px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px 6px;
+      padding: 14px 12px 18px;
+    }
+
+    .item {
+      text-align: center;
+      font-size: 0.68rem;
+      color: #d5dbe6;
+    }
+
+    .item .ico {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 6px;
+      border-radius: 4px;
+    }
+
+    .folder { background: linear-gradient(180deg, #f0c36b, #c9892a); }
+    .lnk { background: linear-gradient(180deg, #7eb6ff, #3b6fd4); }
+    .pdf { background: linear-gradient(180deg, #e07070, #a83232); }
+    .zip { background: linear-gradient(180deg, #c9a06a, #7a5a32); }
+
+    .ghost {
+      position: absolute;
+      right: 18%;
+      bottom: 8%;
+      z-index: 3;
+      width: 56px;
+      padding: 8px 6px 6px;
+      background: rgba(20, 22, 30, 0.82);
+      border: 1px solid var(--stroke-strong);
+      border-radius: 6px;
+      text-align: center;
+      font-size: 0.65rem;
+      color: #e8edf5;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.4);
+      transform: rotate(-6deg);
+      animation: float 3.6s ease-in-out infinite;
+    }
+
+    .ghost .ico {
+      width: 32px;
+      height: 32px;
+      margin: 0 auto 4px;
+      border-radius: 4px;
+      background: linear-gradient(180deg, #7eb6ff, #3b6fd4);
+    }
+
+    @keyframes float {
+      0%, 100% { transform: rotate(-6deg) translateY(0); }
+      50% { transform: rotate(-4deg) translateY(-8px); }
+    }
+
+    section {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 28px 24px 8px;
+    }
+
+    h2 {
+      font-size: 1.7rem;
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+    }
+
+    .section-lede {
+      color: var(--muted);
+      max-width: 62ch;
+      margin-bottom: 28px;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.035);
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      padding: 22px;
+    }
+
+    .card h3 {
+      font-size: 1.05rem;
+      margin-bottom: 8px;
+    }
+
+    .card p, .card li {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .card ul {
+      margin-left: 1.1em;
+      display: grid;
+      gap: 7px;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .feat {
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      padding: 18px 18px 16px;
+      background: rgba(7, 8, 12, 0.35);
+    }
+
+    .feat b {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .feat span { color: var(--muted); font-size: 0.9rem; }
+
+    .roadmap {
+      display: grid;
+      gap: 12px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 72px 1fr auto;
+      gap: 16px;
+      align-items: start;
+      padding: 16px 18px;
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.03);
+    }
+
+    .step .n {
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      color: var(--ice);
+      font-size: 0.8rem;
+      padding-top: 3px;
+    }
+
+    .step h3 { font-size: 1rem; margin-bottom: 4px; }
+    .step p { color: var(--muted); font-size: 0.9rem; }
+
+    .tag {
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border: 1px solid var(--stroke);
+      border-radius: 999px;
+      padding: 4px 8px;
+      white-space: nowrap;
+    }
+
+    .soon {
+      opacity: 0.85;
+    }
+
+    footer {
+      max-width: var(--max);
+      margin: 48px auto 0;
+      padding: 28px 24px 48px;
+      border-top: 1px solid var(--stroke);
+      color: var(--muted);
+      font-size: 0.85rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 860px) {
+      .hero, .split, .features { grid-template-columns: 1fr; }
+      .stage { min-height: 380px; }
+      .fence { margin: 0 auto; }
+      nav { display: none; }
+      .step { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wallpaper" aria-hidden="true"></div>
+
+  <header>
+    <a class="mark" href="#top">
+      <div class="squircle" aria-hidden="true">
+        <span></span><span></span><span></span><span></span>
+      </div>
+      DesktopFences
+    </a>
+    <nav>
+      <a href="#mvp">MVP 1</a>
+      <a href="#next">Roadmap</a>
+      <a href="../README.md">Source</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div>
+        <div class="badge"><i></i> MVP 1 · shipping now</div>
+        <h1>The real desktop icons go in the glass. Not a copy.</h1>
+        <p class="lede">A native Windows 11 fence that hides Explorer’s icons and draws our grid on top. Drag them out and they come back.</p>
+        <div class="cta">
+          <a class="btn btn-primary" href="../README.md">Build from source</a>
+          <a class="btn btn-ghost" href="pos-mvp1.md">What comes after</a>
+        </div>
+        <p class="note">C# / .NET 8 / WPF · runs asInvoker · not affiliated with Stardock.</p>
+      </div>
+
+      <div class="stage" aria-hidden="true">
+        <div class="desk-icon" style="top:24px;left:8px"><div class="tile"></div>This PC</div>
+        <div class="desk-icon" style="top:110px;left:8px"><div class="tile"></div>Recycle</div>
+        <div class="desk-icon" style="top:196px;left:8px"><div class="tile"></div>Notes</div>
+        <div class="fence">
+          <div class="titlebar">
+            <span class="grip">⋮⋮</span>
+            <span class="title">Work</span>
+            <span class="chevron">▴</span>
+          </div>
+          <div class="grid">
+            <div class="item"><div class="ico folder"></div>Projects</div>
+            <div class="item"><div class="ico lnk"></div>VS Code</div>
+            <div class="item"><div class="ico pdf"></div>Spec</div>
+            <div class="item"><div class="ico zip"></div>Backup</div>
+            <div class="item"><div class="ico lnk"></div>Chrome</div>
+            <div class="item"><div class="ico folder"></div>Inbox</div>
+            <div class="item"><div class="ico pdf"></div>Invoice</div>
+            <div class="item"><div class="ico lnk"></div>Spotify</div>
+          </div>
+        </div>
+        <div class="ghost">
+          <div class="ico"></div>
+          Slack
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="split">
+        <article class="card">
+          <h3>The usual clones leave duplicates</h3>
+          <p>DeskFrame, NoFences, and OpenFences float shortcuts in a window while the original icons stay on the desktop. You get two of everything.</p>
+        </article>
+        <article class="card">
+          <h3>We hide SysListView32 and paint over it</h3>
+          <p>DesktopFences conceals the real Explorer icons, shows them in the fence, and restores them on drag-out, pause, or exit. Hide is never permanent.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="mvp">
+      <h2>What MVP 1 actually does</h2>
+      <p class="section-lede">One usable fence. Daily driver, not a demo. One panel for now — not a wall of them.</p>
+      <div class="features">
+        <div class="feat"><b>Glass on the wallpaper</b><span>Dark translucent panel, 8px corners, sits behind ordinary windows.</span></div>
+        <div class="feat"><b>Drag in, drag out</b><span>Single or multi-select from Explorer. Ghost follows the cursor. Arrow stays an arrow.</span></div>
+        <div class="feat"><b>Move, resize, collapse</b><span>Move only from ⋮⋮. Edges resize. Collapse to the title bar.</span></div>
+        <div class="feat"><b>Select and reorder</b><span>Click, Ctrl/Shift, rearrange inside the grid. Long titles ellipsize.</span></div>
+        <div class="feat"><b>Pause from the tray</b><span>Pause restores real icons. Resume hides them again. Exit always restores.</span></div>
+        <div class="feat"><b>Remembers the layout</b><span>%AppData%\DesktopFences\layout.json — position, size, title, items.</span></div>
+      </div>
+    </section>
+
+    <section id="next">
+      <h2>Not in this MVP</h2>
+      <p class="section-lede">Shipped as one fence on purpose. The JSON already has a list of fences; the app still opens a single window. This is the map after that.</p>
+      <div class="roadmap">
+        <div class="step">
+          <div class="n">Next</div>
+          <div>
+            <h3>Many fences + a settings window</h3>
+            <p>Create, remove, show, and hide fences from a normal window — not magic on the desktop.</p>
+          </div>
+          <span class="tag">planned</span>
+        </div>
+        <div class="step soon">
+          <div class="n">Then</div>
+          <div>
+            <h3>Drag an item from one fence to another</h3>
+            <p>Same ghost. Drop target is whichever fence is under the cursor.</p>
+          </div>
+          <span class="tag">planned</span>
+        </div>
+        <div class="step soon">
+          <div class="n">Then</div>
+          <div>
+            <h3>Snap to screen edges and to other fences</h3>
+            <p>A few pixels of magnet when you let go of the grip.</p>
+          </div>
+          <span class="tag">planned</span>
+        </div>
+        <div class="step soon">
+          <div class="n">Then</div>
+          <div>
+            <h3>Push the fence below when you expand</h3>
+            <p>Only for an explicit vertical stack — not physics for every panel on the desktop.</p>
+          </div>
+          <span class="tag">later</span>
+        </div>
+        <div class="step soon">
+          <div class="n">Also</div>
+          <div>
+            <h3>Double-click empty desktop, Explorer/DPI/Win+D, themes, startup, installer</h3>
+            <p>Robustness and polish after the multi-fence host exists.</p>
+          </div>
+          <span class="tag">later</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>DesktopFences · MIT · “Fences” is a Stardock trademark.</span>
+    <span>Windows 11 · .NET 8 · no admin required</span>
+  </footer>
+</body>
+</html>
