@@ -60,3 +60,4 @@ $RECYCLE.BIN/
 *.snk
 .env
 .env.*
+docs/analise-referencias.md
