@@ -48,7 +48,7 @@ public sealed class DesktopVisibility
         if (!Exists(source))
             return default;
 
-        string folder = FenceItemStore.FolderFor(fenceId);
+        string folder = FenceItemStore.LegacyFolderForFence(fenceId);
         string fileName = Path.GetFileName(source);
         if (string.IsNullOrEmpty(fileName))
             fileName = displayName ?? "item";
@@ -265,12 +265,12 @@ public sealed class DesktopVisibility
         return true;
     }
 
-    private static bool ApplyNamespaceHidden(string clsid)
+    internal static bool SetNamespaceHidden(string clsid, bool hidden)
     {
         try
         {
-            WriteDword(NewStartPanel, clsid, 1);
-            WriteDword(ClassicStartMenu, clsid, 1);
+            WriteDword(NewStartPanel, clsid, hidden ? 1 : 0);
+            WriteDword(ClassicStartMenu, clsid, hidden ? 1 : 0);
             return true;
         }
         catch
@@ -279,12 +279,13 @@ public sealed class DesktopVisibility
         }
     }
 
+    private static bool ApplyNamespaceHidden(string clsid) => SetNamespaceHidden(clsid, true);
+
     private static void RestoreNamespaceVisible(string clsid)
     {
         try
         {
-            WriteDword(NewStartPanel, clsid, 0);
-            WriteDword(ClassicStartMenu, clsid, 0);
+            SetNamespaceHidden(clsid, false);
         }
         catch
         {

@@ -2,7 +2,7 @@
 
 Mapa curto do ciclo. O detalhe operacional está em [`plano-implementacao.md`](plano-implementacao.md). Cada fase pede autorização no `SESSION-HEADER.md` **e** pedido explícito.
 
-**MVP 2** (`v0.3.1`) = Fases 1 + 2. As Fases 3–5 estão **fechadas**. Release preparada: `v0.4.0`. A Fase 6 é a próxima.
+**MVP 2** (`v0.3.1`) = Fases 1 + 2. As Fases 3–6 estão **fechadas**. A versão `v0.5.0` está preparada; a Fase 7 ainda não foi iniciada.
 
 ---
 
@@ -15,10 +15,10 @@ Mapa curto do ciclo. O detalhe operacional está em [`plano-implementacao.md`](p
 | 3 | Arrastar item entre fences | Média — **fechada** |
 | 4 | Snap a bordas e a outras fences | Média — **fechada** |
 | 5 | Explorer reiniciado / DPI / Win+D | Média–alta — **fechada** |
-| 6 | Custódia transacional de itens do Desktop | Alta — **planejada** |
-| 7 | Instalador (path estável no arranque) | Baixa–média |
+| 6 | Custódia transacional de itens do Desktop | Alta — **fechada e validada** |
+| 7 | Instalador (path estável no arranque) | Baixa–média — **não iniciada** |
 
-Não pular a 6 nem iniciar o instalador antes do gate dela. Criar fence continua nas Settings.
+Não iniciar o instalador sem pedido explícito. Criar fence continua nas Settings.
 
 ---
 
@@ -58,4 +58,4 @@ Ao soltar a alça ⋮⋮ (e ao terminar o resize), a fence cola nas bordas da á
 
 Validada no Windows 11. Se o Explorer morrer, os ficheiros já não estão no Desktop (estão no store); CLSID de namespace é reaplicado. Mudança de DPI atualiza o clip. Para Win+D / Mostrar ambiente de trabalho, a fence é reancorada acima da banda Progman/WorkerW e abaixo dos aplicativos, inclusive quando o Windows ainda a reporta como visível. Pausar/Sair continua a devolver os ícones reais.
 
-A seguir no plano, depois do gate da Fase 5 e só com pedido: Fase 6 — store por `ItemId`, transação/recovery, transferência por metadados e lote, somente para itens do Desktop. Depois do gate dela: instalador (Fase 7), com path estável no arranque e sem packs de tema.
+A Fase 6 entregou store por `ItemId`, transação/recovery, transferência por metadados e lote, somente para itens do Desktop. Está fechada na versão preparada `v0.5.0`. A próxima etapa é o instalador (Fase 7), com path estável no arranque e sem packs de tema.

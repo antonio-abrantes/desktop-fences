@@ -22,7 +22,7 @@
 
 A área de trabalho acumula atalhos, pastas e arquivos soltos. Os clones open source (DeskFrame, NoFences, OpenFences) colocam esses itens em janelas flutuantes, mas **deixam os ícones originais no desktop**. O resultado é duplicata: o atalho continua lá e também aparece no painel.
 
-O DesktopFences faz o que esses clones não fazem: tira o ícone real da pasta Desktop (move para o armazenamento do Fence; registry para Lixeira / Este computador / Rede), desenha a nossa grade por cima, e devolve o ícone ao desktop se você tirar o item da fence ou sair do app.
+O DesktopFences faz o que esses clones não fazem: tira o ícone real da pasta Desktop (move para um armazenamento estável por item; registry para Lixeira / Este computador / Rede), desenha a nossa grade por cima, e devolve o ícone ao desktop se você tirar o item da fence ou sair do app.
 
 ## O que o MVP 2 entrega
 
@@ -36,9 +36,9 @@ O hide/restore do MVP 1, mais várias fences no mesmo desktop:
 - **Idioma:** Sistema / Português / Inglês. Troca ao vivo. Título já gravado não muda.
 - **Iniciar com o Windows** (o atalho usa o `.exe` desta pasta; se mover o programa, abra-o uma vez no sítio novo). Uma só instância.
 - Bandeja: Pausar / Retomar / Configurações / Sobre / Sair. Pausar restaura os ícones reais.
-- Persistência em `%AppData%\DesktopFences\layout.json`. Ficheiros das fences em `%LocalAppData%\DesktopFences\Items`.
+- Persistência v2 em `%AppData%\DesktopFences\layout.json`, com gravação atômica e backup. Ficheiros em `%LocalAppData%\DesktopFences\Items\{ItemId}`; transações interrompidas são recuperadas antes de mostrar as fences.
 
-Explorer reiniciado, DPI e Win+D foram validados no Windows 11; as Fases 3–5 estão fechadas e a release `v0.4.0` está preparada. A seguir no plano: reforçar a custódia dos itens do Desktop com store por item, recovery, transferência entre fences sem mover o payload e processamento em lote. O instalador vem depois desse gate. Duplo clique no vazio do desktop não faz parte deste ciclo.
+Explorer reiniciado, DPI e Win+D foram validados no Windows 11. As Fases 3–6 estão fechadas; a versão `v0.5.0` está preparada com store por item, recovery, transferência entre fences sem mover o payload e processamento em lote. O instalador permanece como Fase 7 e ainda não foi iniciado. Duplo clique no vazio do desktop não faz parte deste ciclo.
 
 ## Requisitos
 
@@ -60,19 +60,21 @@ Ou abra `DesktopFences.sln` e dê F5 (perfil Debug). O binário fica em:
 
 Fecha o app pela bandeja antes de gerar um build novo — o `.exe` em execução trava as DLLs.
 
-## Testes (domínio, sem Win32)
+## Testes automatizados
 
 ```powershell
 dotnet test DesktopFences.sln
 ```
+
+`DesktopFences.Core.Tests` cobre domínio/persistência; `DesktopFences.App.Tests` cobre o coordenador, checkpoints de crash, contadores de lote e moves físicos somente em diretórios temporários.
 
 ## Release
 
 O GitHub Action **não** roda em push de branch. Só em tag `v*`:
 
 ```powershell
-git tag v0.4.0
-git push origin v0.4.0
+git tag -a v0.5.0 -m "DesktopFences v0.5.0"
+git push origin v0.5.0
 ```
 
 Isso publica um GitHub Release com zip portable `win-x64` e `win-arm64` (self-contained). Download: [Releases](https://github.com/antonio-abrantes/desktop-fences/releases).

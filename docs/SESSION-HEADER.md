@@ -7,8 +7,8 @@
 ## Contexto da Sessão ou fase
 
 **Projeto:** DesktopFences 1.0
-**Etapa atual:** Fase 6 — custódia transacional de itens do Desktop (**planejada; implementação não iniciada**).
-**Objetivo desta sessão:** registrar o gate humano da Fase 5 como aprovado, preparar a release `v0.4.0` e deixar a Fase 6 pronta para um próximo pedido explícito.
+**Etapa atual:** Fase 6 — custódia transacional de itens do Desktop (**fechada e validada; versão `v0.5.0` preparada**).
+**Objetivo desta sessão:** fechar o gate da Fase 6, alinhar a versão `0.5.0` e preparar commit/tag, sem iniciar o instalador.
 
 ---
 
@@ -37,12 +37,12 @@ Apoio (quando o assunto for relevante):
 
 ## Instrução de Revisão
 
-A Fase 5 está **fechada e validada no Windows 11**: re-hide se o Explorer reiniciar (store + registry), `PerMonitorV2` + clip no DPI e Win+D por ancoragem de z-order acima de Progman/WorkerW. A Fase 6 foi especificada para store por `ItemId`, transação/recovery, transferência por metadados e lote; ainda não foi implementada. O instalador é a Fase 7. Duplo clique no vazio do desktop, packs de tema e empurrar vizinhos estão **fora** deste ciclo.
+A Fase 6 está **fechada e validada no Windows 11**. O código implementa schema/store v2 por `ItemId`, migração v1 recuperável, JSON atômico com backup, journal/recovery, transferência somente por metadados e lote. A regressão de arranque encontrada num layout v1 misto foi corrigida e coberta por regressão. Builds Debug/Release e 159 testes automatizados estão verdes. A versão interna é `0.5.0`; o instalador é a Fase 7 e não foi iniciado.
 
 ```
-ETAPA FECHADA  : Fase 5 — Explorer / DPI / Win+D (validada no Windows 11)
-ETAPA ATUAL    : Fase 6 — custódia transacional de itens do Desktop (planejada; não implementada)
-ETAPA SEGUINTE : Fase 7 — instalador (path estável no arranque; sem packs de tema)
+ETAPA FECHADA  : Fase 6 — custódia transacional de itens do Desktop (validada no Windows 11)
+VERSÃO PRONTA  : v0.5.0 — commit e tag pendentes do desenvolvedor
+ETAPA SEGUINTE : Fase 7 — instalador (não iniciada; exige pedido explícito)
 FORA DO CICLO  : duplo clique no vazio do desktop · packs de tema · empurrar fence de baixo ao expandir
 ```
 
@@ -71,9 +71,12 @@ FORA DO CICLO  : duplo clique no vazio do desktop · packs de tema · empurrar f
 - [x] Desenvolvedor validou no Windows 11: soltar a alça ⋮⋮ perto da borda da tela / de outra fence cola; resize idem; vizinho não se mexe
 - [x] Fase 5 fechada: Explorer morre → re-Conceal; DPI atualiza clip; Win+D reancora a fence acima de Progman/WorkerW; hide por move para o store
 - [x] Fase 6 documentada: store por ItemId; transação/JSON atômico/backup/recovery; transferência por metadados; lote; somente Desktop
+- [x] Fase 6 implementada no código: schema v2/migração; commit atômico/journal/recovery; ownership por metadados; pipeline em lote
+- [x] Fase 6 validada automaticamente: builds Debug/Release sem avisos e 159 testes verdes (131 Core + 28 App/Native)
+- [x] Desenvolvedor validou a matriz da Fase 6 no Windows 11 real
+- [x] Versão do aplicativo alinhada para `0.5.0` / tag `v0.5.0`
 - [x] Desenvolvedor validou no Windows 11: Explorer/DPI e Win+D / Mostrar ambiente de trabalho; fences permanecem visíveis; Pausar/Sair continua restaurando
-- [ ] Não iniciar a implementação da Fase 6 sem novo pedido explícito
-- [ ] Não implementar a Fase 7 (instalador / path estável no arranque) antes do gate da Fase 6 e sem pedido explícito
+- [ ] Não implementar a Fase 7 (instalador / path estável no arranque) sem novo pedido explícito
 - [ ] Não implementar duplo clique no vazio do desktop, packs de tema, nem empurrar a fence de baixo ao expandir
 
 Se qualquer inconsistência for encontrada na revisão, reporte antes de sugerir qualquer ação.

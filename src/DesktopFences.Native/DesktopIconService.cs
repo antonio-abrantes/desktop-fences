@@ -6,7 +6,12 @@ namespace DesktopFences.Native;
 /// <summary>
 /// Localiza a SysListView32 do desktop e lê/escreve ícones reais.
 /// </summary>
-public sealed class DesktopIconService
+public interface IDesktopSnapshotSource
+{
+    DesktopSnapshot Capture();
+}
+
+public sealed class DesktopIconService : IDesktopSnapshotSource
 {
     private const int MaxNameChars = 260;
     private readonly DesktopVisibility _visibility = new();
@@ -161,6 +166,40 @@ public sealed class DesktopIconService
         return true;
     }
 
+    public void PlaceRevealedItems(IReadOnlyList<DesktopPlacement> placements)
+    {
+        if (placements.Count == 0)
+            return;
+        DesktopSnapshot snap = Capture();
+        if (!snap.Connected || ListViewHandle == IntPtr.Zero)
+            return;
+
+        NativeMethods.POINT? sharedScreenPoint = null;
+        foreach (DesktopPlacement placement in placements)
+        {
+            DesktopIcon? match = DesktopFences.Core.DesktopIconMatcher.Find(snap.Icons, placement.NameOrPath);
+            if (match is null)
+                continue;
+            int x = placement.OriginalX ?? match.X;
+            int y = placement.OriginalY ?? match.Y;
+            if (placement.ScreenX is int screenX && placement.ScreenY is int screenY)
+            {
+                if (sharedScreenPoint is null)
+                {
+                    var point = new NativeMethods.POINT { X = screenX, Y = screenY };
+                    if (NativeMethods.ScreenToClient(ListViewHandle, ref point))
+                        sharedScreenPoint = point;
+                }
+                if (sharedScreenPoint is NativeMethods.POINT screenPoint)
+                {
+                    x = screenPoint.X;
+                    y = screenPoint.Y;
+                }
+            }
+            SetItemPosition(match.Index, x, y);
+        }
+    }
+
     public static (int X, int Y) CursorScreen()
     {
         NativeMethods.GetCursorPos(out NativeMethods.POINT pt);
@@ -263,3 +302,10 @@ public sealed class DesktopIconService
         return result;
     }
 }
+
+public sealed record DesktopPlacement(
+    string NameOrPath,
+    int? OriginalX,
+    int? OriginalY,
+    int? ScreenX,
+    int? ScreenY);

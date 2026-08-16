@@ -26,10 +26,17 @@ public sealed class FenceItemStoreTests : IDisposable
     }
 
     [Fact]
-    public void FolderFor_UsesFenceGuid()
+    public void FolderForItem_UsesStableItemGuid()
     {
         var id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-        FenceItemStore.FolderFor(id).Should().EndWith(Path.Combine("DesktopFences", "Items", id.ToString("D")));
+        FenceItemStore.FolderForItem(id).Should().EndWith(Path.Combine("DesktopFences", "Items", id.ToString("D")));
+    }
+
+    [Fact]
+    public void PayloadPath_RejectsTraversal()
+    {
+        Action act = () => FenceItemStore.PayloadPath(_dir, Guid.NewGuid(), @"..\escape.txt");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]

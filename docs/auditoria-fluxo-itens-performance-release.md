@@ -5,6 +5,8 @@
 **Escopo:** entrada de arquivos, atalhos e pastas nas fences; transferência entre fences; restauração ao desktop; performance e segurança desses fluxos.  
 **Natureza:** análise e validação. Este documento não implementa as recomendações.
 
+> **Reavaliação em 16/08/2026:** os quatro reforços selecionados para a Fase 6 foram implementados e validados: store por `ItemId`, transação/JSON atômico/backup/recovery, transferência por metadados e processamento em lote. O gate Windows 11 foi aprovado pelo desenvolvedor. Dentro do escopo definido para itens do Desktop, o parecer vigente é **GO para `v0.5.0`**. Os demais achados permanecem em stand-by como melhorias futuras e não bloqueiam esta entrega.
+
 ---
 
 ## 1. Parecer executivo
@@ -16,20 +18,20 @@
 3. **No cenário comum — atalhos ou arquivos pequenos no Desktop e armazenamento no mesmo volume — o movimento atual tende a ser muito rápido.** O custo relevante não é o tamanho do arquivo quando o sistema consegue fazer um movimento dentro do mesmo volume. Já movimentos entre volumes, de pastas grandes, rede ou provedores de nuvem podem virar cópia + exclusão e custar proporcionalmente ao conteúdo.
 4. **A arquitetura deve ser mantida, mas o fluxo atual precisa de reforços antes de um release para usuários gerais.** Os principais bloqueios não são CPU ou memória em repouso; são consistência entre arquivo e JSON, recuperação após falha, propagação de erro, movimentação física desnecessária entre fences e trabalho síncrono/repetido na thread da interface.
 
-### Decisão de release
+### Decisão original de release (baseline anterior à Fase 6)
 
 | Pergunta | Parecer |
 |---|---|
 | A estratégia “mover para store” está aprovada? | **Sim** |
 | A implementação atual está aprovada para teste controlado? | **Sim, com backup e usuários informados** |
-| Está aprovada para release público/usuários gerais? | **Não — NO-GO neste estado** |
+| Estava aprovada para release público/usuários gerais? | **Não — NO-GO naquele estado anterior** |
 | O que falta para o GO? | Fechar os bloqueios R1–R6 e executar a matriz de validação da seção 10 |
 
 O conteúdo dos arquivos não é apagado pelos problemas encontrados, mas algumas falhas podem deixá-lo fora do Desktop e sem referência válida no `layout.json`. Para um usuário comum, isso se apresenta como perda de arquivo; portanto, deve ser tratado como risco de dados de severidade alta.
 
 ### Decisão de escopo posterior à auditoria
 
-Após a revisão dos achados, foi decidido concentrar a próxima etapa exclusivamente no fluxo de itens do Desktop. A Fase 6, antes do instalador, implementará em um único gate:
+Após a revisão dos achados, foi decidido concentrar a etapa seguinte exclusivamente no fluxo de itens do Desktop. A Fase 6 implementou e validou em um único gate técnico:
 
 1. store estável por `ItemId`;
 2. transação recuperável, JSON atômico, backup e recovery;
@@ -46,7 +48,7 @@ Os demais achados não foram descartados. Permanecem registrados neste documento
 | OneDrive, placeholders e Desktop redirecionado | Stand-by |
 | Protocolo OLE, cache de ícones e demais otimizações | Stand-by |
 
-Especificação e execução: [spec-fase-6-custodia-desktop.md](spec-fase-6-custodia-desktop.md) e [plano-fase-6-custodia-desktop.md](plano-fase-6-custodia-desktop.md). Esta decisão reduz o escopo da próxima fase, mas não transforma automaticamente o parecer de release em `GO`: a aprovação deve ser reavaliada com os testes e evidências do novo gate.
+Especificação e execução: [spec-fase-6-custodia-desktop.md](spec-fase-6-custodia-desktop.md) e [plano-fase-6-custodia-desktop.md](plano-fase-6-custodia-desktop.md). O novo gate foi aprovado e o resultado está registrado em [resultado-fase-6-custodia-desktop.md](resultado-fase-6-custodia-desktop.md).
 
 ---
 
@@ -77,7 +79,7 @@ Validação isolada, sem executar o DesktopFences contra o desktop real:
 1. O drop fornece paths ou nomes do desktop.
 2. `AddDesktopEntry` resolve o path, captura novamente os ícones do `SysListView32`, extrai o ícone visual e inclui o item na coleção da fence.
 3. `HideDesktopCounterparts` percorre todos os itens da fence.
-4. Para arquivo, atalho ou pasta, `DesktopVisibility` move o objeto para `%LocalAppData%\DesktopFences\Items\{FenceId}`.
+4. No baseline auditado (`v0.4.0`), `DesktopVisibility` movia o objeto para `%LocalAppData%\DesktopFences\Items\{FenceId}`. A Fase 6 substituiu esse path por `Items\{ItemId}`; ver [resultado-fase-6-custodia-desktop.md](resultado-fase-6-custodia-desktop.md).
 5. Para Lixeira, Este Computador e Rede, aplica `HideDesktopIcons` no registro.
 6. Atualiza `path` e `originalPath`, regrava o documento JSON e notifica a Shell.
 
@@ -479,7 +481,9 @@ O próximo passo não deve ser procurar outro truque de hide. Deve ser transform
 - operação longa assíncrona e observável;
 - política segura para origem externa e nuvem.
 
-**Parecer final da auditoria:** abordagem aprovada; implementação ainda não aprovada para usuários gerais. A decisão posterior agenda os quatro reforços centrais na Fase 6 e mantém os demais achados em stand-by, sem declarar `GO` antecipadamente.
+**Parecer original da auditoria:** abordagem aprovada; implementação anterior à Fase 6 não aprovada para usuários gerais.
+
+**Parecer vigente após a Fase 6:** quatro reforços centrais implementados, gate Windows 11 aprovado e entrega `v0.5.0` com `GO` dentro do escopo definido. Os demais achados continuam documentados em stand-by para ciclos futuros.
 
 ---
 

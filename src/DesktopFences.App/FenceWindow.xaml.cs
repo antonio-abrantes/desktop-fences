@@ -68,6 +68,8 @@ public partial class FenceWindow : Window
 
     public Guid FenceId => _fenceId;
 
+    internal IReadOnlyList<FenceItemVm> Items => _items;
+
     public bool SuppressPersistOnClose { get; set; }
 
     public FenceWindow() : this(null)
@@ -93,8 +95,17 @@ public partial class FenceWindow : Window
 
     public void Pause()
     {
+        if (_host is not null)
+        {
+            _host.PauseAll();
+            return;
+        }
+        PauseVisual();
+    }
+
+    internal void PauseVisual()
+    {
         _stayOnDesktop = false;
-        RestoreHiddenIcons();
         Hide();
         EndInboundCursor();
         _oleHit?.Withdraw();
@@ -103,14 +114,25 @@ public partial class FenceWindow : Window
 
     public void Resume()
     {
+        if (_host is not null)
+        {
+            _host.ResumeAll();
+            return;
+        }
+        ResumeVisual();
+    }
+
+    internal void ResumeVisual()
+    {
         Show();
         _stayOnDesktop = true;
-        HideDesktopCounterparts();
         SendBehindApps();
     }
 
     public bool RestoreHiddenIcons()
     {
+        if (_host is not null)
+            return true;
         try
         {
             bool all = _desktop.RevealAllHidden();
@@ -125,7 +147,6 @@ public partial class FenceWindow : Window
 
     public void RebindAfterExplorer()
     {
-        HideDesktopCounterparts();
         EnsureDesktopSurvival();
     }
 
@@ -219,7 +240,6 @@ public partial class FenceWindow : Window
         RestoreLayout();
         ApplyChromeStrings();
         ShowResizeHandles(!_collapsed);
-        HideDesktopCounterparts();
         UpdateEmptyHint();
         AttachDesktopDropIntake();
         SizeChanged += OnFenceSizeChanged;
@@ -261,7 +281,8 @@ public partial class FenceWindow : Window
         DetachDesktopDropIntake();
         if (!SuppressPersistOnClose)
             SaveLayout();
-        RestoreHiddenIcons();
+        if (_host is null)
+            RestoreHiddenIcons();
     }
 
     private void AttachDesktopDropIntake()
@@ -520,30 +541,26 @@ public partial class FenceWindow : Window
         if (ShouldIgnoreDesktopInbound())
             return;
 
-        if (files.Count > 0)
-        {
-            foreach (string file in files)
-                AddDesktopEntry(file, null, null);
-        }
-
-        AddInboundDesktopIcons();
-        HideDesktopCounterparts();
-        SaveLayout();
+        var entries = files.Select(file => new InboundEntry(file, null, null)).ToList();
+        entries.AddRange(InboundDesktopEntries());
+        AddDesktopEntries(entries);
         SetChromeBorder(drop: false);
     }
 
     private void AddInboundDesktopIcons()
     {
+        AddDesktopEntries(InboundDesktopEntries());
+    }
+
+    private IReadOnlyList<InboundEntry> InboundDesktopEntries()
+    {
         EnsureInboundPressSet();
         if (_pressIcons is { Count: > 0 })
-        {
-            foreach (DesktopIcon icon in _pressIcons)
-                AddDesktopEntry(icon.Name, icon.X, icon.Y);
-            return;
-        }
+            return _pressIcons.Select(icon => new InboundEntry(icon.Name, icon.X, icon.Y)).ToList();
 
         if (_pressIcon is not null)
-            AddDesktopEntry(_pressIcon.Name, _pressIcon.X, _pressIcon.Y);
+            return [new InboundEntry(_pressIcon.Name, _pressIcon.X, _pressIcon.Y)];
+        return [];
     }
 
     private System.Drawing.Rectangle FenceBodyScreenRect()
@@ -733,11 +750,7 @@ public partial class FenceWindow : Window
         if (files.Count == 0)
             return;
 
-        foreach (string file in files)
-            AddDesktopEntry(file, null, null);
-
-        HideDesktopCounterparts();
-        SaveLayout();
+        AddDesktopEntries(files.Select(file => new InboundEntry(file, null, null)));
         e.Handled = true;
     }
 
@@ -915,12 +928,18 @@ public partial class FenceWindow : Window
         if (item is null)
             return;
 
-        if (!RestoreDesktopItem(item))
+        if (_host is not null)
+        {
+            _host.RemoveItems(this, [item]);
             return;
+        }
 
-        _items.Remove(item);
-        SaveLayout();
-        UpdateEmptyHint();
+        if (RestoreDesktopItem(item))
+        {
+            _items.Remove(item);
+            SaveLayout();
+            UpdateEmptyHint();
+        }
     }
 
     private void ToggleCollapse()
@@ -1061,35 +1080,58 @@ public partial class FenceWindow : Window
     private void AddFile(string path) => AddDesktopEntry(path, null, null);
 
     private void AddDesktopEntry(string nameOrPath, int? originalX, int? originalY)
+        => AddDesktopEntries([new InboundEntry(nameOrPath, originalX, originalY)]);
+
+    private void AddDesktopEntries(IEnumerable<InboundEntry> sourceEntries)
     {
-        string? resolved = DesktopPaths.ResolveExisting(nameOrPath);
-        DesktopSnapshot snap = _desktop.Capture();
-        DesktopIcon? desktopIcon = snap.Connected
-            ? DesktopIconMatcher.Find(snap.Icons, resolved ?? nameOrPath)
-              ?? DesktopIconMatcher.Find(snap.Icons, DesktopPaths.VisibleName(resolved ?? nameOrPath))
-            : null;
-
-        string name = string.IsNullOrWhiteSpace(desktopIcon?.Name)
-            ? DesktopPaths.VisibleName(resolved ?? nameOrPath)
-            : desktopIcon.Name;
-
-        if (_items.Any(i => string.Equals(i.Path, resolved, StringComparison.OrdinalIgnoreCase)
-                            || string.Equals(i.Name, name, StringComparison.OrdinalIgnoreCase)
-                            || string.Equals(i.Name, nameOrPath, StringComparison.OrdinalIgnoreCase)))
+        List<InboundEntry> entries = sourceEntries.ToList();
+        if (entries.Count == 0)
             return;
 
-        _items.Add(new FenceItemVm
+        DesktopSnapshot snap = _host?.CaptureDesktop(_desktop) ?? _desktop.Capture();
+        var pending = new List<FenceItemVm>();
+        foreach (InboundEntry entry in entries)
         {
-            Name = name,
-            Path = resolved ?? desktopIcon?.Name ?? nameOrPath,
-            OriginalPath = resolved is not null && !FenceItemStore.IsUnderRoot(resolved)
-                ? resolved
-                : null,
-            Icon = IconImageLoader.Load(resolved ?? desktopIcon?.Name ?? nameOrPath),
-            OriginalX = originalX ?? desktopIcon?.X,
-            OriginalY = originalY ?? desktopIcon?.Y
-        });
+            string? resolved = DesktopPaths.ResolveExisting(entry.NameOrPath);
+            DesktopIcon? desktopIcon = snap.Connected
+                ? DesktopIconMatcher.Find(snap.Icons, resolved ?? entry.NameOrPath)
+                  ?? DesktopIconMatcher.Find(snap.Icons, DesktopPaths.VisibleName(resolved ?? entry.NameOrPath))
+                : null;
+            string name = string.IsNullOrWhiteSpace(desktopIcon?.Name)
+                ? DesktopPaths.VisibleName(resolved ?? entry.NameOrPath)
+                : desktopIcon.Name;
+            if (_items.Concat(pending).Any(i => resolved is not null
+                    ? string.Equals(i.Path, resolved, StringComparison.OrdinalIgnoreCase)
+                      || string.Equals(i.OriginalPath, resolved, StringComparison.OrdinalIgnoreCase)
+                    : string.Equals(i.Name, name, StringComparison.OrdinalIgnoreCase)
+                      || string.Equals(i.Name, entry.NameOrPath, StringComparison.OrdinalIgnoreCase)))
+                continue;
 
+            string runtime = resolved ?? desktopIcon?.Name ?? entry.NameOrPath;
+            pending.Add(new FenceItemVm
+            {
+                ItemId = Guid.NewGuid(),
+                Kind = resolved is null ? FenceItemKind.Namespace : FenceItemKind.Stored,
+                Name = name,
+                StorageName = resolved is null ? null : Path.GetFileName(resolved),
+                Path = runtime,
+                OriginalPath = resolved is not null && !FenceItemStore.IsUnderRoot(resolved) ? resolved : null,
+                Icon = IconImageLoader.Load(runtime),
+                OriginalX = entry.OriginalX ?? desktopIcon?.X,
+                OriginalY = entry.OriginalY ?? desktopIcon?.Y
+            });
+        }
+
+        if (pending.Count == 0)
+            return;
+        if (_host is not null)
+        {
+            _host.AddItems(this, pending);
+            return;
+        }
+
+        foreach (FenceItemVm item in pending)
+            _items.Add(item);
         HideDesktopCounterparts();
         SaveLayout();
         UpdateEmptyHint();
@@ -1106,6 +1148,11 @@ public partial class FenceWindow : Window
 
     internal void EjectItemsToDesktop(IReadOnlyList<FenceItemVm> items, int screenX, int screenY)
     {
+        if (_host is not null)
+        {
+            _host.RemoveItems(this, items);
+            return;
+        }
         var leaving = new List<FenceItemVm>();
         foreach (FenceItemVm item in items)
         {
@@ -1168,8 +1215,71 @@ public partial class FenceWindow : Window
             inserted++;
         }
 
-        HideDesktopCounterparts();
         UpdateEmptyHint();
+    }
+
+    internal int TransferInsertIndex(int screenX, int screenY) => InsertIndexAtScreen(screenX, screenY);
+
+    internal void ApplyInbound(
+        IReadOnlyList<FenceItemVm> items,
+        IReadOnlyList<DesktopCustodyPlan> plans)
+    {
+        Dictionary<Guid, DesktopCustodyPlan> byId = plans.ToDictionary(p => p.ItemId);
+        foreach (FenceItemVm item in items)
+        {
+            DesktopCustodyPlan plan = byId[item.ItemId];
+            item.Kind = plan.Kind;
+            item.StorageName = plan.StorageName;
+            item.OriginalPath = plan.OriginalPath;
+            item.Path = plan.Kind == FenceItemKind.Stored ? plan.DestinationPath : plan.NamespaceKey ?? item.Name;
+            _items.Add(item);
+        }
+        UpdateEmptyHint();
+    }
+
+    internal void ApplyOutbound(
+        IReadOnlyList<FenceItemVm> items,
+        IReadOnlyList<DesktopCustodyPlan> plans,
+        int? screenX = null,
+        int? screenY = null)
+    {
+        Dictionary<Guid, DesktopCustodyPlan> byId = plans.ToDictionary(p => p.ItemId);
+        foreach (FenceItemVm item in items)
+        {
+            DesktopCustodyPlan plan = byId[item.ItemId];
+            if (plan.Kind == FenceItemKind.Stored)
+                item.Path = plan.DestinationPath;
+            _items.Remove(item);
+        }
+        UpdateEmptyHint();
+    }
+
+    internal void PlaceRestoredItems(
+        IReadOnlyList<FenceItemVm> items,
+        int? screenX = null,
+        int? screenY = null) =>
+        TryPlaceRestoredIcons(items, screenX, screenY);
+
+    internal void ApplyReleasedPaths(IReadOnlyList<DesktopCustodyPlan> plans)
+    {
+        Dictionary<Guid, DesktopCustodyPlan> byId = plans.ToDictionary(p => p.ItemId);
+        foreach (FenceItemVm item in _items)
+        {
+            byId.TryGetValue(item.ItemId, out DesktopCustodyPlan? plan);
+            if (plan?.Kind == FenceItemKind.Stored)
+                item.Path = plan.DestinationPath;
+        }
+    }
+
+    internal void ApplyStoredPaths(IReadOnlyList<DesktopCustodyPlan> plans)
+    {
+        Dictionary<Guid, DesktopCustodyPlan> byId = plans.ToDictionary(p => p.ItemId);
+        foreach (FenceItemVm item in _items)
+        {
+            byId.TryGetValue(item.ItemId, out DesktopCustodyPlan? plan);
+            if (plan is not null)
+                item.Path = plan.Kind == FenceItemKind.Stored ? plan.DestinationPath : plan.NamespaceKey ?? item.Name;
+        }
     }
 
     private int InsertIndexAtScreen(int screenX, int screenY)
@@ -1283,6 +1393,8 @@ public partial class FenceWindow : Window
 
     private static bool SameItem(FenceItemVm left, FenceItemVm right)
     {
+        if (left.ItemId != Guid.Empty && right.ItemId != Guid.Empty)
+            return left.ItemId == right.ItemId;
         if (!string.IsNullOrWhiteSpace(left.Path)
             && !string.IsNullOrWhiteSpace(right.Path)
             && string.Equals(left.Path, right.Path, StringComparison.OrdinalIgnoreCase))
@@ -1305,17 +1417,22 @@ public partial class FenceWindow : Window
 
     private void TryPlaceRestoredIcon(FenceItemVm item, int? screenX = null, int? screenY = null)
     {
+        TryPlaceRestoredIcons([item], screenX, screenY);
+    }
+
+    private void TryPlaceRestoredIcons(
+        IReadOnlyList<FenceItemVm> items,
+        int? screenX = null,
+        int? screenY = null)
+    {
         try
         {
-            if (screenX is int x && screenY is int y)
-            {
-                _desktop.PlaceIconAtScreen(
-                    item.Path ?? item.Name, x, y, item.OriginalX, item.OriginalY);
-                return;
-            }
-
-            if (item.OriginalX is int ox && item.OriginalY is int oy)
-                _desktop.SetItemPositionAfterReveal(item.Path ?? item.Name, ox, oy);
+            _desktop.PlaceRevealedItems(items.Select(item => new DesktopPlacement(
+                item.Path ?? item.Name,
+                item.OriginalX,
+                item.OriginalY,
+                screenX,
+                screenY)).ToList());
         }
         catch
         {
@@ -1351,6 +1468,8 @@ public partial class FenceWindow : Window
 
     private void HideDesktopCounterparts()
     {
+        if (_host is not null)
+            return;
         bool changed = false;
         foreach (FenceItemVm item in _items)
         {
@@ -1534,13 +1653,18 @@ public partial class FenceWindow : Window
 
             foreach (FenceItemState item in state.Items)
             {
-                string? path = DesktopPaths.ResolveExisting(item.Path ?? item.Name);
+                string? path = item.Kind == FenceItemKind.Stored && !string.IsNullOrWhiteSpace(item.StorageName)
+                    ? FenceItemStore.PayloadPath(item.ItemId, item.StorageName)
+                    : item.OriginalPath ?? item.Name;
                 _items.Add(new FenceItemVm
                 {
+                    ItemId = item.ItemId,
+                    Kind = item.Kind,
                     Name = item.Name,
-                    Path = path ?? item.Path,
+                    StorageName = item.StorageName,
+                    Path = path,
                     OriginalPath = item.OriginalPath,
-                    Icon = IconImageLoader.Load(path ?? item.Path ?? item.Name),
+                    Icon = IconImageLoader.Load(path ?? item.Name),
                     OriginalX = item.OriginalX,
                     OriginalY = item.OriginalY
                 });
@@ -1559,4 +1683,6 @@ public partial class FenceWindow : Window
         try { LayoutChanged?.Invoke(); }
         catch { }
     }
+
+    private sealed record InboundEntry(string NameOrPath, int? OriginalX, int? OriginalY);
 }

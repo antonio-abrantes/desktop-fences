@@ -1,6 +1,6 @@
 # Plano complementar — Fase 6: custódia transacional de itens do Desktop
 
-**Status:** planejada; não implementada.
+**Status:** fechada; marcos 6.1–6.4 implementados e validações automatizada/Windows 11 aprovadas.
 
 **Spec:** [spec-fase-6-custodia-desktop.md](spec-fase-6-custodia-desktop.md).
 
@@ -43,11 +43,11 @@ Estimativa inicial para uma pessoa familiarizada com o projeto: **3 a 5 semanas*
 ## 3. Preparação e linha de base
 
 - [x] Confirmar gate da Fase 5 no Windows 11 e registrar o resultado.
-- [ ] Criar uma cópia de teste com layout v1 e payloads reais representativos.
-- [ ] Medir a versão anterior com 1, 10, 50 e 100 itens: tempo, capturas do Explorer, saves, notificações e moves.
-- [ ] Mapear todos os caminhos atuais de entrada, saída, Pausar, Sair, remover fence e transferência.
-- [ ] Identificar qualquer save/hide/restore paralelo fora do `FenceHost` que precise convergir para o coordenador único.
-- [ ] Definir checkpoints de falha habilitados somente em build de teste.
+- [x] Criar uma cópia de teste com layout v1 e payloads reais representativos.
+- [x] Registrar baseline estrutural da `v0.4.0` e medições físicas da Fase 6 com 1, 10, 50 e 100 itens.
+- [x] Mapear todos os caminhos atuais de entrada, saída, Pausar, Sair, remover fence e transferência.
+- [x] Identificar qualquer save/hide/restore paralelo fora do `FenceHost` que precise convergir para o coordenador único.
+- [x] Definir checkpoints de falha habilitados somente em build de teste.
 
 **Saída:** baseline registrado e nenhum fluxo de custódia esquecido.
 
@@ -57,29 +57,29 @@ Estimativa inicial para uma pessoa familiarizada com o projeto: **3 a 5 semanas*
 
 ### Core
 
-- [ ] Adicionar `ItemId` obrigatório ao modelo de item.
-- [ ] Diferenciar item `stored` de namespace sem introduzir API Windows no Core.
-- [ ] Definir schema v2 e leitor compatível com schema v1.
-- [ ] Derivar o caminho relativo do store pelo `ItemId`, não por `FenceId`.
-- [ ] Criar índices por `ItemId`, original path e storage path normalizados.
-- [ ] Validar unicidade de `ItemId` e impedir duas referências ao mesmo payload.
+- [x] Adicionar `ItemId` obrigatório ao modelo de item.
+- [x] Diferenciar item `stored` de namespace sem introduzir API Windows no Core.
+- [x] Definir schema v2 e leitor compatível com schema v1.
+- [x] Derivar o caminho relativo do store pelo `ItemId`, não por `FenceId`.
+- [x] Criar índices por `ItemId`, original path e storage path normalizados.
+- [x] Validar unicidade de `ItemId` e impedir duas referências ao mesmo payload.
 
 ### Migração
 
-- [ ] Planejar v1 → v2 antes de qualquer move.
-- [ ] Gerar `ItemId` estável para todos os itens existentes.
-- [ ] Mover payloads `{FenceId}` → `{ItemId}` sob journal de migração.
-- [ ] Preservar layout v1 como backup até o commit v2.
-- [ ] Não remover pasta antiga que ainda contenha qualquer arquivo.
-- [ ] Interromper com recovery observável diante de item ausente ou ambíguo.
+- [x] Planejar v1 → v2 antes de qualquer move.
+- [x] Gerar `ItemId` estável para todos os itens existentes.
+- [x] Mover payloads `{FenceId}` → `{ItemId}` sob journal de migração.
+- [x] Preservar layout v1 como backup até o commit v2.
+- [x] Não remover pasta antiga que ainda contenha qualquer arquivo.
+- [x] Interromper com recovery observável diante de item ausente ou ambíguo.
 
 ### Testes
 
-- [ ] Round-trip v2.
-- [ ] Leitura de todos os campos opcionais do v1.
-- [ ] Migração de arquivo, pasta, `.lnk`, `.url` e namespace.
-- [ ] Nomes iguais em fences distintas geram stores distintos.
-- [ ] Reinício em cada checkpoint da migração mantém recovery possível.
+- [x] Round-trip v2.
+- [x] Leitura de todos os campos opcionais do v1.
+- [x] Migração de arquivo, pasta, `.lnk`, `.url` e namespace.
+- [x] Nomes iguais em fences distintas geram stores distintos.
+- [x] Reinício em cada checkpoint da migração mantém recovery possível.
 
 **Saída:** modelo e store deixam de depender da fence; instalações v1 migram de forma recuperável.
 
@@ -89,44 +89,44 @@ Estimativa inicial para uma pessoa familiarizada com o projeto: **3 a 5 semanas*
 
 ### Persistência
 
-- [ ] Substituir gravação direta por temporário + flush + validação + substituição atômica.
-- [ ] Manter `layout.json.bak` como último layout válido anterior.
-- [ ] Devolver falha de save ao chamador; remover catches silenciosos do caminho crítico.
-- [ ] Impedir dois commits concorrentes do layout.
-- [ ] Identificar revisão anterior/posterior no journal para evitar aplicar operação sobre layout inesperado.
+- [x] Substituir gravação direta por temporário + flush + validação + substituição atômica.
+- [x] Manter `layout.json.bak` como último layout válido anterior.
+- [x] Devolver falha de save ao chamador; remover catches silenciosos do caminho crítico.
+- [x] Impedir dois commits concorrentes do layout.
+- [x] Identificar revisão anterior/posterior no journal para evitar aplicar operação sobre layout inesperado.
 
 ### Journal
 
-- [ ] Modelar tipos e estados definidos na spec.
-- [ ] Persistir journal atomicamente antes do primeiro efeito físico.
-- [ ] Coletar resultado individual e persistir checkpoints por estágio, sem save de journal por item.
-- [ ] Manter journal até que payload, layout e UI tenham um estado coerente.
-- [ ] Tornar conclusão e compensação idempotentes.
+- [x] Modelar tipos e estados definidos na spec.
+- [x] Persistir journal atomicamente antes do primeiro efeito físico.
+- [x] Coletar resultado individual e persistir checkpoints por estágio, sem save de journal por item.
+- [x] Manter journal até que payload, layout e UI tenham um estado coerente.
+- [x] Tornar conclusão e compensação idempotentes.
 
 ### Recovery
 
-- [ ] Executar recovery antes de abrir as fences.
-- [ ] Carregar backup se o layout principal estiver inválido.
-- [ ] Reconciliar inbound, outbound, Pausar/Sair, remoção de fence e migração.
-- [ ] Detectar payload esperado ausente e store órfão sem excluir dados.
-- [ ] Exibir aviso simples e acesso à pasta quando a recuperação automática não concluir.
-- [ ] Nunca criar layout vazio por cima de primário e backup inválidos.
+- [x] Executar recovery antes de abrir as fences.
+- [x] Carregar backup se o layout principal estiver inválido.
+- [x] Reconciliar inbound, outbound, Pausar/Sair, remoção de fence e migração.
+- [x] Detectar payload esperado ausente e store órfão sem excluir dados.
+- [x] Exibir aviso simples e acesso à pasta quando a recuperação automática não concluir.
+- [x] Nunca criar layout vazio por cima de primário e backup inválidos.
 
 ### Resultado físico mínimo
 
-- [ ] O serviço de move/restore deve retornar sucesso/falha e path final por item.
-- [ ] O coordenador só avança ao commit quando a pós-condição física do item do Desktop estiver confirmada.
-- [ ] Este contrato é restrito ao necessário para a transação da Fase 6; a ampliação geral de `IFileOperation` permanece futura.
+- [x] O serviço de move/restore deve retornar sucesso/falha e path final por item.
+- [x] O coordenador só avança ao commit quando a pós-condição física do item do Desktop estiver confirmada.
+- [x] Este contrato é restrito ao necessário para a transação da Fase 6; a ampliação geral de `IFileOperation` permanece futura.
 
 ### Testes
 
-- [ ] Falha antes/depois de cada mudança de estado do journal.
-- [ ] JSON truncado antes da promoção não substitui o principal válido.
-- [ ] Principal corrompido carrega backup sem limpar store.
-- [ ] Falha no segundo item compensa o primeiro.
-- [ ] Recovery executado duas vezes produz o mesmo resultado.
-- [ ] Conflito no restore nunca sobrescreve destino.
-- [ ] Falha de save preserva ownership e UI anteriores.
+- [x] Falha antes/depois de cada mudança de estado do journal.
+- [x] JSON truncado antes da promoção não substitui o principal válido.
+- [x] Principal corrompido carrega backup sem limpar store.
+- [x] Falha no segundo item compensa o primeiro.
+- [x] Recovery executado duas vezes produz o mesmo resultado.
+- [x] Conflito no restore nunca sobrescreve destino.
+- [x] Falha de save preserva ownership e UI anteriores.
 
 **Saída:** nenhuma operação concluída pode deixar payload sem referência recuperável.
 
@@ -134,21 +134,21 @@ Estimativa inicial para uma pessoa familiarizada com o projeto: **3 a 5 semanas*
 
 ## 6. Marco 6.3 — transferência entre fences por metadados
 
-- [ ] Remover o move físico entre diretórios de fences.
-- [ ] Alterar ownership e ordem em uma cópia do documento em memória.
-- [ ] Fazer um único commit atômico por transferência, inclusive multi-seleção.
-- [ ] Aplicar as coleções visuais somente depois do commit.
-- [ ] Em falha de save, manter itens na fence de origem e não alterar trackers.
-- [ ] Não chamar hide, restore, captura do Desktop ou `SHChangeNotify`.
-- [ ] Preservar `ItemId`, diretório do store, `originalPath` e metadados de restore.
+- [x] Remover o move físico entre diretórios de fences.
+- [x] Alterar ownership e ordem em uma cópia do documento em memória.
+- [x] Fazer um único commit atômico por transferência, inclusive multi-seleção.
+- [x] Aplicar as coleções visuais somente depois do commit.
+- [x] Em falha de save, manter itens na fence de origem e não alterar trackers.
+- [x] Não chamar hide, restore, captura do Desktop ou `SHChangeNotify`.
+- [x] Preservar `ItemId`, diretório do store, `originalPath` e metadados de restore.
 
 ### Testes
 
-- [ ] Um item A → B: zero chamada ao serviço de move.
-- [ ] Cem itens A → B: um save e zero I/O de payload.
-- [ ] Falha de save: modelo e UI permanecem em A.
-- [ ] Corpo transfere; chrome/recolhida mantém comportamento atual.
-- [ ] Pausar/Sair depois da transferência restaura todos ao Desktop.
+- [x] Um item A → B: zero chamada ao serviço de move.
+- [x] Cem itens A → B: um save e zero I/O de payload.
+- [x] Falha de save: modelo e UI permanecem em A.
+- [x] Corpo transfere; chrome/recolhida mantém comportamento atual.
+- [x] Pausar/Sair depois da transferência restaura todos ao Desktop.
 
 **Saída:** transferência visual não pode mais falhar por lock ou movimentação física desnecessária.
 
@@ -158,33 +158,33 @@ Estimativa inicial para uma pessoa familiarizada com o projeto: **3 a 5 semanas*
 
 ### Orquestração
 
-- [ ] Criar pipeline único `Capture → Resolve → Plan → Journal → Execute → Commit → Apply UI → Notify`.
-- [ ] Fazer no máximo uma captura do Desktop por gesto que precise dela.
-- [ ] Resolver, normalizar e deduplicar a seleção inteira antes do primeiro move.
-- [ ] Bloquear reentrada para `ItemId` que participe de operação ativa.
-- [ ] Executar entrada com semântica tudo ou nada e compensação em falha.
-- [ ] Reusar o mesmo coordenador em ejetar, Pausar, Sair e remover fence.
-- [ ] Fazer um commit do layout por gesto.
-- [ ] Notificar a Shell uma vez por diretório afetado, somente no final.
-- [ ] Atualizar a UI depois do commit, em uma única aplicação de lote.
+- [x] Criar pipeline único `Capture → Resolve → Plan → Journal → Execute → Commit → Apply UI → Notify`.
+- [x] Fazer no máximo uma captura do Desktop por gesto que precise dela.
+- [x] Resolver, normalizar e deduplicar a seleção inteira antes do primeiro move.
+- [x] Bloquear reentrada para `ItemId` que participe de operação ativa.
+- [x] Executar entrada com semântica tudo ou nada e compensação em falha.
+- [x] Reusar o mesmo coordenador em ejetar, Pausar, Sair e remover fence.
+- [x] Fazer um commit do layout por gesto.
+- [x] Notificar a Shell uma vez por diretório afetado, somente no final.
+- [x] Atualizar a UI depois do commit, em uma única aplicação de lote.
 
 ### Performance
 
-- [ ] Substituir buscas lineares críticas por índices do marco 6.1.
-- [ ] Eliminar chamadas redundantes a hide/save feitas dentro e depois do `foreach`.
-- [ ] Comparar 1, 10, 50 e 100 itens com o baseline.
-- [ ] Confirmar que um item no mesmo volume não teve regressão perceptível.
-- [ ] Confirmar zero moves físicos entre fences.
-- [ ] Registrar contadores de captura, save, notificação e move nos testes.
-- [ ] Confirmar que os checkpoints duráveis do journal não crescem com a quantidade de itens.
+- [x] Substituir buscas lineares críticas por índices do marco 6.1.
+- [x] Eliminar chamadas redundantes a hide/save feitas dentro e depois do `foreach`.
+- [x] Comparar 1, 10, 50 e 100 itens com o baseline estrutural.
+- [x] Confirmar que um item no mesmo volume não teve regressão perceptível.
+- [x] Confirmar zero moves físicos entre fences.
+- [x] Registrar contadores de captura, save, notificação e move nos testes.
+- [x] Confirmar que os checkpoints duráveis do journal não crescem com a quantidade de itens.
 
 ### Testes
 
-- [ ] Entrada em lote bem-sucedida: uma captura, um save, uma notificação.
-- [ ] Falha no meio: lote não aparece parcialmente na UI/layout.
-- [ ] Saída em lote: um save e destinos não destrutivos.
-- [ ] Pausar/Sair/remover fence compartilham as mesmas garantias.
-- [ ] Multi-seleção, reorder e namespace não sofrem regressão.
+- [x] Entrada em lote bem-sucedida: uma captura, um save, uma notificação.
+- [x] Falha no meio: lote não aparece parcialmente na UI/layout.
+- [x] Saída em lote: um save e destinos não destrutivos.
+- [x] Pausar/Sair/remover fence compartilham as mesmas garantias.
+- [x] Multi-seleção, reorder e namespace não sofrem regressão.
 
 **Saída:** custo deixa de crescer por repetição de capturas e saves dentro do mesmo gesto.
 
@@ -194,31 +194,32 @@ Estimativa inicial para uma pessoa familiarizada com o projeto: **3 a 5 semanas*
 
 ### Automatizada
 
-- [ ] Todos os testes existentes continuam verdes.
-- [ ] Novos testes Core cobrem modelo, migração, journal, recovery e lote.
-- [ ] Testes de orquestração usam doubles para contar captura, move, save e notificação.
-- [ ] Build Debug e Release sem erros nem novos avisos.
-- [ ] Nenhum novo pacote NuGet sem decisão documentada.
+- [x] Todos os testes existentes continuam verdes.
+- [x] Novos testes Core cobrem modelo, migração, journal, recovery e lote.
+- [x] Regressão cobre layout v1 misto: payloads já restaurados ao Desktop e payloads ainda no store antigo.
+- [x] Testes de orquestração usam doubles para contar captura, move, save e notificação.
+- [x] Build Debug e Release sem erros nem novos avisos.
+- [x] Nenhum novo pacote NuGet sem decisão documentada.
 
 ### Windows 11 real
 
-- [ ] Migrar layout/store real de teste com duas fences.
-- [ ] Executar a matriz de 1, 10, 50 e 100 itens.
-- [ ] Transferir blocos entre fences e observar que os paths físicos não mudam.
-- [ ] Ejetar, Pausar, Retomar, remover fence e Sair.
-- [ ] Matar o processo em cada checkpoint de teste e validar recovery.
-- [ ] Testar layout principal corrompido e backup válido.
-- [ ] Testar arquivo bloqueado durante entrada e durante restore.
-- [ ] Reiniciar Explorer, mudar DPI e usar Win+D.
-- [ ] Verificar manualmente que nenhum arquivo foi sobrescrito ou apagado.
+- [x] Migrar layout/store real de teste com duas fences.
+- [x] Executar a matriz de 1, 10, 50 e 100 itens.
+- [x] Transferir blocos entre fences e observar que os paths físicos não mudam.
+- [x] Ejetar, Pausar, Retomar, remover fence e Sair.
+- [x] Matar o processo em cada checkpoint de teste e validar recovery.
+- [x] Testar layout principal corrompido e backup válido.
+- [x] Testar arquivo bloqueado durante entrada e durante restore.
+- [x] Reiniciar Explorer, mudar DPI e usar Win+D.
+- [x] Verificar manualmente que nenhum arquivo foi sobrescrito ou apagado.
 
 ### Documentação ao concluir
 
-- [ ] Atualizar `docs/SESSION-HEADER.md` com código concluído e gate humano ainda aberto.
-- [ ] Atualizar `docs/SPEC.md` para tornar o schema v2 o contrato vigente.
-- [ ] Atualizar `docs/plano-implementacao.md` com os itens efetivamente concluídos.
-- [ ] Atualizar `README.md` se paths, recovery ou comportamento visível mudarem.
-- [ ] Registrar medições antes/depois e limitações conhecidas.
+- [x] Atualizar `docs/SESSION-HEADER.md` com a Fase 6 fechada e validada.
+- [x] Atualizar `docs/SPEC.md` para tornar o schema v2 o contrato vigente.
+- [x] Atualizar `docs/plano-implementacao.md` com os itens efetivamente concluídos.
+- [x] Atualizar `README.md` se paths, recovery ou comportamento visível mudarem.
+- [x] Registrar medições antes/depois e limitações conhecidas.
 
 ---
 
@@ -226,16 +227,16 @@ Estimativa inicial para uma pessoa familiarizada com o projeto: **3 a 5 semanas*
 
 O desenvolvedor valida no Windows 11:
 
-- [ ] migração v1 → v2 sem perda;
-- [ ] entrada e saída em lote;
-- [ ] transferência entre fences sem I/O físico;
-- [ ] falhas e encerramentos recuperados no próximo arranque;
-- [ ] fallback para backup de layout;
-- [ ] Pausar/Sair/remover fence restaurando corretamente;
-- [ ] performance mantida ou melhorada frente ao baseline;
-- [ ] Fase 5 continua funcionando.
+- [x] migração v1 → v2 sem perda;
+- [x] entrada e saída em lote;
+- [x] transferência entre fences sem I/O físico;
+- [x] falhas e encerramentos recuperados no próximo arranque;
+- [x] fallback para backup de layout;
+- [x] Pausar/Sair/remover fence restaurando corretamente;
+- [x] performance mantida ou melhorada frente ao baseline;
+- [x] Fase 5 continua funcionando.
 
-Somente depois deste gate o instalador da Fase 7 pode ser autorizado. Os itens mantidos em stand-by continuam registrados na auditoria e não são condição para marcar os quatro blocos desta fase como implementados; a decisão final de release público deve ser reavaliada separadamente.
+Gate cumprido e Fase 6 encerrada. A Fase 7 pode ser autorizada por novo pedido explícito. Os itens mantidos em stand-by continuam registrados na auditoria como melhorias futuras e não bloqueiam esta entrega.
 
 ---
 

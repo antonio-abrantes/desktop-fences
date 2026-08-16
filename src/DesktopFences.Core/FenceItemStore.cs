@@ -11,7 +11,29 @@ public static class FenceItemStore
             "DesktopFences",
             "Items");
 
-    public static string FolderFor(Guid fenceId) =>
+    public static string FolderForItem(Guid itemId) => FolderForItem(Root(), itemId);
+
+    public static string FolderForItem(string root, Guid itemId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(root);
+        if (itemId == Guid.Empty)
+            throw new ArgumentException("ItemId não pode ser vazio.", nameof(itemId));
+        return Path.Combine(root, itemId.ToString("D"));
+    }
+
+    public static string PayloadPath(Guid itemId, string storageName) =>
+        PayloadPath(Root(), itemId, storageName);
+
+    public static string PayloadPath(string root, Guid itemId, string storageName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(storageName);
+        if (!string.Equals(Path.GetFileName(storageName), storageName, StringComparison.Ordinal)
+            || storageName is "." or "..")
+            throw new ArgumentException("StorageName deve ser apenas um nome relativo.", nameof(storageName));
+        return Path.Combine(FolderForItem(root, itemId), storageName);
+    }
+
+    public static string LegacyFolderForFence(Guid fenceId) =>
         Path.Combine(Root(), fenceId.ToString("D"));
 
     public static bool IsUnderRoot(string path)

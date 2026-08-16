@@ -12,7 +12,7 @@ App Windows 11 que agrupa ícones **reais** da área de trabalho em fences retan
 | `DesktopFences.Native` | SysListView32, COM Shell, OLE drop, DWM, âncora | Sim, e só aqui |
 | `DesktopFences.App` | XAML, fence, bandeja, ghost | Só via serviços Native |
 
-**Estado:** release `v0.4.0` preparada; MVP 2 + Fases 3–5 fechadas e validadas no Windows 11. N fences, Configurações, hide/restore, arrastar entre fences, snap, sobrevivência ao Explorer/DPI e Win+D. Próxima: Fase 6, custódia transacional de itens do Desktop; depois, instalador (Fase 7). Ambas só com gate e pedido explícito. Duplo clique no desktop, packs de tema e empurrar vizinhos estão **fora** deste ciclo. Detalhe: [plano-implementacao.md](plano-implementacao.md).
+**Estado:** versão `v0.5.0` preparada; MVP 2 + Fases 3–6 fechadas e validadas no Windows 11. O instalador permanece como Fase 7 e só pode começar com pedido explícito. Duplo clique no desktop, packs de tema e empurrar vizinhos estão **fora** deste ciclo. Detalhe: [plano-implementacao.md](plano-implementacao.md).
 
 ---
 
@@ -44,14 +44,14 @@ A Native aloca o `POINT` / `LVITEM` remoto. Não confiar em marshalling automát
 Fluxo de hide:
 
 1. Resolver o item: pasta Desktop (`DesktopPaths`) ou CLSID do namespace (`::{GUID}` / `shell:`).
-2. Atalho, ficheiro ou pasta: **mover** para `%LocalAppData%\DesktopFences\Items\{FenceId}`. Lixeira / Este computador / Rede: registry `HideDesktopIcons` com o CLSID.
-3. Persistir `path` (store) e `originalPath` (origem). Um `SHChangeNotify` no fim do lote.
+2. Atalho, ficheiro ou pasta: **mover** para `%LocalAppData%\DesktopFences\Items\{ItemId}\{storageName}`. Lixeira / Este computador / Rede: registry `HideDesktopIcons` com o CLSID.
+3. Persistir `itemId`, `kind`, `storageName` relativo e `originalPath`; o path absoluto do store é derivado. Um `SHChangeNotify` no fim do lote.
 4. Desenhar a grade WPF (`SHGetFileInfo` no path do store).
 5. Restaurar (mover de volta / registry `0`) no shutdown, Pausar, ejetar, remover fence.
 
 **Não** usar `FILE_ATTRIBUTE_HIDDEN` nem coordenadas no ListView. Itens ocultos no Explorer não voltam a pintar o que já não está na pasta Desktop.
 
-O fluxo acima descreve a implementação vigente da Fase 5. A Fase 6 substituirá o diretório por fence por store estável `%LocalAppData%\DesktopFences\Items\{ItemId}`, sem mudar a decisão de mover o item real para fora do Desktop. Contrato completo em [spec-fase-6-custodia-desktop.md](spec-fase-6-custodia-desktop.md).
+O store por item é o contrato vigente da Fase 6. O movimento físico fica coberto por journal durável e commit atômico do layout; transferir entre fences não move o payload. Contrato completo em [spec-fase-6-custodia-desktop.md](spec-fase-6-custodia-desktop.md).
 
 ---
 
@@ -91,18 +91,16 @@ Contrato vigente — [ADR-0004](adr/0004-ole-inbound-drop.md):
 - **Inbound:** `RegisterDragDrop` nativo + alvo OLE minúsculo no cursor; ghost WPF próprio (com `+N` se a seleção do desktop tiver vários ícones); cursor de “proibido” substituído pela seta só enquanto o ponteiro está sobre a fence. A seleção do `SysListView32` é lida no início do arraste (`LVM_GETNEXTITEM` / `LVNI_SELECTED`).
 - **Outbound / reorder:** não usamos `DoDragDrop` do Explorer; hook `WH_MOUSE_LL` + `DragGhostWindow` (click-through).
 - Soltar na fence esconde o ícone real e adiciona na grade; soltar fora restaura.
-- Entre fences, no código atual: soltar no **corpo** de outra fence muda o dono (JSON) e move o ficheiro entre pastas do store. Barra de título / fence recolhida não transfere nem ejetar.
-- Alvo da Fase 6: a transferência preserva `ItemId` e store, alterando somente ownership/ordem por um commit atômico de metadados; zero I/O de payload.
+- Entre fences, soltar no **corpo** muda somente ownership/ordem em uma cópia do layout; após um commit atômico bem-sucedido a UI é atualizada. `ItemId`, store e metadados de restore permanecem iguais, com zero I/O de payload. Barra de título / fence recolhida preservam o comportamento anterior.
 
 ### 2.5 Persistência
 
-No código atual, o arquivo único é `%AppData%\DesktopFences\layout.json` (`LayoutStore`) e os itens ficam em `%LocalAppData%\DesktopFences\Items\{FenceId}`. Lista de fences persistida pelo `FenceHost`. `titleAlignment`: `"left"` | `"center"` (ausente = `left`). `theme` opcional (ausente = vidro do MVP 1). `uiLanguage` opcional: `"system"` | `"pt"` | `"en"` (ausente = `system`; `version` permanece 1). `originalPath` opcional (origem para restore). Fundo da fence: alfa do fill limitado a 45–85%. Sempre ≥ 1 fence.
-
-Na Fase 6, o schema sobe para `version: 2`, cada item recebe `itemId`, o store passa a ser derivado do item, e o layout passa a usar gravação temporária, substituição atômica, backup e journal/recovery. A leitura do schema v1 é mantida exclusivamente para migração recuperável. A spec complementar é a fonte de verdade desse alvo.
+O formato vigente é `version: 2`. `%AppData%\DesktopFences\layout.json` usa temporário, flush durável, validação, substituição atômica e `layout.json.bak`. Operações físicas usam `%LocalAppData%\DesktopFences\Transactions\{OperationId}.json` e recovery antes da abertura das fences. A leitura v1 existe apenas para migração recuperável; todo commit novo grava v2.
 
 ```json
 {
-  "version": 1,
+  "version": 2,
+  "revision": 12,
   "uiLanguage": "system",
   "fences": [
     {
@@ -119,7 +117,7 @@ Na Fase 6, o schema sobe para `version: 2`, cada item recebe `itemId`, o store p
       "monitorDeviceName": "\\\\.\\DISPLAY1",
       "collapsed": false,
       "items": [
-        { "name": "Relatorio.docx", "path": "C:\\\\Users\\\\…\\\\AppData\\\\Local\\\\DesktopFences\\\\Items\\\\guid\\\\Relatorio.docx", "originalPath": "C:\\\\Users\\\\…\\\\Desktop\\\\Relatorio.docx", "originalX": 12, "originalY": 48 }
+        { "itemId": "guid-do-item", "kind": "stored", "name": "Relatorio.docx", "storageName": "Relatorio.docx", "originalPath": "C:\\\\Users\\\\…\\\\Desktop\\\\Relatorio.docx", "originalX": 12, "originalY": 48 }
       ]
     }
   ]
@@ -130,7 +128,7 @@ Coordenadas da fence em **DIPs** WPF; posições de ícone em **pixels** do List
 
 ### 2.6 Fora do que já está no código (ciclo em `plano-implementacao.md`)
 
-- Fase 6: custódia transacional de itens do Desktop — store por `ItemId`, JSON atômico/backup/recovery, transferência por metadados e lote. Planejada em [spec-fase-6-custodia-desktop.md](spec-fase-6-custodia-desktop.md) e [plano-fase-6-custodia-desktop.md](plano-fase-6-custodia-desktop.md).
+- Fase 6: fechada e validada no Windows 11; incluída na versão preparada `v0.5.0`. Evidências em [resultado-fase-6-custodia-desktop.md](resultado-fase-6-custodia-desktop.md).
 - Fase 7: instalador (path estável no arranque). Sem packs de tema.
 - **Fora do ciclo:** empurrar a fence de baixo ao expandir; duplo clique no vazio do desktop cria fence; packs de tema.
 - **Reserva (reavaliar no fim):** Novo → Fence no Explorer. Não implementar até planejada e validada.
@@ -143,7 +141,7 @@ Coordenadas da fence em **DIPs** WPF; posições de ícone em **pixels** do List
 | Risco | Mitigação |
 |---|---|
 | Árvore Progman/WorkerW muda | 100% em Native; fallback duplo |
-| Crash a meio do move | Risco vigente; Fase 6: journal durável, commit atômico, backup e recovery idempotente |
+| Crash a meio do move | Journal durável, revisão antes/depois, compensação e recovery idempotente antes da UI |
 | DPI por monitor | DIPs vs pixels documentados; `PerMonitorV2` + `DpiChanged` (Fase 5) |
 | Restart do Explorer | Ficheiro já não está no Desktop; reaplicar só CLSID de namespace |
 | Win+D eleva Progman/WorkerW acima da fence sem marcá-la oculta | Reancorar o grupo de fences acima da banda do Desktop por shell hook + verificação de sobrevivência; gate Windows 11 obrigatório |
@@ -170,6 +168,7 @@ DesktopFences/
 │   ├── plano-implementacao.md
 │   ├── spec-fase-6-custodia-desktop.md
 │   ├── plano-fase-6-custodia-desktop.md
+│   ├── resultado-fase-6-custodia-desktop.md
 │   ├── auditoria-fluxo-itens-performance-release.md
 │   ├── pos-mvp1.md
 │   └── adr/
@@ -178,7 +177,8 @@ DesktopFences/
 │   ├── DesktopFences.Native/
 │   └── DesktopFences.App/           ← Assets/app.ico
 └── tests/
-    └── DesktopFences.Core.Tests/
+    ├── DesktopFences.Core.Tests/
+    └── DesktopFences.App.Tests/
 ```
 
 ---

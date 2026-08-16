@@ -10,7 +10,10 @@ public enum TitleAlignment
 
 public sealed class LayoutDocument
 {
-    public int Version { get; set; } = 1;
+    public const int CurrentVersion = 2;
+
+    public int Version { get; set; } = CurrentVersion;
+    public long Revision { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? UiLanguage { get; set; }
@@ -35,10 +38,24 @@ public sealed class FenceState
 
 public sealed class FenceItemState
 {
+    public Guid ItemId { get; set; }
+    public FenceItemKind Kind { get; set; } = FenceItemKind.Stored;
     public string Name { get; set; } = string.Empty;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? StorageName { get; set; }
+
+    // Compatibilidade exclusiva de leitura com layout v1. Commits v2 limpam este campo.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Path { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? OriginalPath { get; set; }
     public int? OriginalX { get; set; }
     public int? OriginalY { get; set; }
+}
+
+public enum FenceItemKind
+{
+    Stored,
+    Namespace
 }

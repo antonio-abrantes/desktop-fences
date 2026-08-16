@@ -41,13 +41,13 @@ public sealed class LayoutStoreTests : IDisposable
                     Y = 80,
                     Width = 400,
                     Height = 240,
-                    Items = [new FenceItemState { Name = "a.txt", OriginalX = 10, OriginalY = 20 }]
+                    Items = [StoredItem("a.txt", originalX: 10, originalY: 20)]
                 }
             ]
         });
 
         LayoutDocument loaded = store.LoadOrEmpty();
-        loaded.Version.Should().Be(1);
+        loaded.Version.Should().Be(LayoutDocument.CurrentVersion);
         loaded.Fences.Should().ContainSingle();
         FenceState fence = loaded.Fences[0];
         fence.Id.Should().Be(id);
@@ -59,7 +59,7 @@ public sealed class LayoutStoreTests : IDisposable
     }
 
     [Fact]
-    public void Save_ThenLoad_RoundTripsOriginalPath()
+    public void Save_ThenLoad_RoundTripsStableCustodyMetadataWithoutAbsoluteStorePath()
     {
         var store = new LayoutStore(_file);
         store.Save(new LayoutDocument
@@ -73,8 +73,10 @@ public sealed class LayoutStoreTests : IDisposable
                     [
                         new FenceItemState
                         {
+                            ItemId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+                            Kind = FenceItemKind.Stored,
                             Name = "VS Code",
-                            Path = @"C:\Users\Test\AppData\Local\DesktopFences\Items\aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\VS Code.lnk",
+                            StorageName = "VS Code.lnk",
                             OriginalPath = @"C:\Users\Test\Desktop\VS Code.lnk"
                         }
                     ]
@@ -84,8 +86,11 @@ public sealed class LayoutStoreTests : IDisposable
 
         FenceItemState item = store.LoadOrEmpty().Fences.Should().ContainSingle().Subject.Items.Should().ContainSingle().Subject;
         item.OriginalPath.Should().Be(@"C:\Users\Test\Desktop\VS Code.lnk");
+        item.StorageName.Should().Be("VS Code.lnk");
+        item.Path.Should().BeNull();
         string json = File.ReadAllText(_file);
         json.Should().Contain("originalPath");
+        json.Should().NotContain("AppData");
     }
 
     [Fact]
@@ -142,7 +147,7 @@ public sealed class LayoutStoreTests : IDisposable
         string json = File.ReadAllText(_file);
         json.Should().Contain($"\"uiLanguage\": \"{code}\"");
         store.LoadOrEmpty().UiLanguage.Should().Be(code);
-        store.LoadOrEmpty().Version.Should().Be(1);
+        store.LoadOrEmpty().Version.Should().Be(LayoutDocument.CurrentVersion);
     }
 
     [Fact]
@@ -180,4 +185,17 @@ public sealed class LayoutStoreTests : IDisposable
         if (Directory.Exists(_dir))
             Directory.Delete(_dir, recursive: true);
     }
+
+    private static FenceItemState StoredItem(
+        string name,
+        int? originalX = null,
+        int? originalY = null) => new()
+        {
+            ItemId = Guid.NewGuid(),
+            Kind = FenceItemKind.Stored,
+            Name = name,
+            StorageName = name,
+            OriginalX = originalX,
+            OriginalY = originalY
+        };
 }

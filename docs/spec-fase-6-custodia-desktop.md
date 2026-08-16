@@ -1,6 +1,6 @@
 # Especificação complementar — Fase 6: custódia transacional de itens do Desktop
 
-**Status:** especificada; nenhuma implementação iniciada.
+**Status:** implementada, validada no Windows 11 e fechada na versão preparada `v0.5.0`.
 
 **Posição no ciclo:** depois do gate da Fase 5 e antes do instalador, que passa a ser a Fase 7.
 
@@ -361,10 +361,10 @@ DesktopFences.App
 
 ## 13. Gate e release
 
-A Fase 6 só começa após:
+A Fase 6 começou após o cumprimento dos três pré-requisitos:
 
-- gate humano da Fase 5 fechado;
-- pedido explícito de implementação;
-- confirmação de que esta especificação continua aceita.
+- [x] gate humano da Fase 5 fechado;
+- [x] pedido explícito de implementação;
+- [x] confirmação de que esta especificação continua aceita.
 
-O instalador, agora Fase 7, não começa enquanto qualquer item obrigatório do checklist ou o gate Windows 11 da Fase 6 estiver pendente. Concluir a documentação não declara o produto `GO`; a decisão de release deve ser refeita com as evidências dos testes desta fase.
+O gate Windows 11 e os critérios de aceite da Fase 6 foram aprovados. A entrega `v0.5.0` recebeu parecer `GO` dentro do escopo desta especificação. O instalador permanece como Fase 7 e exige novo pedido explícito.

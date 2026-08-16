@@ -10,7 +10,10 @@ public sealed class FenceItemVm : INotifyPropertyChanged
     private bool _isSelected;
     private bool _isDragging;
 
+    public Guid ItemId { get; init; } = Guid.NewGuid();
+    public FenceItemKind Kind { get; set; } = FenceItemKind.Stored;
     public required string Name { get; init; }
+    public string? StorageName { get; set; }
     public string? Path { get; set; }
     public string? OriginalPath { get; set; }
     public ImageSource? Icon { get; init; }
@@ -48,8 +51,10 @@ public sealed class FenceItemVm : INotifyPropertyChanged
 
     public FenceItemState ToState() => new()
     {
+        ItemId = ItemId,
+        Kind = Kind,
         Name = Name,
-        Path = Path,
+        StorageName = Kind == FenceItemKind.Stored ? StorageName : null,
         OriginalPath = OriginalPath,
         OriginalX = OriginalX,
         OriginalY = OriginalY

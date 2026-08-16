@@ -7,7 +7,7 @@ Convenção:
 - `[x]` feito no repositório (agente) e/ou confirmado pelo desenvolvedor na sessão.
 - `[ ]` pendente — **não implementar** sem o gate no `SESSION-HEADER.md` **e** pedido explícito.
 - A Fase 1 abaixo está **fechada**. N fences, Configurações, cores por fence, Sobre, iniciar com o Windows (portable), mutex.
-- As Fases 4 (snap) e 5 (Explorer / DPI / Win+D) estão **fechadas e validadas no Windows 11**. A release `v0.4.0` está preparada. A Fase 6 de custódia transacional dos itens do Desktop está planejada, mas não implementada. O instalador é a Fase 7. Duplo clique no vazio do desktop e packs de tema estão fora deste ciclo.
+- As Fases 4–6 estão **fechadas e validadas no Windows 11**. A versão `v0.5.0` está preparada. O instalador é a Fase 7 e não foi iniciado.
 
 ---
 
@@ -49,10 +49,10 @@ Convenção:
 | **3** | Arrastar item de uma fence para outra | Média | **Fechada** (validada no Windows 11). Reusa o ghost; N fences sem isso são ilhas. |
 | **4** | Snap a bordas da tela e a outras fences | Média | **Fechada** (validada no Windows 11). Posicionamento livre estável primeiro (fase 1); ímã no soltar da alça. |
 | **5** | Explorer reiniciado / DPI / Win+D | Média–alta | **Fechada** (validada no Windows 11). Sobrevivência no Windows real e ancoragem correta após Win+D. |
-| **6** | Custódia transacional de itens do Desktop | Alta | Store por `ItemId`, JSON atômico/backup/recovery, transferência por metadados e lote. Um único gate; sem itens externos. |
+| **6** | Custódia transacional de itens do Desktop | Alta | **Fechada** (validada no Windows 11). Store por `ItemId`, JSON atômico/backup/recovery, transferência por metadados e lote. |
 | **7** | Instalador (path estável no arranque) | Baixa–média | Distribuição somente depois do gate de integridade. Ajustar o “iniciar com o Windows” para a pasta de instalação. Sem packs de tema. |
 
-Não implementar a Fase 6 sem fechar o gate da 5 **e** pedido explícito. Não implementar a Fase 7 antes do gate final da 6.
+Não implementar a Fase 7 sem pedido explícito.
 
 ### Fora deste ciclo (outra versão, se um dia)
 
@@ -352,7 +352,7 @@ Win+D teve uma primeira tentativa baseada em bloquear minimize, `WM_SHOWWINDOW`,
 
 ## Fase 6 — custódia transacional de itens do Desktop
 
-**Não implementar agora.**
+**Status:** fechada e validada no Windows 11; incluída na versão preparada `v0.5.0`.
 
 **Objetivo:** entregar em uma única fase os quatro blocos aprovados após a auditoria:
 
@@ -370,19 +370,19 @@ Fontes de verdade da fase:
 
 ### Checklist resumido
 
-- [ ] 6.1 — schema v2, `ItemId`, store estável e migração recuperável do v1
-- [ ] 6.2 — commit atômico, backup, journal e recovery no arranque
-- [ ] 6.3 — transferência entre fences com zero I/O de payload
-- [ ] 6.4 — pipeline único de lote, uma captura/save/notificação por gesto
-- [ ] Testes automatizados e matriz Windows 11 registrados
+- [x] 6.1 — schema v2, `ItemId`, store estável e migração recuperável do v1
+- [x] 6.2 — commit atômico, backup, journal e recovery no arranque
+- [x] 6.3 — transferência entre fences com zero I/O de payload
+- [x] 6.4 — pipeline único de lote, uma captura/save/notificação por gesto
+- [x] Testes automatizados e matriz Windows 11 aprovados
 
-**Gate do desenvolvedor:** `[ ]` — somente depois dos quatro marcos. Não há release parcial desta fase.
+**Gate do desenvolvedor:** `[x]` — matriz registrada em [resultado-fase-6-custodia-desktop.md](resultado-fase-6-custodia-desktop.md) validada no Windows 11. Fase encerrada.
 
 ---
 
 ## Fase 7 — instalador (path estável no arranque)
 
-**Não implementar antes do gate da Fase 6 e de pedido explícito.**
+**Gate da Fase 6 cumprido. Não implementar sem novo pedido explícito.**
 
 Instalador = distribuição (release com instalador, não só zip portable). **Iniciar com o Windows já existe** (fecho da Fase 1, chave `HKCU\...\Run` com o path do `.exe` atual). Nesta fase **há de se ajustar** essa inicialização: o instalador grava um path estável (pasta de instalação) em vez do portable, sem duplicar o valor Run, e repor o atalho na atualização. Sem packs de tema. O vidro da fence permanece travado.
 

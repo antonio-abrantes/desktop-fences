@@ -18,7 +18,7 @@ Documentos de apoio (ler quando o assunto for relevante):
 
 ## O que este projeto é
 
-App nativo Windows 11 (C# / .NET 8 / WPF) que agrupa ícones reais da área de trabalho em “fences” translúcidas, no espírito do Stardock Fences. O **MVP 2** (`v0.3.1`) entrega N fences, Configurações (cores, idioma pt/en, iniciar com o Windows) e o hide/restore do MVP 1. As Fases 3–5 estão fechadas; a release `v0.4.0` está preparada. A Fase 6 planejada reforça a custódia dos itens do Desktop antes da Fase 7 (instalador). Ambas só avançam com autorização no `SESSION-HEADER.md` e pedido explícito. Duplo clique no desktop e packs de tema estão fora deste ciclo.
+App nativo Windows 11 (C# / .NET 8 / WPF) que agrupa ícones reais da área de trabalho em “fences” translúcidas, no espírito do Stardock Fences. O **MVP 2** (`v0.3.1`) entrega N fences, Configurações (cores, idioma pt/en, iniciar com o Windows) e o hide/restore do MVP 1. As Fases 3–6 estão fechadas e validadas; a versão `v0.5.0` está preparada. A Fase 7 é o instalador e só avança com autorização no `SESSION-HEADER.md` e pedido explícito. Duplo clique no desktop e packs de tema estão fora deste ciclo.
 
 Diferencial em relação aos clones open source: **esconder os ícones reais do `SysListView32` e desenhar a nossa grade por cima**. DeskFrame, NoFences e OpenFences não fazem isso — eles mostram atalhos/pastas em janelas flutuantes enquanto os ícones originais continuam no desktop.
 
@@ -59,7 +59,7 @@ Se uma feature precisa de Win32, a Native expõe um serviço com tipos de Core (
 
 ## Como gerenciar fases
 
-1. A etapa vigente está em `docs/SESSION-HEADER.md` e o detalhe operacional em `docs/plano-implementacao.md`. O MVP 1, o MVP 2 (Fases 1–2) e as Fases 3–5 estão fechados. A Fase 6 é a custódia transacional dos itens do Desktop; a Fase 7 é o instalador. Duplo clique no desktop, packs de tema e empurrar vizinhos **não** entram neste ciclo.
+1. A etapa vigente está em `docs/SESSION-HEADER.md` e o detalhe operacional em `docs/plano-implementacao.md`. O MVP 1, o MVP 2 (Fases 1–2) e as Fases 3–6 estão fechados. A Fase 7 é o instalador e ainda não foi iniciada. Duplo clique no desktop, packs de tema e empurrar vizinhos **não** entram neste ciclo.
 2. Cada passo tem um **gate de validação do desenvolvedor**. O agente marca `[x]` só o que **ele** implementou e testou no código; o gate `[ ]` do desenvolvedor permanece até o humano validar no Windows 11 real.
 3. Ao concluir uma etapa, o agente atualiza:
    - `docs/SESSION-HEADER.md` (contexto + checklist)
@@ -75,7 +75,7 @@ Se uma feature precisa de Win32, a Native expõe um serviço com tipos de Core (
 - C# 12, nullable enabled, implicit usings.
 - Comentários em português só onde a API do Windows for não-óbvia (por que `WriteProcessMemory`, por que `GWL_HWNDPARENT`).
 - Nomes de tipo/membro em inglês.
-- Testes xUnit + FluentAssertions no projeto `tests/DesktopFences.Core.Tests`.
+- Testes xUnit + FluentAssertions: domínio em `tests/DesktopFences.Core.Tests`; orquestração App/Native em `tests/DesktopFences.App.Tests`.
 - Não adicionar pacote NuGet sem registrar o motivo no passo ou num ADR (exceção: pacotes de teste).
 
 ---

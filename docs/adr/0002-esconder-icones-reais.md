@@ -12,16 +12,16 @@ O requisito: **enquanto o item pertence a um Fence, não pode aparecer solto no 
 
 ## Decision
 
-1. Atalho / ficheiro / pasta: **mover** para `%LocalAppData%\DesktopFences\Items\{FenceId}` (`IFileOperation` se o COM responder; senão `File.Move` / `Directory.Move`). O Explorer não tem o que desenhar.
+1. Atalho / ficheiro / pasta: **mover** para um store fora do Desktop (`IFileOperation` se o COM responder; senão `File.Move` / `Directory.Move`). Desde a Fase 6, o path vigente é `%LocalAppData%\DesktopFences\Items\{ItemId}\{storageName}`; o antigo `{FenceId}` permanece apenas como formato de migração v1. O Explorer não tem o que desenhar.
 2. Guardar `originalPath` no `layout.json` para devolver o objeto no Pausar, Sair, ejetar, remover fence.
 3. Lixeira / Este computador / Rede: DWORD `1` em `HKCU\...\Explorer\HideDesktopIcons\NewStartPanel` e `ClassicStartMenu` (não são ficheiros).
 4. Um `SHChangeNotify` no lote. Sem coordenadas no ListView, sem `FileAttributes.Hidden` como mecanismo, sem `FileSystemWatcher`, sem loop de 1s.
 
 `SysListView32` continua só para hit-test de drop e reposicionar o ícone **depois** de voltar ao Desktop.
 
-### Evolução planejada antes do instalador
+### Evolução concluída antes do instalador
 
-A decisão de mover o item real para um store continua aceita. A Fase 6 preserva esse mecanismo, mas troca o diretório `{FenceId}` por `{ItemId}`, acrescenta transação/recovery e torna a transferência entre fences somente metadados. Até a fase ser implementada e validada, o contrato vigente continua sendo o descrito acima. Ver [spec-fase-6-custodia-desktop.md](../spec-fase-6-custodia-desktop.md).
+A decisão de mover o item real para um store continua aceita. A Fase 6 preservou esse mecanismo, trocou o diretório `{FenceId}` por `{ItemId}`, acrescentou transação/recovery e tornou a transferência entre fences somente metadados. A fase está fechada e validada. Ver [spec-fase-6-custodia-desktop.md](../spec-fase-6-custodia-desktop.md).
 
 ## Alternatives Considered
 

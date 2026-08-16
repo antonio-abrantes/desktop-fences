@@ -34,7 +34,21 @@ public partial class App : Application
         StartupRegistration.RefreshPathIfEnabled();
 
         _host = new FenceHost();
-        _host.Start();
+        try
+        {
+            _host.Start();
+        }
+        catch (Exception ex)
+        {
+            _host.RestoreAllIcons();
+            System.Windows.MessageBox.Show(
+                $"O DesktopFences não pôde recuperar os itens com segurança e não será iniciado.\n\n{ex.Message}\n\nDados preservados em: {DesktopFences.Core.FenceItemStore.Root()}",
+                "DesktopFences",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            Shutdown();
+            return;
+        }
         MainWindow = _host.Windows.FirstOrDefault();
 
         _tray = new TrayService();
@@ -47,15 +61,17 @@ public partial class App : Application
 
     private void Pause()
     {
+        if (_host is null || !_host.PauseAll())
+            return;
         _paused = true;
-        _host?.PauseAll();
         _tray?.SetPaused(true);
     }
 
     private void Resume()
     {
+        if (_host is null || !_host.ResumeAll())
+            return;
         _paused = false;
-        _host?.ResumeAll();
         _tray?.SetPaused(false);
     }
 
@@ -86,7 +102,8 @@ public partial class App : Application
 
     private void ExitApp()
     {
-        _host?.PrepareExit();
+        if (_host is not null && !_host.PrepareExit())
+            return;
         Shutdown();
     }
 
