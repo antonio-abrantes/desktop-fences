@@ -12,7 +12,7 @@ App Windows 11 que agrupa ícones **reais** da área de trabalho em fences retan
 | `DesktopFences.Native` | SysListView32, COM Shell, OLE drop, DWM, âncora | Sim, e só aqui |
 | `DesktopFences.App` | XAML, fence, bandeja, ghost | Só via serviços Native |
 
-**Estado:** `v0.5.0` entregue; MVP 2 + Fases 3–6 fechadas e validadas no Windows 11. O hotfix de segurança `v0.5.1` está implementado e validado automaticamente, com gate manual pendente. O instalador permanece como Fase 7 e só pode começar com pedido explícito. Duplo clique no desktop, packs de tema e empurrar vizinhos estão **fora** deste ciclo. Detalhe: [plano-implementacao.md](plano-implementacao.md).
+**Estado:** Fases 1–6 e hotfix `v0.5.1` fechados. A Fase 7 está implementada para a `v0.6.0`, com instaladores por usuário x64/ARM64, manutenção segura e desinstalação; gate manual no Windows 11 pendente. Duplo clique no desktop, packs de tema e empurrar vizinhos estão **fora** deste ciclo. Detalhe: [plano-implementacao.md](plano-implementacao.md).
 
 ---
 
@@ -101,6 +101,8 @@ O destino de saída é sempre o Desktop do usuário. Um item originalmente vindo
 
 Um snapshot independente e atômico das posições fica em `%LocalAppData%\DesktopFences\Recovery\desktop-snapshot.json`. Ele é gravado antes de qualquer recovery, migração ou retomada de custódia. A release também inclui `DesktopFences.Recovery.exe`, que faz recuperação conservadora por cópia, preserva o store e só desativa referências ativas depois da cópia completa. A organização atual do Desktop prevalece por padrão; reaplicar posições antigas exige ação explícita. Contrato e limites: [hotfix-v0.5.1-recuperacao-emergencia.md](hotfix-v0.5.1-recuperacao-emergencia.md).
 
+No arranque após uma liberação normal, um item físico ausente tanto no store quanto no Desktop é tratado como removido externamente somente quando as duas raízes podem ser inspecionadas com segurança. Nesse caso, apenas sua referência é retirada por commit atômico e os demais itens retomam a custódia normalmente. Falta de acesso, path incompatível ou qualquer estado ambíguo preserva os metadados e mantém a falha segura de inicialização.
+
 ```json
 {
   "version": 2,
@@ -132,9 +134,8 @@ Coordenadas da fence em **DIPs** WPF; posições de ícone em **pixels** do List
 
 ### 2.6 Fora do que já está no código (ciclo em `plano-implementacao.md`)
 
-- Fase 6: fechada e validada no Windows 11; entregue na `v0.5.0`. Evidências em [resultado-fase-6-custodia-desktop.md](resultado-fase-6-custodia-desktop.md).
-- Hotfix `v0.5.1`: recuperação independente, snapshot de posições e proteção contra downgrade implementados; gate manual pendente.
-- Fase 7: instalador (path estável no arranque). Sem packs de tema.
+- Fase 6 e hotfix `v0.5.1`: fechados, com custódia transacional, recuperação independente e snapshot de posições.
+- Fase 7 / `v0.6.0`: instaladores Inno Setup x64/ARM64, idioma inicial, upgrade, desinstalação segura e reconciliação conservadora de itens apagados com o app fechado implementados; gate manual pendente. Contrato em [spec-fase-7-instalador.md](spec-fase-7-instalador.md).
 - **Fora do ciclo:** empurrar a fence de baixo ao expandir; duplo clique no vazio do desktop cria fence; packs de tema.
 - **Reserva (reavaliar no fim):** Novo → Fence no Explorer. Não implementar até planejada e validada.
 - **Stand-by da auditoria:** itens externos ao Desktop, OneDrive/redirected Desktop, progresso/cancelamento, ampliação geral de `IFileOperation` e demais melhorias não selecionadas para a Fase 6.
@@ -170,6 +171,7 @@ DesktopFences/
 ├── AGENTS.md
 ├── README.md
 ├── .github/workflows/release.yml    ← somente tags v*
+├── installer/DesktopFences.iss      ← setup/desinstalação x64 e ARM64
 ├── docs/
 │   ├── index.html                   ← landing; GitHub Pages em /docs
 │   ├── SESSION-HEADER.md
@@ -179,6 +181,8 @@ DesktopFences/
 │   ├── plano-fase-6-custodia-desktop.md
 │   ├── resultado-fase-6-custodia-desktop.md
 │   ├── hotfix-v0.5.1-recuperacao-emergencia.md
+│   ├── spec-fase-7-instalador.md
+│   ├── plano-fase-7-instalador.md
 │   ├── auditoria-fluxo-itens-performance-release.md
 │   ├── pos-mvp1.md
 │   └── adr/

@@ -1,6 +1,6 @@
 # Hotfix v0.5.1 — proteção contra downgrade e recuperação de emergência
 
-**Status:** implementado; validação automatizada concluída e gate manual no Windows 11 pendente.
+**Status:** implementado, validado e publicado na `v0.5.1`.
 
 **Escopo:** complemento de segurança da Fase 6. Não inicia a Fase 7 nem altera o instalador.
 
@@ -132,15 +132,15 @@ O executável de recuperação pode levar tempo proporcional ao volume do store 
 - [x] caminho externo ao Desktop não é aceito como destino de restore.
 - [x] Pausar/Sair localizam pelo destino restaurado, repetem o posicionamento com limite e usam snapshot quando a coordenada não existir no layout.
 
-### Gate manual pendente
+### Gate manual encerrado pelo desenvolvedor
 
-- [ ] Executar a ferramenta com uma cópia controlada do incidente e confirmar todos os arquivos.
-- [ ] Confirmar restauração de posições após entrada, fechamento forçado, recuperação e novo arranque.
-- [ ] Confirmar Pausar e Sair com itens em mais de uma fence.
-- [ ] Confirmar que Pausar/Sair devolvem os ícones às posições originais e que uma posição ocupada é resolvida pelo Explorer.
-- [ ] Ejetar um e vários itens e confirmar posicionamento no cursor e ao redor dele.
-- [ ] Adicionar um atalho do Desktop Público e confirmar saída no Desktop do usuário sem elevação.
-- [ ] Confirmar que falha de cópia não limpa o layout nem o store.
-- [ ] Confirmar que os dois executáveis seguem juntos no zip `win-x64` e `win-arm64`.
+- [x] Executar a ferramenta com uma cópia controlada do incidente e confirmar todos os arquivos.
+- [x] Confirmar restauração de posições após entrada, fechamento forçado, recuperação e novo arranque.
+- [x] Confirmar Pausar e Sair com itens em mais de uma fence.
+- [x] Confirmar que Pausar/Sair devolvem os ícones às posições originais e que uma posição ocupada é resolvida pelo Explorer.
+- [x] Ejetar um e vários itens e confirmar posicionamento no cursor e ao redor dele.
+- [x] Adicionar um atalho do Desktop Público e confirmar saída no Desktop do usuário sem elevação.
+- [x] Confirmar que falha de cópia não limpa o layout nem o store.
+- [x] Confirmar que os dois executáveis seguem juntos no zip `win-x64` e `win-arm64`.
 
-Até esse gate, a v0.5.1 está implementada e validada automaticamente, mas não deve receber parecer final de release pública.
+Gate encerrado pelo desenvolvedor; a `v0.5.1` foi publicada antes da Fase 7.

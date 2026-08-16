@@ -4,7 +4,7 @@
 
 **Escopo aplicado:** somente itens do Desktop do usuário/público e itens de namespace já suportados. Arquivos externos ao Desktop são recusados pelo novo pipeline. OneDrive, Desktop redirecionado, progresso/cancelamento, ampliação geral de `IFileOperation` e instalador permanecem em stand-by.
 
-> **Correção pós-release:** depois do GO da `v0.5.0`, a execução de um binário antigo sobre os dados v2 revelou um cenário não coberto: o layout foi rebaixado para v1 e uma resolução de `.env` aceitou a pasta Desktop inteira como payload. O conteúdo permaneceu no store, mas desapareceu da área de trabalho e as posições não tinham snapshot independente. A `v0.5.1` implementa as proteções e a recuperação separada descritas em [hotfix-v0.5.1-recuperacao-emergencia.md](hotfix-v0.5.1-recuperacao-emergencia.md). O GO histórico da Fase 6 não equivale à aprovação automática do hotfix; seu gate manual está pendente.
+> **Correção pós-release:** depois do GO da `v0.5.0`, a execução de um binário antigo sobre os dados v2 revelou um cenário não coberto: o layout foi rebaixado para v1 e uma resolução de `.env` aceitou a pasta Desktop inteira como payload. O conteúdo permaneceu no store, mas desapareceu da área de trabalho e as posições não tinham snapshot independente. A `v0.5.1` implementou as proteções e a recuperação separada descritas em [hotfix-v0.5.1-recuperacao-emergencia.md](hotfix-v0.5.1-recuperacao-emergencia.md), foi validada e publicada antes da Fase 7.
 
 ---
 
@@ -72,7 +72,7 @@ Em 16/08/2026, o primeiro arranque sobre dados v1 reais expôs um caso não cobe
 - Não há política nova para itens externos: o coordenador da Fase 6 os recusa.
 - Stores órfãos nunca são apagados automaticamente.
 - Uma recuperação que não consiga reconciliar payload interrompe o arranque, mostra erro e informa a pasta preservada; não cria layout vazio.
-- O instalador da Fase 7 não foi iniciado.
+- A Fase 7 foi posteriormente autorizada e implementada para a `v0.6.0`.
 
 ---
 
@@ -91,4 +91,4 @@ Executar sobre cópia segura representativa:
 - [x] reiniciar Explorer, alternar DPI/monitor e testar Win+D;
 - [x] confirmar que nenhum arquivo foi sobrescrito ou apagado.
 
-**Parecer final:** `GO` para a entrega `v0.5.0` dentro do escopo definido da Fase 6. O instalador permanece como Fase 7 e não foi iniciado.
+**Parecer final:** `GO` para a entrega `v0.5.0` dentro do escopo definido da Fase 6. A `v0.5.1` fechou o complemento de segurança; o instalador pertence à Fase 7 posterior.

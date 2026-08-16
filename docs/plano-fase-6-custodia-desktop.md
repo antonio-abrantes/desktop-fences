@@ -6,7 +6,7 @@
 
 **Regra de release:** os quatro marcos abaixo pertencem a uma única fase e a um único gate final.
 
-**Complemento pós-release:** o incidente de downgrade motivou o [hotfix v0.5.1](hotfix-v0.5.1-recuperacao-emergencia.md), implementado sem iniciar a Fase 7. A validação automatizada está concluída e o gate manual específico permanece pendente.
+**Complemento pós-release:** o incidente de downgrade motivou o [hotfix v0.5.1](hotfix-v0.5.1-recuperacao-emergencia.md), validado e publicado antes do início da Fase 7.
 
 ---
 

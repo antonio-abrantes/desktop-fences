@@ -1,6 +1,6 @@
 # Especificação complementar — Fase 6: custódia transacional de itens do Desktop
 
-**Status:** implementada, validada no Windows 11 e fechada na `v0.5.0`; complementada pelo hotfix de segurança `v0.5.1`, cujo gate manual está pendente.
+**Status:** implementada, validada no Windows 11 e fechada na `v0.5.0`; complementada pelo hotfix de segurança `v0.5.1`, posteriormente validado e publicado pelo desenvolvedor.
 
 **Posição no ciclo:** depois do gate da Fase 5 e antes do instalador, que passa a ser a Fase 7.
 
@@ -371,6 +371,6 @@ A Fase 6 começou após o cumprimento dos três pré-requisitos:
 - [x] pedido explícito de implementação;
 - [x] confirmação de que esta especificação continua aceita.
 
-O gate Windows 11 e os critérios de aceite da Fase 6 foram aprovados. A entrega `v0.5.0` recebeu parecer `GO` dentro do escopo desta especificação. O instalador permanece como Fase 7 e exige novo pedido explícito.
+O gate Windows 11 e os critérios de aceite da Fase 6 foram aprovados. A entrega `v0.5.0` recebeu parecer `GO` dentro do escopo desta especificação. A Fase 7 foi posteriormente autorizada e implementada para a `v0.6.0`.
 
-Após o fechamento foi confirmado um incidente de downgrade por binário antigo. O complemento [hotfix-v0.5.1-recuperacao-emergencia.md](hotfix-v0.5.1-recuperacao-emergencia.md) adiciona defesa contra layout rebaixado, snapshot independente de posições e recuperação separada por cópia. Ele não reabre os marcos arquiteturais da Fase 6, mas exige gate manual próprio antes de uma nova liberação pública.
+Após o fechamento foi confirmado um incidente de downgrade por binário antigo. O complemento [hotfix-v0.5.1-recuperacao-emergencia.md](hotfix-v0.5.1-recuperacao-emergencia.md) adicionou defesa contra layout rebaixado, snapshot independente de posições e recuperação separada por cópia. O gate próprio foi encerrado e a `v0.5.1` foi publicada antes do início da Fase 7.

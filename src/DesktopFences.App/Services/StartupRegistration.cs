@@ -54,6 +54,12 @@ internal static class StartupRegistration
             WriteCurrentPath(enableApproved: false);
     }
 
+    public static void RemoveForUninstall()
+    {
+        try { Remove(); }
+        catch { }
+    }
+
     private static void WriteCurrentPath(bool enableApproved)
     {
         string? path = Environment.ProcessPath;

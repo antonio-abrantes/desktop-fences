@@ -637,6 +637,13 @@ public sealed class FenceHost
 
     private LayoutDocument EnsureCustodyBeforeUi(LayoutDocument doc)
     {
+        StartupCustodyReconciliation reconciliation = StartupCustodyReconciler.Reconcile(doc);
+        if (reconciliation.RemovedItemIds.Count > 0)
+        {
+            _custody.CommitMetadata(doc, reconciliation.Document, reconciliation.RemovedItemIds);
+            doc = reconciliation.Document;
+        }
+
         List<DesktopCustodyItem> items = doc.Fences.SelectMany(f => f.Items).Select(item =>
         {
             string? runtime = item.Kind == FenceItemKind.Stored && !string.IsNullOrWhiteSpace(item.StorageName)

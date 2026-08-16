@@ -24,7 +24,7 @@ A área de trabalho acumula atalhos, pastas e arquivos soltos. Os clones open so
 
 O DesktopFences faz o que esses clones não fazem: tira o ícone real da pasta Desktop (move para um armazenamento estável por item; registry para Lixeira / Este computador / Rede), desenha a nossa grade por cima, e devolve o ícone ao desktop se você tirar o item da fence ou sair do app.
 
-## O que o MVP 2 entrega
+## O que o MVP 3 entrega
 
 O hide/restore do MVP 1, mais várias fences no mesmo desktop:
 
@@ -34,17 +34,25 @@ O hide/restore do MVP 1, mais várias fences no mesmo desktop:
 - Mover só pela alça **⋮⋮** (ímã nas bordas da tela e nas outras fences ao soltar); redimensionar pelas bordas (ímã no fim do gesto); recolher para só a barra (▴); duplo clique no **texto** do título para renomear.
 - Sempre **pelo menos uma** fence. Nas Configurações: criar, remover (nunca a última), alinhar o título, **cores**, e botões para abrir a pasta do `layout.json` e a dos ficheiros agrupados.
 - **Idioma:** Sistema / Português / Inglês. Troca ao vivo. Título já gravado não muda.
-- **Iniciar com o Windows** (o atalho usa o `.exe` desta pasta; se mover o programa, abra-o uma vez no sítio novo). Uma só instância.
+- **Iniciar com o Windows** em path estável quando instalado; o portable continua atualizando o path para a pasta em uso. Uma só instância.
 - Bandeja: Pausar / Retomar / Configurações / Sobre / Sair. Pausar e Sair restauram os ícones reais e reaplicam suas posições originais; se uma célula estiver ocupada, o Explorer resolve o alinhamento.
 - Persistência v2 em `%AppData%\DesktopFences\layout.json`, com gravação atômica e backup. Ficheiros em `%LocalAppData%\DesktopFences\Items\{ItemId}`; transações interrompidas são recuperadas antes de mostrar as fences.
+- Se um item devolvido ao Desktop for apagado enquanto o app estiver fechado, no próximo arranque somente sua referência é removida da fence; os demais itens continuam normalmente. Estados inacessíveis ou ambíguos permanecem bloqueados por segurança.
 - Snapshot atômico das posições dos ícones no arranque e `DesktopFences.Recovery.exe` separado para recuperação por um clique. A ferramenta copia os dados sem apagar o store e nunca sobrescreve um arquivo do Desktop.
 
-Explorer reiniciado, DPI e Win+D foram validados no Windows 11. As Fases 3–6 estão fechadas. A `v0.5.1` é o hotfix de recuperação de emergência e proteção contra downgrade; sua validação automatizada está concluída e o gate manual no Windows 11 está pendente. O instalador permanece como Fase 7 e ainda não foi iniciado. Duplo clique no vazio do desktop não faz parte deste ciclo.
+Explorer reiniciado, DPI e Win+D foram validados no Windows 11. A `v0.6.0` acrescenta instaladores x64/ARM64, idioma inicial e desinstalação segura. A implementação automática está concluída; o gate manual dos setups ainda precisa ser feito. Duplo clique no vazio do desktop não faz parte deste ciclo.
+
+## Instalação e desinstalação
+
+Baixe o setup da sua arquitetura em [Releases](https://github.com/antonio-abrantes/desktop-fences/releases). A instalação é por usuário, sem administrador, e Português vem selecionado por padrão; Inglês também pode ser escolhido e o idioma continua alterável nas Configurações.
+
+Ao encontrar dados anteriores, o setup oferece usar as configurações existentes ou começar com novas depois de devolver os itens ao Desktop e arquivar o estado antigo em `%LocalAppData%\DesktopFences.Backups`. Na desinstalação, é possível manter as configurações ou remover tudo. Se a devolução dos itens falhar, a limpeza é cancelada e o aplicativo, Recovery e store são preservados.
 
 ## Requisitos
 
 - Windows 10/11 (alvo: Windows 11)
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- O setup e os zips são self-contained; o usuário não precisa instalar o .NET.
+- Para compilar o projeto: [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
 
 Rode **sem** administrador (`asInvoker`). Elevar o processo só complica o acesso ao `explorer.exe`.
 
@@ -82,11 +90,11 @@ dotnet test DesktopFences.sln
 O GitHub Action **não** roda em push de branch. Só em tag `v*`:
 
 ```powershell
-git tag -a v0.5.1 -m "DesktopFences v0.5.1"
-git push origin v0.5.1
+git tag -a v0.6.0 -m "DesktopFences v0.6.0"
+git push origin v0.6.0
 ```
 
-Isso publica um GitHub Release com zip portable `win-x64` e `win-arm64` (self-contained), contendo o aplicativo e o executável independente de recuperação. Download: [Releases](https://github.com/antonio-abrantes/desktop-fences/releases).
+Isso publica, para `win-x64` e `win-arm64`, um setup e um zip portable self-contained, ambos com o aplicativo e o executável independente de recuperação. Download: [Releases](https://github.com/antonio-abrantes/desktop-fences/releases).
 
 ## Licença
 

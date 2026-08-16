@@ -7,8 +7,8 @@
 ## Contexto da Sessão ou fase
 
 **Projeto:** DesktopFences 1.0
-**Etapa atual:** Hotfix de segurança da Fase 6 (**`v0.5.1` implementada; gate manual pendente**).
-**Objetivo desta sessão:** impedir recorrência do incidente de downgrade, entregar recuperação independente por um clique e preservar posições dos ícones na ejeção, em Pausar e em Sair, sem iniciar o instalador.
+**Etapa atual:** Fase 7 — instalador e desinstalação segura (**`v0.6.0` implementada; gate manual pendente**).
+**Objetivo desta sessão:** entregar instalação por usuário, upgrade no lugar, idioma Português/Inglês, path estável e desinstalação com opção de preservar ou remover dados, sempre liberando a custódia do Desktop antes de qualquer limpeza; inclui o ajuste emergencial que reconcilia somente referências de itens apagados externamente enquanto o app esteve fechado.
 
 ---
 
@@ -25,6 +25,8 @@ Para implementar a próxima fase, ler também integralmente:
 
 5. `docs/spec-fase-6-custodia-desktop.md`
 6. `docs/plano-fase-6-custodia-desktop.md`
+7. `docs/spec-fase-7-instalador.md`
+8. `docs/plano-fase-7-instalador.md`
 
 Apoio (quando o assunto for relevante):
 
@@ -37,12 +39,12 @@ Apoio (quando o assunto for relevante):
 
 ## Instrução de Revisão
 
-A Fase 6 continua **fechada e validada no Windows 11**. Após um incidente real causado pela execução de um binário antigo sobre dados v2, foi autorizado um hotfix de custódia: proteção contra downgrade, validação estrita da migração v1, snapshot atômico das posições e `DesktopFences.Recovery.exe` separado, conservador e não destrutivo. A revisão também corrigiu a ejeção para o ponto do cursor, restaurou as posições originais em Pausar/Sair e eliminou o bloqueio causado por itens do Desktop Público, que passam a ser devolvidos ao Desktop gravável do usuário. A versão interna é `0.5.1`. Build Release sem avisos de código, 176 testes e publishes self-contained `win-x64`/`win-arm64` estão aprovados; o aviso NU1900 observado antes do restore sem auditoria foi somente indisponibilidade de rede do nuget.org. O gate manual específico do hotfix precisa ser concluído antes do parecer final de release pública. O instalador é a Fase 7 e não foi iniciado.
+A Fase 6 e o hotfix `v0.5.1` foram concluídos e salvos. A Fase 7 foi implementada para a `0.6.0`: instalador Inno Setup por usuário, duas arquiteturas, atualização no lugar, idioma inicial Português/Inglês e desinstalação segura. O ajuste emergencial da mesma fase remove atomicamente apenas a referência de um item físico confirmado como apagado enquanto o app esteve fechado; estados inacessíveis ou ambíguos continuam bloqueando o arranque por segurança. Nenhuma limpeza de dados ocorre antes da liberação confirmada dos itens para o Desktop. Validação automática: 197 testes, build Release sem avisos, publishes self-contained x64/ARM64 e dois setups compilados com Inno Setup 6.7.3. O gate manual específico da Fase 7 permanece pendente.
 
 ```
-ETAPA FECHADA  : Fase 6 — custódia transacional de itens do Desktop (validada no Windows 11)
-HOTFIX ATUAL   : v0.5.1 — recuperação de emergência implementada; gate manual pendente
-ETAPA SEGUINTE : Fase 7 — instalador (não iniciada; exige pedido explícito)
+ETAPA FECHADA  : Fase 6 + hotfix v0.5.1
+ETAPA ATUAL    : Fase 7 — instalador/desinstalador seguro + reconciliação emergencial, v0.6.0 implementada
+GATE PENDENTE  : validação manual da instalação, upgrade e desinstalação no Windows 11
 FORA DO CICLO  : duplo clique no vazio do desktop · packs de tema · empurrar fence de baixo ao expandir
 ```
 
@@ -85,9 +87,12 @@ FORA DO CICLO  : duplo clique no vazio do desktop · packs de tema · empurrar f
 - [x] Pausar/Sair usam o destino físico realmente restaurado e repetem por janela limitada a posição original; snapshot cobre coordenada ausente
 - [x] Item vindo do Desktop Público é restaurado no Desktop do usuário, sem exigir administrador e sem bloquear o restante do lote
 - [x] Hotfix validado automaticamente: 176 testes verdes (138 Core + 38 App/Native), build Release com 0 avisos de código/0 erros e publishes `win-x64`/`win-arm64` com os dois executáveis
-- [ ] Desenvolvedor validar o hotfix `v0.5.1` no Windows 11 e os dois executáveis nos zips de release
+- [x] Desenvolvedor encerrou e publicou o hotfix `v0.5.1`
 - [x] Desenvolvedor validou no Windows 11: Explorer/DPI e Win+D / Mostrar ambiente de trabalho; fences permanecem visíveis; Pausar/Sair continua restaurando
-- [ ] Não implementar a Fase 7 (instalador / path estável no arranque) sem novo pedido explícito
+- [x] Fase 7 autorizada explicitamente pelo desenvolvedor
+- [x] Fase 7 implementada e validada automaticamente: 197 testes, dois publishes e dois setups
+- [x] Ajuste emergencial da Fase 7: item apagado enquanto o app estava fechado perde somente sua referência; estado ambíguo preserva metadados e mantém o bloqueio seguro
+- [ ] Desenvolvedor validar a Fase 7 no Windows 11
 - [ ] Não implementar duplo clique no vazio do desktop, packs de tema, nem empurrar a fence de baixo ao expandir
 
 Se qualquer inconsistência for encontrada na revisão, reporte antes de sugerir qualquer ação.

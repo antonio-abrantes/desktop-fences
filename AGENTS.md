@@ -18,7 +18,7 @@ Documentos de apoio (ler quando o assunto for relevante):
 
 ## O que este projeto é
 
-App nativo Windows 11 (C# / .NET 8 / WPF) que agrupa ícones reais da área de trabalho em “fences” translúcidas, no espírito do Stardock Fences. O **MVP 2** (`v0.3.1`) entrega N fences, Configurações (cores, idioma pt/en, iniciar com o Windows) e o hide/restore do MVP 1. As Fases 3–6 estão fechadas e validadas. A `v0.5.1` complementa a custódia com proteção contra downgrade, snapshot de posições e `DesktopFences.Recovery.exe`; o gate manual desse hotfix está pendente. A Fase 7 é o instalador e só avança com autorização no `SESSION-HEADER.md` e pedido explícito. Duplo clique no desktop e packs de tema estão fora deste ciclo.
+App nativo Windows 11 (C# / .NET 8 / WPF) que agrupa ícones reais da área de trabalho em “fences” translúcidas, no espírito do Stardock Fences. As Fases 1–6 e o hotfix `v0.5.1` estão fechados. A Fase 7 entrega na `v0.6.0` instaladores por usuário x64/ARM64, upgrade no lugar, idioma inicial, desinstalação segura e reconciliação conservadora de itens apagados enquanto o app esteve fechado; implementação automática concluída, com gate manual pendente. Duplo clique no desktop e packs de tema estão fora deste ciclo.
 
 Diferencial em relação aos clones open source: **esconder os ícones reais do `SysListView32` e desenhar a nossa grade por cima**. DeskFrame, NoFences e OpenFences não fazem isso — eles mostram atalhos/pastas em janelas flutuantes enquanto os ícones originais continuam no desktop.
 
@@ -59,7 +59,7 @@ Se uma feature precisa de Win32, a Native expõe um serviço com tipos de Core (
 
 ## Como gerenciar fases
 
-1. A etapa vigente está em `docs/SESSION-HEADER.md` e o detalhe operacional em `docs/plano-implementacao.md`. O MVP 1, o MVP 2 (Fases 1–2) e as Fases 3–6 estão fechados. A Fase 7 é o instalador e ainda não foi iniciada. Duplo clique no desktop, packs de tema e empurrar vizinhos **não** entram neste ciclo.
+1. A etapa vigente está em `docs/SESSION-HEADER.md` e o detalhe operacional em `docs/plano-implementacao.md`. As Fases 1–6 estão fechadas. A Fase 7 está implementada e validada automaticamente; o gate humano de instalação/upgrade/desinstalação permanece aberto. Duplo clique no desktop, packs de tema e empurrar vizinhos **não** entram neste ciclo.
 2. Cada passo tem um **gate de validação do desenvolvedor**. O agente marca `[x]` só o que **ele** implementou e testou no código; o gate `[ ]` do desenvolvedor permanece até o humano validar no Windows 11 real.
 3. Ao concluir uma etapa, o agente atualiza:
    - `docs/SESSION-HEADER.md` (contexto + checklist)

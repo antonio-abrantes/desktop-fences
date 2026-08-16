@@ -7,7 +7,7 @@ Convenção:
 - `[x]` feito no repositório (agente) e/ou confirmado pelo desenvolvedor na sessão.
 - `[ ]` pendente — **não implementar** sem o gate no `SESSION-HEADER.md` **e** pedido explícito.
 - A Fase 1 abaixo está **fechada**. N fences, Configurações, cores por fence, Sobre, iniciar com o Windows (portable), mutex.
-- As Fases 4–6 estão **fechadas e validadas no Windows 11**. A `v0.5.0` foi entregue; o hotfix `v0.5.1` está implementado e validado automaticamente, com gate manual pendente. O instalador é a Fase 7 e não foi iniciado.
+- As Fases 1–6 e o hotfix `v0.5.1` estão fechados. A Fase 7 foi implementada e validada automaticamente para a `v0.6.0`, incluindo a reconciliação emergencial de itens apagados externamente; o gate manual do instalador permanece pendente.
 
 ---
 
@@ -50,9 +50,9 @@ Convenção:
 | **4** | Snap a bordas da tela e a outras fences | Média | **Fechada** (validada no Windows 11). Posicionamento livre estável primeiro (fase 1); ímã no soltar da alça. |
 | **5** | Explorer reiniciado / DPI / Win+D | Média–alta | **Fechada** (validada no Windows 11). Sobrevivência no Windows real e ancoragem correta após Win+D. |
 | **6** | Custódia transacional de itens do Desktop | Alta | **Fechada** (validada no Windows 11). Store por `ItemId`, JSON atômico/backup/recovery, transferência por metadados e lote. |
-| **7** | Instalador (path estável no arranque) | Baixa–média | Distribuição somente depois do gate de integridade. Ajustar o “iniciar com o Windows” para a pasta de instalação. Sem packs de tema. |
+| **7** | Instalador, upgrade e desinstalação segura | Média | **Implementada automaticamente; gate manual pendente.** Path estável, idioma inicial e proteção da custódia antes de atualizar/remover. |
 
-Não implementar a Fase 7 sem pedido explícito.
+Não declarar a Fase 7 fechada antes do gate manual no Windows 11.
 
 ### Fora deste ciclo (outra versão, se um dia)
 
@@ -352,7 +352,7 @@ Win+D teve uma primeira tentativa baseada em bloquear minimize, `WM_SHOWWINDOW`,
 
 ## Fase 6 — custódia transacional de itens do Desktop
 
-**Status:** fechada e validada no Windows 11; entregue na `v0.5.0`. Hotfix de segurança `v0.5.1` implementado, com gate manual pendente.
+**Status:** fechada e validada no Windows 11; entregue na `v0.5.0`. Hotfix de segurança `v0.5.1` validado e publicado.
 
 **Objetivo:** entregar em uma única fase os quatro blocos aprovados após a auditoria:
 
@@ -399,9 +399,22 @@ Contrato e matriz: [hotfix-v0.5.1-recuperacao-emergencia.md](hotfix-v0.5.1-recup
 
 ## Fase 7 — instalador (path estável no arranque)
 
-**Gate da Fase 6 cumprido. Não implementar sem novo pedido explícito.**
+**Status:** implementada e validada automaticamente para a `v0.6.0`; gate manual pendente.
 
-Instalador = distribuição (release com instalador, não só zip portable). **Iniciar com o Windows já existe** (fecho da Fase 1, chave `HKCU\...\Run` com o path do `.exe` atual). Nesta fase **há de se ajustar** essa inicialização: o instalador grava um path estável (pasta de instalação) em vez do portable, sem duplicar o valor Run, e repor o atalho na atualização. Sem packs de tema. O vidro da fence permanece travado.
+Contrato e matriz: [spec-fase-7-instalador.md](spec-fase-7-instalador.md) e [plano-fase-7-instalador.md](plano-fase-7-instalador.md).
+
+- [x] Inno Setup por usuário, sem UAC, path estável em `%LocalAppData%\Programs\DesktopFences`
+- [x] dois setups: `win-x64` e `win-arm64`; zip portable continua na release
+- [x] `AppId` estável, atualização no lugar e bloqueio de downgrade
+- [x] seletor Português/Inglês, Português como default; preferência continua alterável no app
+- [x] configuração existente: manter ou começar nova após liberação segura e arquivo do estado anterior
+- [x] desinstalação: manter configurações ou remover tudo, sempre depois de devolver os itens ao Desktop
+- [x] canal local pede `PrepareExit`; sem encerramento forçado e sem custo periódico de I/O
+- [x] path de Iniciar com o Windows atualizado para o executável instalado quando habilitado
+- [x] item confirmado como apagado enquanto o app esteve fechado perde somente sua referência; itens válidos continuam e estados ambíguos mantêm o bloqueio seguro
+- [x] release de tag publica zip e setup para cada arquitetura
+- [x] 197 testes verdes; builds/publishes x64/ARM64 e dois scripts Inno compilados
+- [ ] gate manual no Windows 11
 
 ---
 

@@ -12,6 +12,7 @@ public partial class App : Application
     private TrayService? _tray;
     private FenceHost? _host;
     private SettingsWindow? _settings;
+    private MaintenancePipeServer? _maintenancePipe;
     private bool _paused;
     private bool _startRecoveryOnExit;
 
@@ -19,6 +20,15 @@ public partial class App : Application
     {
         base.OnStartup(e);
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+        if (InstallerMaintenanceArguments.TryParse(e.Args, out InstallerMaintenanceArguments? maintenance, out string? error))
+        {
+            Environment.ExitCode = maintenance is null || error is not null
+                ? 2
+                : InstallerMaintenance.Run(maintenance);
+            Shutdown(Environment.ExitCode);
+            return;
+        }
 
         _singleInstance = new Mutex(initiallyOwned: true, @"Local\DesktopFences.SingleInstance", out bool created);
         if (!created)
@@ -61,6 +71,10 @@ public partial class App : Application
         _tray.SettingsRequested += OpenSettings;
         _tray.AboutRequested += OpenAbout;
         _tray.ExitRequested += ExitApp;
+        _maintenancePipe = new MaintenancePipeServer(
+            Dispatcher,
+            () => _host?.PrepareExit() == true,
+            () => Shutdown());
     }
 
     private void Pause()
@@ -113,6 +127,8 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _maintenancePipe?.Dispose();
+        _maintenancePipe = null;
         if (!_paused)
             _host?.RestoreAllIcons();
 

@@ -65,6 +65,10 @@ jobs:
           -p:DebugType=none
           -o ${{ github.workspace }}/publish/${{ matrix.rid }}
 
+      - name: Remove intermediate runtime config
+        shell: pwsh
+        run: Remove-Item -LiteralPath "publish/${{ matrix.rid }}/DesktopFences.Recovery.runtimeconfig.json" -ErrorAction SilentlyContinue
+
       - name: Pack zip
         shell: pwsh
         run: |
@@ -73,10 +77,35 @@ jobs:
           Compress-Archive -Path "publish/${{ matrix.rid }}/*" -DestinationPath $zip -Force
           Get-ChildItem out
 
+      - name: Locate Inno Setup compiler
+        id: inno
+        shell: pwsh
+        run: |
+          $candidates = @(
+            'C:\Program Files (x86)\Inno Setup 7\ISCC.exe',
+            'C:\Program Files (x86)\Inno Setup 6\ISCC.exe',
+            'C:\Program Files\Inno Setup 7\ISCC.exe',
+            'C:\Program Files\Inno Setup 6\ISCC.exe'
+          )
+          $compiler = $candidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+          if (-not $compiler) {
+            choco install innosetup --no-progress -y
+            $compiler = $candidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+          }
+          if (-not $compiler) { throw 'Inno Setup compiler not found.' }
+          "compiler=$compiler" >> $env:GITHUB_OUTPUT
+
+      - name: Compile installer
+        shell: pwsh
+        run: |
+          & '${{ steps.inno.outputs.compiler }}' "/DMyVersion=${{ steps.ver.outputs.version }}" "/DMyArch=${{ matrix.rid }}" installer/DesktopFences.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
+          Get-ChildItem out
+
       - uses: actions/upload-artifact@v4
         with:
           name: DesktopFences-${{ matrix.rid }}
-          path: out/*.zip
+          path: out/*
           if-no-files-found: error
 
   release:
@@ -92,6 +121,6 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*.zip
+          files: artifacts/*
           generate_release_notes: true
           fail_on_unmatched_files: true
