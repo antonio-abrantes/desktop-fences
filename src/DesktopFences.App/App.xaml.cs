@@ -1,4 +1,6 @@
 using System.Windows;
+using System.Diagnostics;
+using System.IO;
 using DesktopFences.App.Services;
 using Application = System.Windows.Application;
 
@@ -11,6 +13,7 @@ public partial class App : Application
     private FenceHost? _host;
     private SettingsWindow? _settings;
     private bool _paused;
+    private bool _startRecoveryOnExit;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -41,11 +44,12 @@ public partial class App : Application
         catch (Exception ex)
         {
             _host.RestoreAllIcons();
-            System.Windows.MessageBox.Show(
-                $"O DesktopFences não pôde recuperar os itens com segurança e não será iniciado.\n\n{ex.Message}\n\nDados preservados em: {DesktopFences.Core.FenceItemStore.Root()}",
+            MessageBoxResult choice = System.Windows.MessageBox.Show(
+                $"O DesktopFences não pôde recuperar os itens com segurança e não será iniciado.\n\n{ex.Message}\n\nDados preservados em: {DesktopFences.Core.FenceItemStore.Root()}\n\nDeseja abrir a recuperação de emergência?",
                 "DesktopFences",
-                MessageBoxButton.OK,
+                MessageBoxButton.YesNo,
                 MessageBoxImage.Error);
+            _startRecoveryOnExit = choice == MessageBoxResult.Yes;
             Shutdown();
             return;
         }
@@ -118,6 +122,18 @@ public partial class App : Application
             try { _singleInstance.ReleaseMutex(); }
             catch { }
             _singleInstance.Dispose();
+        }
+
+        if (_startRecoveryOnExit)
+        {
+            try
+            {
+                string? directory = Path.GetDirectoryName(Environment.ProcessPath);
+                string recovery = Path.Combine(directory ?? string.Empty, "DesktopFences.Recovery.exe");
+                if (File.Exists(recovery))
+                    Process.Start(new ProcessStartInfo(recovery) { UseShellExecute = true });
+            }
+            catch { }
         }
 
         base.OnExit(e);

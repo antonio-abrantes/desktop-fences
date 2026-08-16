@@ -6,6 +6,8 @@
 
 **Regra de release:** os quatro marcos abaixo pertencem a uma única fase e a um único gate final.
 
+**Complemento pós-release:** o incidente de downgrade motivou o [hotfix v0.5.1](hotfix-v0.5.1-recuperacao-emergencia.md), implementado sem iniciar a Fase 7. A validação automatizada está concluída e o gate manual específico permanece pendente.
+
 ---
 
 ## 1. Resultado da fase
@@ -237,6 +239,10 @@ O desenvolvedor valida no Windows 11:
 - [x] Fase 5 continua funcionando.
 
 Gate cumprido e Fase 6 encerrada. A Fase 7 pode ser autorizada por novo pedido explícito. Os itens mantidos em stand-by continuam registrados na auditoria como melhorias futuras e não bloqueiam esta entrega.
+
+O gate acima se refere à `v0.5.0`. A `v0.5.1` somente pode receber novo parecer público após validar a ferramenta separada, preservação do store, conflitos, posições e os dois artefatos de release conforme o documento do hotfix.
+
+Complemento de segurança já implementado na `v0.5.1`: a ejeção usa o ponto do cursor (ou pontos próximos e distintos para múltiplos itens), e payloads originados no Desktop Público são restaurados no Desktop do usuário. Isso evita depender de permissão administrativa na pasta pública e impede que um único atalho reverta o lote inteiro.
 
 ---
 

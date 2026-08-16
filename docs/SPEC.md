@@ -12,7 +12,7 @@ App Windows 11 que agrupa ícones **reais** da área de trabalho em fences retan
 | `DesktopFences.Native` | SysListView32, COM Shell, OLE drop, DWM, âncora | Sim, e só aqui |
 | `DesktopFences.App` | XAML, fence, bandeja, ghost | Só via serviços Native |
 
-**Estado:** versão `v0.5.0` preparada; MVP 2 + Fases 3–6 fechadas e validadas no Windows 11. O instalador permanece como Fase 7 e só pode começar com pedido explícito. Duplo clique no desktop, packs de tema e empurrar vizinhos estão **fora** deste ciclo. Detalhe: [plano-implementacao.md](plano-implementacao.md).
+**Estado:** `v0.5.0` entregue; MVP 2 + Fases 3–6 fechadas e validadas no Windows 11. O hotfix de segurança `v0.5.1` está implementado e validado automaticamente, com gate manual pendente. O instalador permanece como Fase 7 e só pode começar com pedido explícito. Duplo clique no desktop, packs de tema e empurrar vizinhos estão **fora** deste ciclo. Detalhe: [plano-implementacao.md](plano-implementacao.md).
 
 ---
 
@@ -90,12 +90,16 @@ Contrato vigente — [ADR-0004](adr/0004-ole-inbound-drop.md):
 
 - **Inbound:** `RegisterDragDrop` nativo + alvo OLE minúsculo no cursor; ghost WPF próprio (com `+N` se a seleção do desktop tiver vários ícones); cursor de “proibido” substituído pela seta só enquanto o ponteiro está sobre a fence. A seleção do `SysListView32` é lida no início do arraste (`LVM_GETNEXTITEM` / `LVNI_SELECTED`).
 - **Outbound / reorder:** não usamos `DoDragDrop` do Explorer; hook `WH_MOUSE_LL` + `DragGhostWindow` (click-through).
-- Soltar na fence esconde o ícone real e adiciona na grade; soltar fora restaura.
+- Soltar na fence esconde o ícone real e adiciona na grade; soltar fora restaura o primeiro ícone no ponto do cursor e distribui uma seleção múltipla em células próximas. Como a notificação da Shell é assíncrona, a Native repete por um intervalo curto durante essa ejeção e ao repor posições originais em Pausar/Sair.
 - Entre fences, soltar no **corpo** muda somente ownership/ordem em uma cópia do layout; após um commit atômico bem-sucedido a UI é atualizada. `ItemId`, store e metadados de restore permanecem iguais, com zero I/O de payload. Barra de título / fence recolhida preservam o comportamento anterior.
 
 ### 2.5 Persistência
 
-O formato vigente é `version: 2`. `%AppData%\DesktopFences\layout.json` usa temporário, flush durável, validação, substituição atômica e `layout.json.bak`. Operações físicas usam `%LocalAppData%\DesktopFences\Transactions\{OperationId}.json` e recovery antes da abertura das fences. A leitura v1 existe apenas para migração recuperável; todo commit novo grava v2.
+O formato vigente é `version: 2`. `%AppData%\DesktopFences\layout.json` usa temporário, flush durável, validação, substituição atômica e `layout.json.bak`. Operações físicas usam `%LocalAppData%\DesktopFences\Transactions\{OperationId}.json` e recovery antes da abertura das fences. A leitura v1 existe apenas para migração recuperável; todo commit novo grava v2. Se um principal v1 tiver sido produzido por downgrade e o backup continuar em v2, o documento v2 tem precedência.
+
+O destino de saída é sempre o Desktop do usuário. Um item originalmente vindo do Desktop Público não volta para a pasta pública, pois o processo `asInvoker` pode não ter permissão de escrita ali; ele é devolvido ao Desktop gravável do usuário e continua visualmente no mesmo ambiente de trabalho. Nenhum caminho externo ao Desktop é usado como destino de restore.
+
+Um snapshot independente e atômico das posições fica em `%LocalAppData%\DesktopFences\Recovery\desktop-snapshot.json`. Ele é gravado antes de qualquer recovery, migração ou retomada de custódia. A release também inclui `DesktopFences.Recovery.exe`, que faz recuperação conservadora por cópia, preserva o store e só desativa referências ativas depois da cópia completa. A organização atual do Desktop prevalece por padrão; reaplicar posições antigas exige ação explícita. Contrato e limites: [hotfix-v0.5.1-recuperacao-emergencia.md](hotfix-v0.5.1-recuperacao-emergencia.md).
 
 ```json
 {
@@ -128,7 +132,8 @@ Coordenadas da fence em **DIPs** WPF; posições de ícone em **pixels** do List
 
 ### 2.6 Fora do que já está no código (ciclo em `plano-implementacao.md`)
 
-- Fase 6: fechada e validada no Windows 11; incluída na versão preparada `v0.5.0`. Evidências em [resultado-fase-6-custodia-desktop.md](resultado-fase-6-custodia-desktop.md).
+- Fase 6: fechada e validada no Windows 11; entregue na `v0.5.0`. Evidências em [resultado-fase-6-custodia-desktop.md](resultado-fase-6-custodia-desktop.md).
+- Hotfix `v0.5.1`: recuperação independente, snapshot de posições e proteção contra downgrade implementados; gate manual pendente.
 - Fase 7: instalador (path estável no arranque). Sem packs de tema.
 - **Fora do ciclo:** empurrar a fence de baixo ao expandir; duplo clique no vazio do desktop cria fence; packs de tema.
 - **Reserva (reavaliar no fim):** Novo → Fence no Explorer. Não implementar até planejada e validada.
@@ -142,6 +147,10 @@ Coordenadas da fence em **DIPs** WPF; posições de ícone em **pixels** do List
 |---|---|
 | Árvore Progman/WorkerW muda | 100% em Native; fallback duplo |
 | Crash a meio do move | Journal durável, revisão antes/depois, compensação e recovery idempotente antes da UI |
+| Versão antiga rebaixa o layout e referencia payload incorreto | Preferir backup de schema mais novo, validar nome do payload v1, impedir stem vazio e oferecer recuperação independente por cópia |
+| Aplicativo principal não inicia | `DesktopFences.Recovery.exe` usa snapshot próprio, preserva store/conflitos e gera recibo da sessão |
+| Item do Desktop Público não pode ser restaurado sem elevação | Restaurar no Desktop do usuário; nunca pedir administrador nem deixar o item bloquear o lote |
+| Explorer materializa o ícone depois do `SHChangeNotify` | Repetir o posicionamento por janela curta após ejeção/Pausar/Sair; usar o destino físico real e deixar o Explorer resolver eventual colisão da grade |
 | DPI por monitor | DIPs vs pixels documentados; `PerMonitorV2` + `DpiChanged` (Fase 5) |
 | Restart do Explorer | Ficheiro já não está no Desktop; reaplicar só CLSID de namespace |
 | Win+D eleva Progman/WorkerW acima da fence sem marcá-la oculta | Reancorar o grupo de fences acima da banda do Desktop por shell hook + verificação de sobrevivência; gate Windows 11 obrigatório |
@@ -169,13 +178,15 @@ DesktopFences/
 │   ├── spec-fase-6-custodia-desktop.md
 │   ├── plano-fase-6-custodia-desktop.md
 │   ├── resultado-fase-6-custodia-desktop.md
+│   ├── hotfix-v0.5.1-recuperacao-emergencia.md
 │   ├── auditoria-fluxo-itens-performance-release.md
 │   ├── pos-mvp1.md
 │   └── adr/
 ├── src/
 │   ├── DesktopFences.Core/
 │   ├── DesktopFences.Native/
-│   └── DesktopFences.App/           ← Assets/app.ico
+│   ├── DesktopFences.App/           ← Assets/app.ico
+│   └── DesktopFences.Recovery/      ← restauração independente por um clique
 └── tests/
     ├── DesktopFences.Core.Tests/
     └── DesktopFences.App.Tests/

@@ -44,6 +44,17 @@ public static class LayoutV1Migration
                     string storageName = Path.GetFileName(legacyPath);
                     if (string.IsNullOrWhiteSpace(storageName))
                         throw new InvalidDataException($"Payload v1 sem nome: {item.Name}");
+                    if (!string.IsNullOrWhiteSpace(item.OriginalPath))
+                    {
+                        string expectedName = Path.GetFileName(item.OriginalPath);
+                        if (!string.IsNullOrWhiteSpace(expectedName)
+                            && !string.Equals(storageName, expectedName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            throw new InvalidDataException(
+                                $"Payload v1 incompatível com o item '{item.Name}': " +
+                                $"esperado '{expectedName}', encontrado '{storageName}'.");
+                        }
+                    }
                     item.Kind = FenceItemKind.Stored;
                     item.StorageName = storageName;
                     string destination = FenceItemStore.PayloadPath(itemsRoot, item.ItemId, storageName);

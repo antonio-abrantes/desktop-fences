@@ -52,6 +52,19 @@ jobs:
           -p:DebugType=none
           -o ${{ github.workspace }}/publish/${{ matrix.rid }}
 
+      - name: Publish emergency recovery
+        run: >
+          dotnet publish src/DesktopFences.Recovery/DesktopFences.Recovery.csproj
+          -c Release
+          -r ${{ matrix.rid }}
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:Version=${{ steps.ver.outputs.version }}
+          -p:DebugType=none
+          -o ${{ github.workspace }}/publish/${{ matrix.rid }}
+
       - name: Pack zip
         shell: pwsh
         run: |

@@ -1425,19 +1425,54 @@ public partial class FenceWindow : Window
         int? screenX = null,
         int? screenY = null)
     {
-        try
+        IReadOnlyList<DesktopPlacement> placements = BuildRestoredPlacements(
+            items, screenX, screenY);
+        if (placements.Count == 0)
+            return;
+
+        // SHChangeNotify usa FLUSHNOWAIT; a primeira captura pode acontecer antes
+        // de o Explorer materializar o novo item. Uma segunda passagem também
+        // estabiliza os índices depois que o ListView resolve a inserção inicial.
+        int attempts = 0;
+        var retry = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
+        void Attempt()
         {
-            _desktop.PlaceRevealedItems(items.Select(item => new DesktopPlacement(
+            int positioned = 0;
+            try { positioned = _desktop.PlaceRevealedItems(placements); }
+            catch { /* o Store e o layout já estão consistentes */ }
+            attempts++;
+            if (attempts >= 8 || (attempts >= 2 && positioned >= placements.Count))
+                retry.Stop();
+        }
+
+        retry.Tick += (_, _) => Attempt();
+        Attempt();
+        if (attempts < 2 || retry.IsEnabled)
+            retry.Start();
+    }
+
+    internal static IReadOnlyList<DesktopPlacement> BuildRestoredPlacements(
+        IReadOnlyList<FenceItemVm> items,
+        int? screenX,
+        int? screenY)
+    {
+        const int horizontalStep = 88;
+        const int verticalStep = 96;
+        int columns = Math.Clamp((int)Math.Ceiling(Math.Sqrt(items.Count)), 1, 4);
+        var result = new List<DesktopPlacement>(items.Count);
+        for (int index = 0; index < items.Count; index++)
+        {
+            FenceItemVm item = items[index];
+            int? targetX = screenX is int x ? x + (index % columns) * horizontalStep : null;
+            int? targetY = screenY is int y ? y + (index / columns) * verticalStep : null;
+            result.Add(new DesktopPlacement(
                 item.Path ?? item.Name,
                 item.OriginalX,
                 item.OriginalY,
-                screenX,
-                screenY)).ToList());
+                targetX,
+                targetY));
         }
-        catch
-        {
-            /* o Explorer volta a desenhar o ícone mesmo sem reposicionar */
-        }
+        return result;
     }
 
     private void ApplyPendingSingleSelect()

@@ -7,7 +7,7 @@ Convenção:
 - `[x]` feito no repositório (agente) e/ou confirmado pelo desenvolvedor na sessão.
 - `[ ]` pendente — **não implementar** sem o gate no `SESSION-HEADER.md` **e** pedido explícito.
 - A Fase 1 abaixo está **fechada**. N fences, Configurações, cores por fence, Sobre, iniciar com o Windows (portable), mutex.
-- As Fases 4–6 estão **fechadas e validadas no Windows 11**. A versão `v0.5.0` está preparada. O instalador é a Fase 7 e não foi iniciado.
+- As Fases 4–6 estão **fechadas e validadas no Windows 11**. A `v0.5.0` foi entregue; o hotfix `v0.5.1` está implementado e validado automaticamente, com gate manual pendente. O instalador é a Fase 7 e não foi iniciado.
 
 ---
 
@@ -352,7 +352,7 @@ Win+D teve uma primeira tentativa baseada em bloquear minimize, `WM_SHOWWINDOW`,
 
 ## Fase 6 — custódia transacional de itens do Desktop
 
-**Status:** fechada e validada no Windows 11; incluída na versão preparada `v0.5.0`.
+**Status:** fechada e validada no Windows 11; entregue na `v0.5.0`. Hotfix de segurança `v0.5.1` implementado, com gate manual pendente.
 
 **Objetivo:** entregar em uma única fase os quatro blocos aprovados após a auditoria:
 
@@ -377,6 +377,23 @@ Fontes de verdade da fase:
 - [x] Testes automatizados e matriz Windows 11 aprovados
 
 **Gate do desenvolvedor:** `[x]` — matriz registrada em [resultado-fase-6-custodia-desktop.md](resultado-fase-6-custodia-desktop.md) validada no Windows 11. Fase encerrada.
+
+### Hotfix de segurança v0.5.1
+
+- [x] Preferir backup v2 válido sobre principal v1 rebaixado
+- [x] Bloquear resolução de `.env` para a raiz do Desktop e payload v1 de nome incompatível
+- [x] Capturar snapshot atômico das posições uma vez no arranque
+- [x] Capturar o snapshot antes de qualquer recovery, migração ou retomada de custódia
+- [x] Restaurar posições em Pausar/Sair e na liberação de emergência
+- [x] Em Pausar/Sair, aguardar de forma limitada a materialização da Shell, localizar pelo destino realmente restaurado e usar snapshot como fallback de coordenadas
+- [x] Entregar `DesktopFences.Recovery.exe` separado, por cópia e sem sobrescrita
+- [x] Preservar posições atuais por padrão no recovery; posições antigas somente por opção explícita
+- [x] Restaurar itens do Desktop Público no Desktop gravável do usuário, sem elevação e sem bloquear o lote
+- [x] Posicionar ejeção no cursor; seleção múltipla usa pontos próximos e distintos com retry curto da Shell
+- [x] Incluir os dois executáveis nos zips self-contained
+- [ ] Gate manual do hotfix no Windows 11
+
+Contrato e matriz: [hotfix-v0.5.1-recuperacao-emergencia.md](hotfix-v0.5.1-recuperacao-emergencia.md).
 
 ---
 

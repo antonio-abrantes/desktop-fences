@@ -1,6 +1,6 @@
 # Especificação complementar — Fase 6: custódia transacional de itens do Desktop
 
-**Status:** implementada, validada no Windows 11 e fechada na versão preparada `v0.5.0`.
+**Status:** implementada, validada no Windows 11 e fechada na `v0.5.0`; complementada pelo hotfix de segurança `v0.5.1`, cujo gate manual está pendente.
 
 **Posição no ciclo:** depois do gate da Fase 5 e antes do instalador, que passa a ser a Fase 7.
 
@@ -62,6 +62,7 @@ As regras abaixo têm prioridade sobre detalhes de implementação:
 9. Pausar, Sair e remover fence continuam tendo caminho de restauração para todos os itens sob custódia.
 10. Não existe release parcial da Fase 6: schema, migração, transação, transferências por metadados e lote entram no mesmo gate final.
 11. O número de gravações duráveis do journal depende das etapas da transação, não da quantidade de itens do lote.
+12. A saída nunca depende de escrita no Desktop Público: sob `asInvoker`, payloads vindos dele são restaurados no Desktop do usuário e nenhum path externo ao Desktop vira destino.
 
 ---
 
@@ -316,6 +317,7 @@ DesktopFences.App
 - Store inacessível: não remover item do layout nem afirmar restore/hide concluído.
 - Save indisponível: não mudar ownership visual e não remover journal.
 - Conflito de nome no restore: escolher destino não destrutivo e registrar o path final.
+- Origem no Desktop Público: restaurar no Desktop do usuário para não exigir elevação nem transformar o item em bloqueador do lote.
 - Falha no segundo item de um lote: compensar o primeiro; não apresentar lote parcial como sucesso.
 
 ---
@@ -333,6 +335,8 @@ DesktopFences.App
 - recovery repetido é idempotente;
 - falha parcial de lote executa compensação e mantém estado anterior;
 - conflitos de nome nunca sobrescrevem destino;
+- item originado no Desktop Público planeja saída para o Desktop do usuário;
+- saída não aceita pasta externa ao Desktop como destino de restore;
 - diretório órfão é preservado e reportado;
 - um gesto produz uma chamada de captura/save/notificação nos testes de orquestração.
 
@@ -368,3 +372,5 @@ A Fase 6 começou após o cumprimento dos três pré-requisitos:
 - [x] confirmação de que esta especificação continua aceita.
 
 O gate Windows 11 e os critérios de aceite da Fase 6 foram aprovados. A entrega `v0.5.0` recebeu parecer `GO` dentro do escopo desta especificação. O instalador permanece como Fase 7 e exige novo pedido explícito.
+
+Após o fechamento foi confirmado um incidente de downgrade por binário antigo. O complemento [hotfix-v0.5.1-recuperacao-emergencia.md](hotfix-v0.5.1-recuperacao-emergencia.md) adiciona defesa contra layout rebaixado, snapshot independente de posições e recuperação separada por cópia. Ele não reabre os marcos arquiteturais da Fase 6, mas exige gate manual próprio antes de uma nova liberação pública.

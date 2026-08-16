@@ -36,9 +36,17 @@ public sealed class LayoutStore : ILayoutStore
 
     public LayoutDocument LoadOrEmpty()
     {
-        if (TryLoad(FilePath, out LayoutDocument? primary))
+        bool hasPrimary = TryLoad(FilePath, out LayoutDocument? primary);
+        bool hasBackup = TryLoad(BackupPath, out LayoutDocument? backup);
+
+        // Uma versão antiga pode regravar o primário como v1 enquanto o backup v2
+        // ainda contém ItemId, storageName e posições válidas. O schema mais novo
+        // é sempre a fonte mais segura; dentro do mesmo schema o primário vence.
+        if (hasPrimary && hasBackup && backup!.Version > primary!.Version)
+            return backup;
+        if (hasPrimary)
             return primary!;
-        if (TryLoad(BackupPath, out LayoutDocument? backup))
+        if (hasBackup)
             return backup!;
         if (!File.Exists(FilePath) && !File.Exists(BackupPath))
             return new LayoutDocument();
@@ -119,7 +127,7 @@ public sealed class LayoutStore : ILayoutStore
         }
     }
 
-    private static bool TryLoad(string path, out LayoutDocument? document)
+    public static bool TryLoad(string path, out LayoutDocument? document)
     {
         document = null;
         if (!File.Exists(path))

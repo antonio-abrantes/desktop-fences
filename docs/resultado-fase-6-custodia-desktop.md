@@ -4,6 +4,8 @@
 
 **Escopo aplicado:** somente itens do Desktop do usuário/público e itens de namespace já suportados. Arquivos externos ao Desktop são recusados pelo novo pipeline. OneDrive, Desktop redirecionado, progresso/cancelamento, ampliação geral de `IFileOperation` e instalador permanecem em stand-by.
 
+> **Correção pós-release:** depois do GO da `v0.5.0`, a execução de um binário antigo sobre os dados v2 revelou um cenário não coberto: o layout foi rebaixado para v1 e uma resolução de `.env` aceitou a pasta Desktop inteira como payload. O conteúdo permaneceu no store, mas desapareceu da área de trabalho e as posições não tinham snapshot independente. A `v0.5.1` implementa as proteções e a recuperação separada descritas em [hotfix-v0.5.1-recuperacao-emergencia.md](hotfix-v0.5.1-recuperacao-emergencia.md). O GO histórico da Fase 6 não equivale à aprovação automática do hotfix; seu gate manual está pendente.
+
 ---
 
 ## 1. Resultado entregue

@@ -166,15 +166,15 @@ public sealed class DesktopIconService : IDesktopSnapshotSource
         return true;
     }
 
-    public void PlaceRevealedItems(IReadOnlyList<DesktopPlacement> placements)
+    public int PlaceRevealedItems(IReadOnlyList<DesktopPlacement> placements)
     {
         if (placements.Count == 0)
-            return;
+            return 0;
         DesktopSnapshot snap = Capture();
         if (!snap.Connected || ListViewHandle == IntPtr.Zero)
-            return;
+            return 0;
 
-        NativeMethods.POINT? sharedScreenPoint = null;
+        int positioned = 0;
         foreach (DesktopPlacement placement in placements)
         {
             DesktopIcon? match = DesktopFences.Core.DesktopIconMatcher.Find(snap.Icons, placement.NameOrPath);
@@ -184,20 +184,18 @@ public sealed class DesktopIconService : IDesktopSnapshotSource
             int y = placement.OriginalY ?? match.Y;
             if (placement.ScreenX is int screenX && placement.ScreenY is int screenY)
             {
-                if (sharedScreenPoint is null)
-                {
-                    var point = new NativeMethods.POINT { X = screenX, Y = screenY };
-                    if (NativeMethods.ScreenToClient(ListViewHandle, ref point))
-                        sharedScreenPoint = point;
-                }
-                if (sharedScreenPoint is NativeMethods.POINT screenPoint)
+                var screenPoint = new NativeMethods.POINT { X = screenX, Y = screenY };
+                if (NativeMethods.ScreenToClient(ListViewHandle, ref screenPoint))
                 {
                     x = screenPoint.X;
                     y = screenPoint.Y;
                 }
             }
             SetItemPosition(match.Index, x, y);
+            positioned++;
         }
+
+        return positioned;
     }
 
     public static (int X, int Y) CursorScreen()

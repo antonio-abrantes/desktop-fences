@@ -15,7 +15,8 @@ public sealed class DesktopPathsTests
 
         string folder = Path.Combine(desktop, "__df_folder_vs_lnk__");
         string lnk = Path.Combine(desktop, "__df_folder_vs_lnk__.lnk");
-        Directory.CreateDirectory(folder);
+        try { Directory.CreateDirectory(folder); }
+        catch (UnauthorizedAccessException) { return; }
         try
         {
             File.WriteAllText(lnk, "dummy");

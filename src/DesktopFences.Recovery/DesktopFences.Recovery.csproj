@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>DesktopFences.Recovery</AssemblyName>
+    <RootNamespace>DesktopFences.Recovery</RootNamespace>
+    <ApplicationIcon>..\DesktopFences.App\Assets\app.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DesktopFences.Native\DesktopFences.Native.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="..\DesktopFences.App\Assets\app.ico" Link="Assets\app.ico" />
+  </ItemGroup>
+
+</Project>

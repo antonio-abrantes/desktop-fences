@@ -2,7 +2,7 @@
 
 Mapa curto do ciclo. O detalhe operacional está em [`plano-implementacao.md`](plano-implementacao.md). Cada fase pede autorização no `SESSION-HEADER.md` **e** pedido explícito.
 
-**MVP 2** (`v0.3.1`) = Fases 1 + 2. As Fases 3–6 estão **fechadas**. A versão `v0.5.0` está preparada; a Fase 7 ainda não foi iniciada.
+**MVP 2** (`v0.3.1`) = Fases 1 + 2. As Fases 3–6 estão **fechadas**. A `v0.5.1` complementa a custódia com recuperação independente e snapshot de posições; o gate manual do hotfix está pendente. A Fase 7 ainda não foi iniciada.
 
 ---
 
@@ -58,4 +58,4 @@ Ao soltar a alça ⋮⋮ (e ao terminar o resize), a fence cola nas bordas da á
 
 Validada no Windows 11. Se o Explorer morrer, os ficheiros já não estão no Desktop (estão no store); CLSID de namespace é reaplicado. Mudança de DPI atualiza o clip. Para Win+D / Mostrar ambiente de trabalho, a fence é reancorada acima da banda Progman/WorkerW e abaixo dos aplicativos, inclusive quando o Windows ainda a reporta como visível. Pausar/Sair continua a devolver os ícones reais.
 
-A Fase 6 entregou store por `ItemId`, transação/recovery, transferência por metadados e lote, somente para itens do Desktop. Está fechada na versão preparada `v0.5.0`. A próxima etapa é o instalador (Fase 7), com path estável no arranque e sem packs de tema.
+A Fase 6 entregou store por `ItemId`, transação/recovery, transferência por metadados e lote, somente para itens do Desktop. Foi entregue na `v0.5.0`. O hotfix `v0.5.1` acrescenta proteção contra downgrade, snapshot atômico das posições e `DesktopFences.Recovery.exe`, sem iniciar o instalador. A próxima etapa continua sendo a Fase 7, com path estável no arranque e sem packs de tema.

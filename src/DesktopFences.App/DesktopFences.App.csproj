@@ -14,11 +14,28 @@
   <ItemGroup>
     <ProjectReference Include="..\DesktopFences.Core\DesktopFences.Core.csproj" />
     <ProjectReference Include="..\DesktopFences.Native\DesktopFences.Native.csproj" />
+    <ProjectReference Include="..\DesktopFences.Recovery\DesktopFences.Recovery.csproj"
+                      ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
     <Resource Include="Assets\app.ico" />
     <Resource Include="Assets\app.png" />
   </ItemGroup>
+
+  <Target Name="CopyRecoveryToolToLocalOutput"
+          AfterTargets="Build"
+          Condition="'$(PublishSingleFile)' != 'true'">
+    <PropertyGroup>
+      <RecoveryOutputDirectory Condition="'$(RuntimeIdentifier)' == ''">$(MSBuildProjectDirectory)\..\DesktopFences.Recovery\bin\$(Configuration)\$(TargetFramework)</RecoveryOutputDirectory>
+      <RecoveryOutputDirectory Condition="'$(RuntimeIdentifier)' != ''">$(MSBuildProjectDirectory)\..\DesktopFences.Recovery\bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)</RecoveryOutputDirectory>
+    </PropertyGroup>
+    <ItemGroup>
+      <RecoveryOutputFiles Include="$(RecoveryOutputDirectory)\DesktopFences.Recovery.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(RecoveryOutputFiles)"
+          DestinationFolder="$(TargetDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>

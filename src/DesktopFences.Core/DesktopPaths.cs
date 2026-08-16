@@ -93,7 +93,8 @@ public static class DesktopPaths
     private static IEnumerable<string> DirectoryCandidates(string folder, string name, string stem)
     {
         yield return Path.Combine(folder, name);
-        if (!string.Equals(name, stem, StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrWhiteSpace(stem)
+            && !string.Equals(name, stem, StringComparison.OrdinalIgnoreCase))
             yield return Path.Combine(folder, stem);
     }
 

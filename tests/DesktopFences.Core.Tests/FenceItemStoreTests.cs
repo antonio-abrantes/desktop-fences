@@ -40,10 +40,37 @@ public sealed class FenceItemStoreTests : IDisposable
     }
 
     [Fact]
-    public void RestoreDirectory_PrefersOriginalParentWhenItExists()
+    public void RestoreDirectory_PreservesOriginalUserDesktop()
     {
-        string original = Path.Combine(_dir, "Chrome.lnk");
-        FenceItemStore.RestoreDirectory(original, [@"C:\Users\Test\Desktop"]).Should().Be(_dir);
+        string userDesktop = Directory.CreateDirectory(Path.Combine(_dir, "UserDesktop")).FullName;
+        string publicDesktop = Directory.CreateDirectory(Path.Combine(_dir, "PublicDesktop")).FullName;
+        string original = Path.Combine(userDesktop, "Chrome.lnk");
+
+        FenceItemStore.RestoreDirectory(original, [userDesktop, publicDesktop])
+            .Should().Be(userDesktop);
+    }
+
+    [Fact]
+    public void RestoreDirectory_RedirectsPublicDesktopToUserDesktop()
+    {
+        string userDesktop = Directory.CreateDirectory(Path.Combine(_dir, "UserDesktop")).FullName;
+        string publicDesktop = Directory.CreateDirectory(Path.Combine(_dir, "PublicDesktop")).FullName;
+        string original = Path.Combine(publicDesktop, "AtalhoPublico.lnk");
+
+        FenceItemStore.RestoreDirectory(original, [userDesktop, publicDesktop])
+            .Should().Be(userDesktop);
+    }
+
+    [Fact]
+    public void RestoreDirectory_DoesNotRestoreOutsideConfiguredDesktop()
+    {
+        string userDesktop = Directory.CreateDirectory(Path.Combine(_dir, "UserDesktop")).FullName;
+        string publicDesktop = Directory.CreateDirectory(Path.Combine(_dir, "PublicDesktop")).FullName;
+        string external = Directory.CreateDirectory(Path.Combine(_dir, "External")).FullName;
+        string original = Path.Combine(external, "Arquivo.txt");
+
+        FenceItemStore.RestoreDirectory(original, [userDesktop, publicDesktop])
+            .Should().Be(userDesktop);
     }
 
     public void Dispose()

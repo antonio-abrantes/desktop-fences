@@ -132,6 +132,27 @@ public sealed class LayoutV1MigrationTests : IDisposable
         act.Should().Throw<InvalidDataException>().WithMessage("*ausente*");
     }
 
+    [Fact]
+    public void Plan_StopsWhenLegacyItemPointsToAnUnrelatedDesktopDirectory()
+    {
+        Guid fenceId = Guid.NewGuid();
+        string legacyFolder = Path.Combine(ItemsRoot, fenceId.ToString("D"));
+        string capturedDesktop = Path.Combine(legacyFolder, "Desktop");
+        Directory.CreateDirectory(capturedDesktop);
+        File.WriteAllText(Path.Combine(capturedDesktop, "arquivo-importante.txt"), "payload");
+        string expected = Path.Combine(_root, "Desktop", ".env");
+        LayoutDocument legacy = Legacy(fenceId, capturedDesktop);
+        legacy.Fences[0].Items[0].Name = ".env";
+        legacy.Fences[0].Items[0].OriginalPath = expected;
+
+        Action act = () => LayoutV1Migration.Plan(legacy, ItemsRoot);
+
+        act.Should().Throw<InvalidDataException>()
+            .WithMessage("*incompatível*.env*Desktop*");
+        Directory.Exists(capturedDesktop).Should().BeTrue();
+        File.Exists(Path.Combine(capturedDesktop, "arquivo-importante.txt")).Should().BeTrue();
+    }
+
     [Theory]
     [InlineData("atalho.lnk", false)]
     [InlineData("site.url", false)]

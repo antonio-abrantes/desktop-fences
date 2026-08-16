@@ -59,6 +59,23 @@ public sealed class AtomicLayoutStoreTests : IDisposable
     }
 
     [Fact]
+    public void LoadOrEmpty_PrefersV2BackupOverDowngradedV1Primary()
+    {
+        var store = new LayoutStore(_file);
+        store.Save(Document("Seguro v2", revision: 88));
+        File.Copy(_file, store.BackupPath, overwrite: true);
+        File.WriteAllText(_file, """
+            {"version":1,"revision":0,"fences":[{"id":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","title":"Regredido"}]}
+            """);
+
+        LayoutDocument loaded = store.LoadOrEmpty();
+
+        loaded.Version.Should().Be(2);
+        loaded.Revision.Should().Be(88);
+        loaded.Fences.Single().Title.Should().Be("Seguro v2");
+    }
+
+    [Fact]
     public void LoadOrEmpty_DoesNotCreateEmptyLayoutWhenPrimaryAndBackupAreInvalid()
     {
         var store = new LayoutStore(_file);

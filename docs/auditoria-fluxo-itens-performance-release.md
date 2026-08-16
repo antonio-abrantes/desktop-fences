@@ -5,7 +5,7 @@
 **Escopo:** entrada de arquivos, atalhos e pastas nas fences; transferência entre fences; restauração ao desktop; performance e segurança desses fluxos.  
 **Natureza:** análise e validação. Este documento não implementa as recomendações.
 
-> **Reavaliação em 16/08/2026:** os quatro reforços selecionados para a Fase 6 foram implementados e validados: store por `ItemId`, transação/JSON atômico/backup/recovery, transferência por metadados e processamento em lote. O gate Windows 11 foi aprovado pelo desenvolvedor. Dentro do escopo definido para itens do Desktop, o parecer vigente é **GO para `v0.5.0`**. Os demais achados permanecem em stand-by como melhorias futuras e não bloqueiam esta entrega.
+> **Reavaliação em 16/08/2026:** os quatro reforços selecionados para a Fase 6 foram implementados e validados: store por `ItemId`, transação/JSON atômico/backup/recovery, transferência por metadados e processamento em lote. O gate Windows 11 foi aprovado pelo desenvolvedor e sustentou o **GO histórico da `v0.5.0`**. Depois da release, um downgrade por binário antigo revelou uma falha adicional capaz de mover a pasta Desktop inteira para o store. O hotfix `v0.5.1` adiciona proteção contra downgrade, snapshot de posições e recuperação separada por cópia; está validado automaticamente, mas permanece sem GO público até o gate manual. Os demais achados continuam em stand-by.
 
 ---
 

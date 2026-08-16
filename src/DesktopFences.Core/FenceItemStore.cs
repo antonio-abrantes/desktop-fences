@@ -71,21 +71,31 @@ public static class FenceItemStore
 
     public static string RestoreDirectory(string? originalPath, IReadOnlyList<string> desktopFolders)
     {
-        if (!string.IsNullOrWhiteSpace(originalPath))
+        string? userDesktop = desktopFolders.FirstOrDefault(folder =>
+            !string.IsNullOrWhiteSpace(folder));
+        if (string.IsNullOrWhiteSpace(userDesktop) || !Directory.Exists(userDesktop))
+            userDesktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+
+        if (!string.IsNullOrWhiteSpace(originalPath) && !string.IsNullOrWhiteSpace(userDesktop))
         {
             string? dir = Path.GetDirectoryName(originalPath.Trim());
-            if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir) && !IsUnderRoot(dir))
+            // FolderList põe o Desktop do utilizador antes do Desktop Público.
+            // O processo asInvoker não pode assumir escrita no Desktop Público;
+            // restaurar lá tornaria o item um bloqueador permanente do lote.
+            if (!string.IsNullOrEmpty(dir)
+                && Directory.Exists(dir)
+                && SamePath(dir, userDesktop))
                 return dir;
         }
 
-        foreach (string folder in desktopFolders)
-        {
-            if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder))
-                return folder;
-        }
-
-        return Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+        return userDesktop ?? string.Empty;
     }
+
+    private static bool SamePath(string left, string right) =>
+        string.Equals(
+            Path.GetFullPath(left).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+            Path.GetFullPath(right).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+            StringComparison.OrdinalIgnoreCase);
 
     private static bool Exists(string path) => File.Exists(path) || Directory.Exists(path);
 }

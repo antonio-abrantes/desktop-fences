@@ -7,6 +7,7 @@ using DesktopFences.Core.Fences;
 using DesktopFences.Core.Models;
 using DesktopFences.Core.Occupancy;
 using DesktopFences.Core.Persistence;
+using DesktopFences.Core.Recovery;
 using DesktopFences.Core.Transactions;
 using DesktopFences.Native;
 
@@ -18,6 +19,8 @@ public sealed class FenceHost
     private readonly CustodyCoordinator _custody;
     private readonly List<FenceWindow> _windows = [];
     private readonly ExplorerListViewGuard _explorer = new();
+    private readonly DesktopIconService _recoveryIcons = new();
+    private readonly DesktopRecoverySnapshotStore _recoverySnapshots = new();
     private DispatcherTimer? _explorerWatch;
     private bool _saving;
     private bool _paused;
@@ -48,6 +51,9 @@ public sealed class FenceHost
     public void Start()
     {
         LayoutDocument doc = _store.LoadOrEmpty();
+        // O estado que o usuário vê no Desktop é capturado antes de qualquer
+        // reconciliação capaz de mover payload ou alterar posições na Shell.
+        SaveRecoverySnapshot(doc);
         RecoveryReport recovery = _custody.Recover(doc);
         if (!recovery.Complete)
             throw new InvalidDataException(string.Join(Environment.NewLine, recovery.Errors));
@@ -70,6 +76,22 @@ public sealed class FenceHost
         _explorerWatch = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _explorerWatch.Tick += OnExplorerWatch;
         _explorerWatch.Start();
+    }
+
+    private void SaveRecoverySnapshot(LayoutDocument document)
+    {
+        DesktopRecoverySnapshot? previous = _recoverySnapshots.Load();
+        DesktopSnapshot visible = _recoveryIcons.Capture();
+        if (!visible.Connected && previous is null)
+            throw new InvalidDataException(
+                "Não foi possível criar o snapshot de segurança das posições do Desktop.");
+
+        DesktopRecoverySnapshot snapshot = DesktopRecoverySnapshotBuilder.Build(
+            visible.Icons,
+            document,
+            DesktopPaths.ResolveExisting,
+            previous);
+        _recoverySnapshots.Save(snapshot);
     }
 
     private void OnExplorerWatch(object? sender, EventArgs e)
@@ -489,6 +511,10 @@ public sealed class FenceHost
                 }, out _))
             return false;
         _layoutRevision = after.Revision;
+        PlaceReleasedItems(BuildReleasedPlacements(
+            items.Select(item => item.ToState()).ToList(),
+            plans,
+            _recoverySnapshots.Load()));
         return true;
     }
 
@@ -510,8 +536,81 @@ public sealed class FenceHost
         try { plans = _custody.PlanOutbound(items); }
         catch { return false; }
         LayoutDocument after = LayoutStore.Clone(document);
-        return _custody.CommitOutbound(
+        bool released = _custody.CommitOutbound(
             document, after, CustodyOperationKind.Shutdown, plans, null, out _);
+        if (released)
+        {
+            PlaceReleasedItems(BuildReleasedPlacements(
+                document.Fences.SelectMany(fence => fence.Items).ToList(),
+                plans,
+                _recoverySnapshots.Load()));
+        }
+        return released;
+    }
+
+    private void PlaceReleasedItems(IReadOnlyList<DesktopPlacement> placements)
+    {
+        RunPlacementRetries(
+            () => _recoveryIcons.PlaceRevealedItems(placements),
+            placements.Count,
+            wait: () => Thread.Sleep(120));
+    }
+
+    internal static IReadOnlyList<DesktopPlacement> BuildReleasedPlacements(
+        IReadOnlyList<FenceItemState> items,
+        IReadOnlyList<DesktopCustodyPlan> plans,
+        DesktopRecoverySnapshot? snapshot)
+    {
+        Dictionary<Guid, DesktopCustodyPlan> plansById = plans.ToDictionary(plan => plan.ItemId);
+        Dictionary<Guid, DesktopRecoveryItem> recoveryById = snapshot?.Items
+            .Where(item => item.ItemId.HasValue)
+            .GroupBy(item => item.ItemId!.Value)
+            .ToDictionary(group => group.Key, group => group.First())
+            ?? [];
+
+        var result = new List<DesktopPlacement>(items.Count);
+        foreach (FenceItemState item in items)
+        {
+            plansById.TryGetValue(item.ItemId, out DesktopCustodyPlan? plan);
+            recoveryById.TryGetValue(item.ItemId, out DesktopRecoveryItem? recovery);
+            string nameOrPath = plan?.Kind == FenceItemKind.Stored
+                ? plan.DestinationPath ?? item.OriginalPath ?? item.Name
+                : item.Name;
+            result.Add(new DesktopPlacement(
+                nameOrPath,
+                item.OriginalX ?? recovery?.X,
+                item.OriginalY ?? recovery?.Y,
+                null,
+                null));
+        }
+
+        return result;
+    }
+
+    internal static int RunPlacementRetries(
+        Func<int> place,
+        int expectedCount,
+        int maxAttempts = 8,
+        Action? wait = null)
+    {
+        if (expectedCount <= 0 || maxAttempts <= 0)
+            return 0;
+
+        int best = 0;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try { best = Math.Max(best, place()); }
+            catch { /* posição é best-effort; o payload já voltou ao Desktop */ }
+
+            // Uma segunda passagem estabiliza os índices depois que o Explorer
+            // materializa os itens e resolve colisões na grade do Desktop.
+            if (attempt >= 2 && best >= expectedCount)
+                break;
+            if (attempt < maxAttempts)
+                (wait ?? (() => Thread.Sleep(120)))();
+        }
+
+        return best;
     }
 
     private bool ConcealAll(CustodyOperationKind operation)
