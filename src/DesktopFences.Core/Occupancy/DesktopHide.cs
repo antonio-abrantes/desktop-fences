@@ -16,7 +16,8 @@ public readonly record struct DesktopHidePlan(DesktopHideKind Kind, string Key);
 /// </summary>
 public static class DesktopHide
 {
-    public static readonly Guid RecycleBin = new("645FF040-5084-101B-9F08-00AA002F954E");
+    // CLSID oficial da Lixeira no HideDesktopIcons / NameSpace: 5081 (não 5084).
+    public static readonly Guid RecycleBin = new("645FF040-5081-101B-9F08-00AA002F954E");
     public static readonly Guid ThisPc = new("20D04FE0-3AEA-1069-A2D8-08002B30309D");
     public static readonly Guid Network = new("F02C1A0D-BE21-4350-88B0-7367FC96EF3C");
 
@@ -67,6 +68,10 @@ public static class DesktopHide
         return false;
     }
 
+    /// <summary>
+    /// Aceita <c>::{GUID}</c>, <c>{GUID}</c> ou <c>shell:…</c> e devolve só <c>{GUID}</c> em maiúsculas.
+    /// O Registro do Explorer ignora nomes com o prefixo <c>::</c>.
+    /// </summary>
     public static bool TryNamespaceKey(string? parsingName, out string key)
     {
         key = "";
@@ -89,7 +94,30 @@ public static class DesktopHide
         return false;
     }
 
+    public static string RequireNamespaceKey(string? parsingName, string? displayName = null)
+    {
+        if (TryNamespaceKey(parsingName, out string key))
+            return key;
+        if (TryNamespaceKey(displayName, out key))
+            return key;
+        string hint = string.IsNullOrWhiteSpace(displayName) ? parsingName ?? "" : displayName;
+        throw new InvalidOperationException($"Ícone de namespace inválido: {hint}");
+    }
+
+    public static bool IsCanonicalNamespaceKey(string? key) =>
+        !string.IsNullOrWhiteSpace(key)
+        && TryNamespaceKey(key, out string canonical)
+        && string.Equals(key, canonical, StringComparison.Ordinal);
+
     public static string FormatClsid(Guid clsid) => clsid.ToString("B").ToUpperInvariant();
+
+    /// <summary>Parsing name da Shell: <c>::{GUID}</c>. O Registro usa só <see cref="FormatClsid"/>.</summary>
+    public static string ToShellParsingName(string? namespaceKey)
+    {
+        if (!TryNamespaceKey(namespaceKey, out string canonical))
+            return namespaceKey?.Trim() ?? "";
+        return "::" + canonical;
+    }
 
     private static bool TryShellAlias(string value, out Guid clsid)
     {

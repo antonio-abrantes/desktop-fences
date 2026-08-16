@@ -3,6 +3,7 @@ using System.Diagnostics;
 using DesktopFences.Core.Models;
 using DesktopFences.Native;
 using FluentAssertions;
+using Microsoft.Win32;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -78,6 +79,111 @@ public sealed class DesktopCustodyBatchTests : IDisposable
         plans.Count(plan => File.Exists(plan.DestinationPath!)).Should().Be(count);
         plans.Count(plan => File.Exists(plan.SourcePath!)).Should().Be(0);
         _output.WriteLine($"lote={count}; elapsedMs={stopwatch.Elapsed.TotalMilliseconds:F3}");
+    }
+
+    [Theory]
+    [InlineData("::{20D04FE0-3AEA-1069-A2D8-08002B30309D}", "{20D04FE0-3AEA-1069-A2D8-08002B30309D}")]
+    [InlineData("{645FF040-5081-101B-9F08-00AA002F954E}", "{645FF040-5081-101B-9F08-00AA002F954E}")]
+    [InlineData("shell:NetworkPlacesFolder", "{F02C1A0D-BE21-4350-88B0-7367FC96EF3C}")]
+    public void PlanInbound_Namespace_NormalizesRegistryKey(string raw, string expected)
+    {
+        var item = new DesktopCustodyItem(
+            Guid.NewGuid(), FenceItemKind.Namespace, "Sistema", raw, null, null);
+
+        IReadOnlyList<DesktopCustodyPlan> plans = new DesktopCustodyBatch().PlanInbound([item]);
+
+        plans.Should().ContainSingle();
+        plans[0].Kind.Should().Be(FenceItemKind.Namespace);
+        plans[0].NamespaceKey.Should().Be(expected);
+    }
+
+    [Fact]
+    public void PlanOutbound_Namespace_NormalizesDoubleColonPrefix()
+    {
+        var item = new DesktopCustodyItem(
+            Guid.NewGuid(),
+            FenceItemKind.Namespace,
+            "Este computador",
+            "::{20D04FE0-3AEA-1069-A2D8-08002B30309D}",
+            null,
+            null);
+
+        IReadOnlyList<DesktopCustodyPlan> plans = new DesktopCustodyBatch().PlanOutbound([item]);
+
+        plans.Single().NamespaceKey.Should().Be("{20D04FE0-3AEA-1069-A2D8-08002B30309D}");
+    }
+
+    [Fact]
+    public void PlanInbound_Namespace_RejectsUnnormalizableKey()
+    {
+        var item = new DesktopCustodyItem(
+            Guid.NewGuid(), FenceItemKind.Namespace, "X", "not-a-clsid", null, null);
+
+        FluentActions.Invoking(() => new DesktopCustodyBatch().PlanInbound([item]))
+            .Should().Throw<InvalidOperationException>()
+            .WithMessage("*namespace*");
+    }
+
+    [Fact]
+    public void ExecuteInbound_Namespace_WritesCanonicalKeyAndRemovesLegacyDoubleColon()
+    {
+        // GUID sintético: não esconde ícones reais do Desktop do programador.
+        string canonical = "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}";
+        string legacy = "::" + canonical;
+        const string newPanel =
+            @"Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel";
+        const string classic =
+            @"Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\ClassicStartMenu";
+        var plan = new DesktopCustodyPlan(
+            Guid.NewGuid(), FenceItemKind.Namespace, "Synthetic", null, null, null, null, legacy);
+
+        try
+        {
+            using (RegistryKey key = Registry.CurrentUser.CreateSubKey(newPanel)!)
+                key.SetValue(legacy, 1, RegistryValueKind.DWord);
+            using (RegistryKey key = Registry.CurrentUser.CreateSubKey(classic)!)
+                key.SetValue(legacy, 1, RegistryValueKind.DWord);
+
+            DesktopCustodyBatchResult hidden = new DesktopCustodyBatch().ExecuteInbound([plan]);
+            hidden.Success.Should().BeTrue(hidden.Error);
+
+            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(newPanel)!)
+            {
+                key.GetValue(canonical).Should().Be(1);
+                key.GetValue(legacy).Should().BeNull();
+            }
+
+            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(classic)!)
+            {
+                key.GetValue(canonical).Should().Be(1);
+                key.GetValue(legacy).Should().BeNull();
+            }
+
+            DesktopCustodyBatchResult shown = new DesktopCustodyBatch().ExecuteOutbound([plan]);
+            shown.Success.Should().BeTrue(shown.Error);
+            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(newPanel)!)
+                key.GetValue(canonical).Should().Be(0);
+        }
+        finally
+        {
+            foreach (string subkey in new[] { newPanel, classic })
+            {
+                using RegistryKey? key = Registry.CurrentUser.OpenSubKey(subkey, writable: true);
+                try { key?.DeleteValue(canonical, throwOnMissingValue: false); } catch { }
+                try { key?.DeleteValue(legacy, throwOnMissingValue: false); } catch { }
+            }
+        }
+    }
+
+    [Fact]
+    public void ExecuteInbound_Namespace_RejectsUnnormalizableKeyWithoutWriting()
+    {
+        var plan = new DesktopCustodyPlan(
+            Guid.NewGuid(), FenceItemKind.Namespace, "X", null, null, null, null, "::{not-valid}");
+
+        DesktopCustodyBatchResult result = new DesktopCustodyBatch().ExecuteInbound([plan]);
+
+        result.Success.Should().BeFalse();
     }
 
     private DesktopCustodyPlan CreatePlanWithSource(int number)

@@ -7,8 +7,8 @@
 ## Contexto da Sessão ou fase
 
 **Projeto:** DesktopFences 1.0
-**Etapa atual:** Fase 7 — instalador e desinstalação segura (**`v0.6.0` implementada; gate manual pendente**).
-**Objetivo desta sessão:** entregar instalação por usuário, upgrade no lugar, idioma Português/Inglês, path estável e desinstalação com opção de preservar ou remover dados, sempre liberando a custódia do Desktop antes de qualquer limpeza; inclui o ajuste emergencial que reconcilia somente referências de itens apagados externamente enquanto o app esteve fechado.
+**Etapa atual:** Hotfix `v0.6.0` — ícones de sistema (CLSID canónico no Registro) + Fase 7 implementada (**gate manual da Fase 7 e deste hotfix pendentes**).
+**Objetivo desta sessão:** corrigir hide de Este Computador / Rede / Lixeira (normalizar `{GUID}`, limpar `::{GUID}` legado, CLSID da Lixeira `5081`); não avançar instalador além do já entregue.
 
 ---
 
@@ -39,12 +39,12 @@ Apoio (quando o assunto for relevante):
 
 ## Instrução de Revisão
 
-A Fase 6 e o hotfix `v0.5.1` foram concluídos e salvos. A Fase 7 foi implementada para a `0.6.0`: instalador Inno Setup por usuário, duas arquiteturas, atualização no lugar, idioma inicial Português/Inglês e desinstalação segura. O ajuste emergencial da mesma fase remove atomicamente apenas a referência de um item físico confirmado como apagado enquanto o app esteve fechado; estados inacessíveis ou ambíguos continuam bloqueando o arranque por segurança. Nenhuma limpeza de dados ocorre antes da liberação confirmada dos itens para o Desktop. Validação automática: 197 testes, build Release sem avisos, publishes self-contained x64/ARM64 e dois setups compilados com Inno Setup 6.7.3. O gate manual específico da Fase 7 permanece pendente.
+A Fase 6 e o hotfix `v0.5.1` foram concluídos e salvos. A Fase 7 foi implementada para a `0.6.0`. Hotfix dos ícones de sistema: o hide via Registro gravava `::{GUID}` (ignorado pelo Explorer) e o alias da Lixeira usava CLSID `5084` em vez de `5081`; normalização canónica, limpeza do legado e testes automatizados estão no código. Validação automática: 211 testes (145 Core + 66 App/Native). O gate manual da Fase 7 e o gate deste hotfix de namespace permanecem pendentes.
 
 ```
 ETAPA FECHADA  : Fase 6 + hotfix v0.5.1
-ETAPA ATUAL    : Fase 7 — instalador/desinstalador seguro + reconciliação emergencial, v0.6.0 implementada
-GATE PENDENTE  : validação manual da instalação, upgrade e desinstalação no Windows 11
+ETAPA ATUAL    : Fase 7 (v0.6.0) + hotfix ícones de sistema (código pronto)
+GATE PENDENTE  : instalação/upgrade/desinstalação + Este Computador/Rede/Lixeira no Windows 11
 FORA DO CICLO  : duplo clique no vazio do desktop · packs de tema · empurrar fence de baixo ao expandir
 ```
 
@@ -92,7 +92,9 @@ FORA DO CICLO  : duplo clique no vazio do desktop · packs de tema · empurrar f
 - [x] Fase 7 autorizada explicitamente pelo desenvolvedor
 - [x] Fase 7 implementada e validada automaticamente: 197 testes, dois publishes e dois setups
 - [x] Ajuste emergencial da Fase 7: item apagado enquanto o app estava fechado perde somente sua referência; estado ambíguo preserva metadados e mantém o bloqueio seguro
+- [x] Hotfix ícones de sistema: NamespaceKey canónico `{GUID}`; remove legado `::{GUID}`; Lixeira `5081`; 211 testes verdes
 - [ ] Desenvolvedor validar a Fase 7 no Windows 11
+- [ ] Desenvolvedor validar hide/restore de Este Computador, Rede e Lixeira (incl. reinício Explorer / novo arranque)
 - [ ] Não implementar duplo clique no vazio do desktop, packs de tema, nem empurrar a fence de baixo ao expandir
 
 Se qualquer inconsistência for encontrada na revisão, reporte antes de sugerir qualquer ação.

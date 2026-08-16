@@ -70,8 +70,9 @@ public sealed class DesktopCustodyBatch : IDesktopCustodyBatch
 
             if (item.Kind == FenceItemKind.Namespace)
             {
-                string key = ShellDesktopNamespace.GetParsingName(item.RuntimePath ?? item.OriginalPath ?? item.Name)
+                string raw = ShellDesktopNamespace.GetParsingName(item.RuntimePath ?? item.OriginalPath ?? item.Name)
                              ?? item.RuntimePath ?? item.OriginalPath ?? item.Name;
+                string key = DesktopHide.RequireNamespaceKey(raw, item.Name);
                 result.Add(new DesktopCustodyPlan(
                     item.ItemId, item.Kind, item.Name, null, null, null, null, key));
                 continue;
@@ -119,7 +120,8 @@ public sealed class DesktopCustodyBatch : IDesktopCustodyBatch
         {
             if (item.Kind == FenceItemKind.Namespace)
             {
-                string key = item.RuntimePath ?? item.OriginalPath ?? item.Name;
+                string raw = item.RuntimePath ?? item.OriginalPath ?? item.Name;
+                string key = DesktopHide.RequireNamespaceKey(raw, item.Name);
                 result.Add(new DesktopCustodyPlan(
                     item.ItemId, item.Kind, item.Name, null, null, null, null, key));
                 continue;

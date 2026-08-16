@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Text;
+using DesktopFences.Core.Occupancy;
 
 namespace DesktopFences.Native;
 
@@ -40,6 +41,9 @@ internal static class ShellDesktopNamespace
         // Só CLSID / shell: — nunca um .lnk que calhe ter o mesmo nome visível.
         if (string.IsNullOrWhiteSpace(parsing) || !LooksLikeParsingName(parsing))
             return false;
+
+        if (DesktopHide.IsCanonicalNamespaceKey(parsing))
+            parsing = DesktopHide.ToShellParsingName(parsing);
 
         IntPtr rc = ShellExecute(IntPtr.Zero, "open", parsing, null, null, SwShownormal);
         return rc.ToInt64() > 32;
@@ -156,8 +160,12 @@ internal static class ShellDesktopNamespace
     internal static bool LooksLikeParsingName(string value)
     {
         string trimmed = value.Trim();
-        return trimmed.StartsWith("::{", StringComparison.Ordinal)
-               || trimmed.StartsWith("shell:", StringComparison.OrdinalIgnoreCase);
+        if (trimmed.StartsWith("::{", StringComparison.Ordinal)
+            || trimmed.StartsWith("shell:", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        // CLSID canónico {GUID} (sem ::) — aceite para abrir; SHParseDisplayName prefere ::{GUID}.
+        return DesktopHide.IsCanonicalNamespaceKey(trimmed);
     }
 
     private sealed record DesktopChild(string DisplayName, string ParsingName);

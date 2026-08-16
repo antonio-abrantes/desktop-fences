@@ -267,11 +267,21 @@ public sealed class DesktopVisibility
 
     internal static bool SetNamespaceHidden(string clsid, bool hidden)
     {
+        if (!DesktopHide.TryNamespaceKey(clsid, out string canonical))
+            return false;
+
         try
         {
-            WriteDword(NewStartPanel, clsid, hidden ? 1 : 0);
-            WriteDword(ClassicStartMenu, clsid, hidden ? 1 : 0);
-            return true;
+            int expected = hidden ? 1 : 0;
+            WriteDword(NewStartPanel, canonical, expected);
+            WriteDword(ClassicStartMenu, canonical, expected);
+            // Valores legados ::{GUID} gravados pelo bug pré-hotfix — o Explorer ignora-os.
+            DeleteValue(NewStartPanel, "::" + canonical);
+            DeleteValue(ClassicStartMenu, "::" + canonical);
+            return ReadDword(NewStartPanel, canonical) == expected
+                   && ReadDword(ClassicStartMenu, canonical) == expected
+                   && !ValueExists(NewStartPanel, "::" + canonical)
+                   && !ValueExists(ClassicStartMenu, "::" + canonical);
         }
         catch
         {
@@ -295,8 +305,31 @@ public sealed class DesktopVisibility
 
     private static void WriteDword(string subkey, string name, int value)
     {
+        if (!DesktopHide.IsCanonicalNamespaceKey(name))
+            throw new ArgumentException("O Registro só aceita CLSID canónico {GUID}.", nameof(name));
+
         using RegistryKey key = Registry.CurrentUser.CreateSubKey(subkey);
         key.SetValue(name, value, RegistryValueKind.DWord);
+    }
+
+    private static int? ReadDword(string subkey, string name)
+    {
+        using RegistryKey? key = Registry.CurrentUser.OpenSubKey(subkey);
+        object? value = key?.GetValue(name);
+        return value is int dword ? dword : null;
+    }
+
+    private static bool ValueExists(string subkey, string name)
+    {
+        using RegistryKey? key = Registry.CurrentUser.OpenSubKey(subkey);
+        return key?.GetValue(name) is not null;
+    }
+
+    private static void DeleteValue(string subkey, string name)
+    {
+        using RegistryKey? key = Registry.CurrentUser.OpenSubKey(subkey, writable: true);
+        try { key?.DeleteValue(name, throwOnMissingValue: false); }
+        catch { /* valor ausente ou chave só de leitura */ }
     }
 
     private static string? FirstExisting(string? path, string? displayName, string? originalPath)

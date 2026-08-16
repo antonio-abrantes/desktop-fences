@@ -1231,7 +1231,11 @@ public partial class FenceWindow : Window
             item.Kind = plan.Kind;
             item.StorageName = plan.StorageName;
             item.OriginalPath = plan.OriginalPath;
-            item.Path = plan.Kind == FenceItemKind.Stored ? plan.DestinationPath : plan.NamespaceKey ?? item.Name;
+            item.Path = plan.Kind == FenceItemKind.Stored
+                ? plan.DestinationPath
+                : DesktopHide.ToShellParsingName(plan.NamespaceKey) is { Length: > 0 } parsing
+                    ? parsing
+                    : item.Name;
             _items.Add(item);
         }
         UpdateEmptyHint();
@@ -1278,7 +1282,11 @@ public partial class FenceWindow : Window
         {
             byId.TryGetValue(item.ItemId, out DesktopCustodyPlan? plan);
             if (plan is not null)
-                item.Path = plan.Kind == FenceItemKind.Stored ? plan.DestinationPath : plan.NamespaceKey ?? item.Name;
+                item.Path = plan.Kind == FenceItemKind.Stored
+                ? plan.DestinationPath
+                : DesktopHide.ToShellParsingName(plan.NamespaceKey) is { Length: > 0 } parsing
+                    ? parsing
+                    : item.Name;
         }
     }
 
