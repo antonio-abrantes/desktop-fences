@@ -8,7 +8,7 @@
 
 **Projeto:** DesktopFences 1.0
 **Etapa atual:** Fase 5 — Explorer / DPI / Win+D (**no código**; gate do desenvolvedor pendente).
-**Objetivo desta sessão:** validar no Windows 11 o hide por move para o store (não Hidden, não coordenadas). Não avançar para a Fase 6 (instalador) sem pedido.
+**Objetivo desta sessão:** documentar, sem implementar, a Fase 6 de custódia transacional dos itens do Desktop. O gate Windows 11 da Fase 5 permanece pendente; não avançar para a Fase 6 sem novo pedido explícito.
 
 ---
 
@@ -18,13 +18,18 @@ Leia os seguintes arquivos integralmente, nesta ordem, antes de responder:
 
 1. `AGENTS.md` — regras de comportamento, o que pode e não pode fazer, como gerenciar fases
 2. `docs/SPEC.md` — arquitetura, stack, modelo de ícones, UI, persistência, riscos
-3. `docs/plano-implementacao.md` — estado atual **e** o detalhe da Fase 6 (próxima: instalador)
+3. `docs/plano-implementacao.md` — estado atual e ordem das fases
 4. `README.md` — o que o produto é e como rodar
+
+Para implementar a próxima fase, ler também integralmente:
+
+5. `docs/spec-fase-6-custodia-desktop.md`
+6. `docs/plano-fase-6-custodia-desktop.md`
 
 Apoio (quando o assunto for relevante):
 
-5. `docs/pos-mvp1.md` — mapa curto do ciclo (sem empurrar vizinhos)
-6. `docs/adr/` — decisões já fechadas
+7. `docs/pos-mvp1.md` — mapa curto do ciclo (sem empurrar vizinhos)
+8. `docs/adr/` — decisões já fechadas
 
 > Não inicie nenhuma implementação antes de confirmar que leu todos os documentos obrigatórios acima.
 
@@ -32,11 +37,12 @@ Apoio (quando o assunto for relevante):
 
 ## Instrução de Revisão
 
-A Fase 4 (snap) está **fechada**. A Fase 5 está **no repositório**: re-hide se o Explorer reiniciar (store + registry), `PerMonitorV2` + clip no DPI, a fence não some com Win+D / Mostrar ambiente de trabalho. Instalador (Fase 6) só com pedido. Duplo clique no vazio do desktop, packs de tema e empurrar vizinhos estão **fora** deste ciclo.
+A Fase 4 (snap) está **fechada**. A Fase 5 está **no repositório**: re-hide se o Explorer reiniciar (store + registry), `PerMonitorV2` + clip no DPI, a fence não some com Win+D / Mostrar ambiente de trabalho. A Fase 6 foi especificada para store por `ItemId`, transação/recovery, transferência por metadados e lote. O instalador passa a ser a Fase 7. Duplo clique no vazio do desktop, packs de tema e empurrar vizinhos estão **fora** deste ciclo.
 
 ```
 ETAPA ATUAL    : Fase 5 — Explorer / DPI / Win+D (código pronto; validar no Windows 11)
-ETAPA SEGUINTE : Fase 6 — instalador (path estável no arranque; sem packs de tema)
+ETAPA SEGUINTE : Fase 6 — custódia transacional de itens do Desktop (planejada; não implementada)
+DEPOIS         : Fase 7 — instalador (path estável no arranque; sem packs de tema)
 FORA DO CICLO  : duplo clique no vazio do desktop · packs de tema · empurrar fence de baixo ao expandir
 ```
 
@@ -64,8 +70,10 @@ FORA DO CICLO  : duplo clique no vazio do desktop · packs de tema · empurrar f
 - [x] Fase 4 fechada: ímã às bordas da área de trabalho e às arestas de outras fences ao soltar a alça e no resize; não empurra vizinhos
 - [x] Desenvolvedor validou no Windows 11: soltar a alça ⋮⋮ perto da borda da tela / de outra fence cola; resize idem; vizinho não se mexe
 - [x] Fase 5 no código: Explorer morre → re-Conceal; DPI atualiza clip; Win+D não esconde a fence; hide por move para o store
+- [x] Fase 6 documentada: store por ItemId; transação/JSON atômico/backup/recovery; transferência por metadados; lote; somente Desktop
 - [ ] Desenvolvedor validou no Windows 11: matar o Explorer e ver os ícones voltarem a esconder; mudar DPI; Win+D / Mostrar ambiente de trabalho — fences continuam visíveis; Pausar/Sair ainda restaura
-- [ ] Não implementar a Fase 6 (instalador / path estável no arranque) sem pedido
+- [ ] Não implementar a Fase 6 sem fechar o gate da Fase 5 e receber pedido explícito
+- [ ] Não implementar a Fase 7 (instalador / path estável no arranque) antes do gate da Fase 6 e sem pedido explícito
 - [ ] Não implementar duplo clique no vazio do desktop, packs de tema, nem empurrar a fence de baixo ao expandir
 
 Se qualquer inconsistência for encontrada na revisão, reporte antes de sugerir qualquer ação.

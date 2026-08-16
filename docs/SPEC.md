@@ -12,7 +12,7 @@ App Windows 11 que agrupa ícones **reais** da área de trabalho em fences retan
 | `DesktopFences.Native` | SysListView32, COM Shell, OLE drop, DWM, âncora | Sim, e só aqui |
 | `DesktopFences.App` | XAML, fence, bandeja, ghost | Só via serviços Native |
 
-**Estado:** MVP 2 (`v0.3.1`) + Fases 3–4 fechadas + Fase 5 no código (Explorer/DPI/Win+D; gate Windows 11 pendente). N fences, Configurações, hide/restore, arrastar entre fences, snap. Próxima: instalador (Fase 6), só com pedido. Duplo clique no desktop, packs de tema e empurrar vizinhos estão **fora** deste ciclo. Detalhe: [plano-implementacao.md](plano-implementacao.md).
+**Estado:** MVP 2 (`v0.3.1`) + Fases 3–4 fechadas + Fase 5 no código (Explorer/DPI/Win+D; gate Windows 11 pendente). N fences, Configurações, hide/restore, arrastar entre fences, snap. Próxima: Fase 6, custódia transacional de itens do Desktop; depois, instalador (Fase 7). Ambas só com gate e pedido explícito. Duplo clique no desktop, packs de tema e empurrar vizinhos estão **fora** deste ciclo. Detalhe: [plano-implementacao.md](plano-implementacao.md).
 
 ---
 
@@ -50,6 +50,8 @@ Fluxo de hide:
 5. Restaurar (mover de volta / registry `0`) no shutdown, Pausar, ejetar, remover fence.
 
 **Não** usar `FILE_ATTRIBUTE_HIDDEN` nem coordenadas no ListView. Itens ocultos no Explorer não voltam a pintar o que já não está na pasta Desktop.
+
+O fluxo acima descreve a implementação vigente da Fase 5. A Fase 6 substituirá o diretório por fence por store estável `%LocalAppData%\DesktopFences\Items\{ItemId}`, sem mudar a decisão de mover o item real para fora do Desktop. Contrato completo em [spec-fase-6-custodia-desktop.md](spec-fase-6-custodia-desktop.md).
 
 ---
 
@@ -89,11 +91,14 @@ Contrato vigente — [ADR-0004](adr/0004-ole-inbound-drop.md):
 - **Inbound:** `RegisterDragDrop` nativo + alvo OLE minúsculo no cursor; ghost WPF próprio (com `+N` se a seleção do desktop tiver vários ícones); cursor de “proibido” substituído pela seta só enquanto o ponteiro está sobre a fence. A seleção do `SysListView32` é lida no início do arraste (`LVM_GETNEXTITEM` / `LVNI_SELECTED`).
 - **Outbound / reorder:** não usamos `DoDragDrop` do Explorer; hook `WH_MOUSE_LL` + `DragGhostWindow` (click-through).
 - Soltar na fence esconde o ícone real e adiciona na grade; soltar fora restaura.
-- Entre fences: soltar no **corpo** de outra fence muda o dono (JSON) e move o ficheiro entre pastas do store. Barra de título / fence recolhida não transfere nem ejetar.
+- Entre fences, no código atual: soltar no **corpo** de outra fence muda o dono (JSON) e move o ficheiro entre pastas do store. Barra de título / fence recolhida não transfere nem ejetar.
+- Alvo da Fase 6: a transferência preserva `ItemId` e store, alterando somente ownership/ordem por um commit atômico de metadados; zero I/O de payload.
 
 ### 2.5 Persistência
 
-Arquivo único `%AppData%\DesktopFences\layout.json` (`LayoutStore`). Itens de fence em `%LocalAppData%\DesktopFences\Items\{FenceId}`. Lista de fences persistida pelo `FenceHost`. `titleAlignment`: `"left"` | `"center"` (ausente = `left`). `theme` opcional (ausente = vidro do MVP 1). `uiLanguage` opcional: `"system"` | `"pt"` | `"en"` (ausente = `system`; `version` permanece 1). `originalPath` opcional (origem para restore). Fundo da fence: alfa do fill limitado a 45–85%. Sempre ≥ 1 fence.
+No código atual, o arquivo único é `%AppData%\DesktopFences\layout.json` (`LayoutStore`) e os itens ficam em `%LocalAppData%\DesktopFences\Items\{FenceId}`. Lista de fences persistida pelo `FenceHost`. `titleAlignment`: `"left"` | `"center"` (ausente = `left`). `theme` opcional (ausente = vidro do MVP 1). `uiLanguage` opcional: `"system"` | `"pt"` | `"en"` (ausente = `system`; `version` permanece 1). `originalPath` opcional (origem para restore). Fundo da fence: alfa do fill limitado a 45–85%. Sempre ≥ 1 fence.
+
+Na Fase 6, o schema sobe para `version: 2`, cada item recebe `itemId`, o store passa a ser derivado do item, e o layout passa a usar gravação temporária, substituição atômica, backup e journal/recovery. A leitura do schema v1 é mantida exclusivamente para migração recuperável. A spec complementar é a fonte de verdade desse alvo.
 
 ```json
 {
@@ -125,9 +130,11 @@ Coordenadas da fence em **DIPs** WPF; posições de ícone em **pixels** do List
 
 ### 2.6 Fora do que já está no código (ciclo em `plano-implementacao.md`)
 
-- Fase 6: instalador (path estável no arranque). Sem packs de tema.
+- Fase 6: custódia transacional de itens do Desktop — store por `ItemId`, JSON atômico/backup/recovery, transferência por metadados e lote. Planejada em [spec-fase-6-custodia-desktop.md](spec-fase-6-custodia-desktop.md) e [plano-fase-6-custodia-desktop.md](plano-fase-6-custodia-desktop.md).
+- Fase 7: instalador (path estável no arranque). Sem packs de tema.
 - **Fora do ciclo:** empurrar a fence de baixo ao expandir; duplo clique no vazio do desktop cria fence; packs de tema.
 - **Reserva (reavaliar no fim):** Novo → Fence no Explorer. Não implementar até planejada e validada.
+- **Stand-by da auditoria:** itens externos ao Desktop, OneDrive/redirected Desktop, progresso/cancelamento, ampliação geral de `IFileOperation` e demais melhorias não selecionadas para a Fase 6.
 
 ---
 
@@ -136,7 +143,7 @@ Coordenadas da fence em **DIPs** WPF; posições de ícone em **pixels** do List
 | Risco | Mitigação |
 |---|---|
 | Árvore Progman/WorkerW muda | 100% em Native; fallback duplo |
-| Crash a meio do move | Gravar layout depois do move; arranque resolve pelo nome no Desktop se o store falhar |
+| Crash a meio do move | Risco vigente; Fase 6: journal durável, commit atômico, backup e recovery idempotente |
 | DPI por monitor | DIPs vs pixels documentados; `PerMonitorV2` + `DpiChanged` (Fase 5) |
 | Restart do Explorer | Ficheiro já não está no Desktop; reaplicar só CLSID de namespace |
 | Defender / `WriteProcessMemory` | `asInvoker`; signing só quando houver release assinado |
@@ -160,6 +167,9 @@ DesktopFences/
 │   ├── SESSION-HEADER.md
 │   ├── SPEC.md
 │   ├── plano-implementacao.md
+│   ├── spec-fase-6-custodia-desktop.md
+│   ├── plano-fase-6-custodia-desktop.md
+│   ├── auditoria-fluxo-itens-performance-release.md
 │   ├── pos-mvp1.md
 │   └── adr/
 ├── src/

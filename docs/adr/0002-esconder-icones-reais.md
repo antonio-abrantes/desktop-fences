@@ -19,6 +19,10 @@ O requisito: **enquanto o item pertence a um Fence, não pode aparecer solto no 
 
 `SysListView32` continua só para hit-test de drop e reposicionar o ícone **depois** de voltar ao Desktop.
 
+### Evolução planejada antes do instalador
+
+A decisão de mover o item real para um store continua aceita. A Fase 6 preserva esse mecanismo, mas troca o diretório `{FenceId}` por `{ItemId}`, acrescenta transação/recovery e torna a transferência entre fences somente metadados. Até a fase ser implementada e validada, o contrato vigente continua sendo o descrito acima. Ver [spec-fase-6-custodia-desktop.md](../spec-fase-6-custodia-desktop.md).
+
 ## Alternatives Considered
 
 ### `LVM_SETITEMPOSITION` fora da vista

@@ -15,9 +15,10 @@ Mapa curto do ciclo. O detalhe operacional está em [`plano-implementacao.md`](p
 | 3 | Arrastar item entre fences | Média — **fechada** |
 | 4 | Snap a bordas e a outras fences | Média — **fechada** |
 | 5 | Explorer reiniciado / DPI / Win+D | Média–alta — **no código** (validar no Windows 11) |
-| 6 | Instalador (path estável no arranque) | Baixa–média |
+| 6 | Custódia transacional de itens do Desktop | Alta — **planejada** |
+| 7 | Instalador (path estável no arranque) | Baixa–média |
 
-Não pular a 6. Criar fence continua nas Settings.
+Não pular a 6 nem iniciar o instalador antes do gate dela. Criar fence continua nas Settings.
 
 ---
 
@@ -57,4 +58,4 @@ Ao soltar a alça ⋮⋮ (e ao terminar o resize), a fence cola nas bordas da á
 
 Se o Explorer morrer, os ficheiros já não estão no Desktop (estão no store); CLSID de namespace é reaplicado. Mudança de DPI atualiza o clip. Win+D / Mostrar ambiente de trabalho não faz a fence desaparecer. Pausar/Sair continua a devolver os ícones reais.
 
-A seguir no plano (só com pedido): instalador (Fase 6) — path estável no arranque, sem packs de tema.
+A seguir no plano, depois do gate da Fase 5 e só com pedido: Fase 6 — store por `ItemId`, transação/recovery, transferência por metadados e lote, somente para itens do Desktop. Depois do gate dela: instalador (Fase 7), com path estável no arranque e sem packs de tema.

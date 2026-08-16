@@ -7,7 +7,7 @@ Convenção:
 - `[x]` feito no repositório (agente) e/ou confirmado pelo desenvolvedor na sessão.
 - `[ ]` pendente — **não implementar** sem o gate no `SESSION-HEADER.md` **e** pedido explícito.
 - A Fase 1 abaixo está **fechada**. N fences, Configurações, cores por fence, Sobre, iniciar com o Windows (portable), mutex.
-- A Fase 4 (snap) está **fechada** (validada no Windows 11). A Fase 5 (Explorer / DPI / Win+D) está **no código**; o gate do desenvolvedor no Windows 11 ainda está aberto. Instalador (Fase 6) só com pedido. Duplo clique no vazio do desktop e packs de tema estão fora deste ciclo.
+- A Fase 4 (snap) está **fechada** (validada no Windows 11). A Fase 5 (Explorer / DPI / Win+D) está **no código**; o gate do desenvolvedor no Windows 11 ainda está aberto. A Fase 6 de custódia transacional dos itens do Desktop está planejada, mas não implementada. O instalador passa a ser a Fase 7. Duplo clique no vazio do desktop e packs de tema estão fora deste ciclo.
 
 ---
 
@@ -49,9 +49,10 @@ Convenção:
 | **3** | Arrastar item de uma fence para outra | Média | **Fechada** (validada no Windows 11). Reusa o ghost; N fences sem isso são ilhas. |
 | **4** | Snap a bordas da tela e a outras fences | Média | **Fechada** (validada no Windows 11). Posicionamento livre estável primeiro (fase 1); ímã no soltar da alça. |
 | **5** | Explorer reiniciado / DPI / Win+D | Média–alta | **No código** (gate Windows 11 pendente). Sobrevivência no Windows real. Piora com N fences. |
-| **6** | Instalador (path estável no arranque) | Baixa–média | Distribuição. Ajustar o “iniciar com o Windows” para a pasta de instalação. Sem packs de tema. |
+| **6** | Custódia transacional de itens do Desktop | Alta | Store por `ItemId`, JSON atômico/backup/recovery, transferência por metadados e lote. Um único gate; sem itens externos. |
+| **7** | Instalador (path estável no arranque) | Baixa–média | Distribuição somente depois do gate de integridade. Ajustar o “iniciar com o Windows” para a pasta de instalação. Sem packs de tema. |
 
-Não implementar a Fase 6 sem fechar o gate da 5 **e** pedido explícito.
+Não implementar a Fase 6 sem fechar o gate da 5 **e** pedido explícito. Não implementar a Fase 7 antes do gate final da 6.
 
 ### Fora deste ciclo (outra versão, se um dia)
 
@@ -197,7 +198,7 @@ O Windows já expõe “iniciar com o sistema” por utilizador na chave:
 - Default **desligado**.
 - Mutex `Local\DesktopFences.SingleInstance`: a segunda instância sai sem tocar nos ícones.
 
-Na Fase 6 o instalador pode passar a um path estável; até lá o portable atualiza o Run key em cada arranque.
+Na Fase 7 o instalador pode passar a um path estável; até lá o portable atualiza o Run key em cada arranque.
 
 ### Checklist
 
@@ -346,9 +347,39 @@ Reaplicar hide se o Explorer reiniciar (ficheiros já estão no store; reaplicar
 
 ---
 
-## Fase 6 — instalador (path estável no arranque)
+## Fase 6 — custódia transacional de itens do Desktop
 
 **Não implementar agora.**
+
+**Objetivo:** entregar em uma única fase os quatro blocos aprovados após a auditoria:
+
+1. store estável por `ItemId`;
+2. transação, JSON atômico, backup e recovery;
+3. transferência entre fences somente por metadados;
+4. processamento em lote.
+
+O escopo é somente o fluxo de itens do Desktop do usuário/público. Itens externos, OneDrive/redirected Desktop, progresso/cancelamento e as demais recomendações da auditoria ficam em stand-by.
+
+Fontes de verdade da fase:
+
+- [spec-fase-6-custodia-desktop.md](spec-fase-6-custodia-desktop.md) — contrato, invariantes, schema v2, recovery e critérios de aceite;
+- [plano-fase-6-custodia-desktop.md](plano-fase-6-custodia-desktop.md) — marcos 6.1–6.4, checklists, testes e gate.
+
+### Checklist resumido
+
+- [ ] 6.1 — schema v2, `ItemId`, store estável e migração recuperável do v1
+- [ ] 6.2 — commit atômico, backup, journal e recovery no arranque
+- [ ] 6.3 — transferência entre fences com zero I/O de payload
+- [ ] 6.4 — pipeline único de lote, uma captura/save/notificação por gesto
+- [ ] Testes automatizados e matriz Windows 11 registrados
+
+**Gate do desenvolvedor:** `[ ]` — somente depois dos quatro marcos. Não há release parcial desta fase.
+
+---
+
+## Fase 7 — instalador (path estável no arranque)
+
+**Não implementar antes do gate da Fase 6 e de pedido explícito.**
 
 Instalador = distribuição (release com instalador, não só zip portable). **Iniciar com o Windows já existe** (fecho da Fase 1, chave `HKCU\...\Run` com o path do `.exe` atual). Nesta fase **há de se ajustar** essa inicialização: o instalador grava um path estável (pasta de instalação) em vez do portable, sem duplicar o valor Run, e repor o atalho na atualização. Sem packs de tema. O vidro da fence permanece travado.
 
@@ -366,7 +397,7 @@ Instalador = distribuição (release com instalador, não só zip portable). **I
 
 ## Ideias em reserva (não implementar)
 
-Reavaliar **depois** do ciclo atual (1–6), só com recorte planejado **e** validação explícita. Não são fase, não têm checklist, não entram no ciclo.
+Reavaliar **depois** do ciclo atual (1–7), só com recorte planejado **e** validação explícita. Não são fase, não têm checklist, não entram no ciclo.
 
 **Duplo clique no vazio do desktop cria fence.** Settings continua o caminho confiável. O hook de rato já existe; o risco é criar fence ao clicar ícone ou ao abrir o menu do desktop. Só com análise de necessidade real.
 

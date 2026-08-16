@@ -38,7 +38,7 @@ O hide/restore do MVP 1, mais várias fences no mesmo desktop:
 - Bandeja: Pausar / Retomar / Configurações / Sobre / Sair. Pausar restaura os ícones reais.
 - Persistência em `%AppData%\DesktopFences\layout.json`. Ficheiros das fences em `%LocalAppData%\DesktopFences\Items`.
 
-Explorer reiniciado / DPI / Win+D está no código; falta validar no Windows 11. A seguir no plano: instalador (path estável). Duplo clique no vazio do desktop não faz parte deste ciclo.
+Explorer reiniciado / DPI / Win+D está no código; falta validar no Windows 11. A seguir no plano: reforçar a custódia dos itens do Desktop com store por item, recovery, transferência entre fences sem mover o payload e processamento em lote. O instalador vem depois desse gate. Duplo clique no vazio do desktop não faz parte deste ciclo.
 
 ## Requisitos
 

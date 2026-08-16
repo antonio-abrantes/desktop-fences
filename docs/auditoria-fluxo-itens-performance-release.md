@@ -27,6 +27,27 @@
 
 O conteúdo dos arquivos não é apagado pelos problemas encontrados, mas algumas falhas podem deixá-lo fora do Desktop e sem referência válida no `layout.json`. Para um usuário comum, isso se apresenta como perda de arquivo; portanto, deve ser tratado como risco de dados de severidade alta.
 
+### Decisão de escopo posterior à auditoria
+
+Após a revisão dos achados, foi decidido concentrar a próxima etapa exclusivamente no fluxo de itens do Desktop. A Fase 6, antes do instalador, implementará em um único gate:
+
+1. store estável por `ItemId`;
+2. transação recuperável, JSON atômico, backup e recovery;
+3. transferência entre fences apenas por metadados;
+4. processamento em lote.
+
+Os demais achados não foram descartados. Permanecem registrados neste documento em **stand-by**, sem entrar na Fase 6:
+
+| Tema | Estado após a decisão |
+|---|---|
+| Validação geral de `IFileOperation` | Melhoria futura; na Fase 6 entra somente o resultado mínimo exigido pela transação de itens do Desktop |
+| Operações longas, UI responsiva, progresso e cancelamento | Stand-by |
+| Arquivos externos ao Desktop | Fora do foco da Fase 6; não criar política nova nesta etapa |
+| OneDrive, placeholders e Desktop redirecionado | Stand-by |
+| Protocolo OLE, cache de ícones e demais otimizações | Stand-by |
+
+Especificação e execução: [spec-fase-6-custodia-desktop.md](spec-fase-6-custodia-desktop.md) e [plano-fase-6-custodia-desktop.md](plano-fase-6-custodia-desktop.md). Esta decisão reduz o escopo da próxima fase, mas não transforma automaticamente o parecer de release em `GO`: a aprovação deve ser reavaliada com os testes e evidências do novo gate.
+
 ---
 
 ## 2. Evidências e limites da auditoria
@@ -430,7 +451,7 @@ São orçamentos iniciais, ainda não medições do produto:
 - reinício do Explorer durante entrada e durante saída;
 - Win+D e mudança de DPI conforme gate atual da Fase 5.
 
-### Critério de aprovação
+### Critério de aprovação original da auditoria
 
 O GO só deve ocorrer quando:
 
@@ -440,6 +461,8 @@ O GO só deve ocorrer quando:
 - a política para itens externos e OneDrive estiver explícita;
 - a Fase 5 estiver validada no Windows 11 real;
 - resultados e ambiente dos testes estiverem registrados.
+
+O critério acima registra o parecer amplo produzido na data da auditoria. Para a Fase 6 de escopo reduzido, vale o gate específico da spec complementar; os pontos em stand-by continuam visíveis para uma reavaliação de release posterior.
 
 ---
 
@@ -456,7 +479,7 @@ O próximo passo não deve ser procurar outro truque de hide. Deve ser transform
 - operação longa assíncrona e observável;
 - política segura para origem externa e nuvem.
 
-**Parecer final:** abordagem aprovada; implementação ainda não aprovada para usuários gerais.
+**Parecer final da auditoria:** abordagem aprovada; implementação ainda não aprovada para usuários gerais. A decisão posterior agenda os quatro reforços centrais na Fase 6 e mantém os demais achados em stand-by, sem declarar `GO` antecipadamente.
 
 ---
 
