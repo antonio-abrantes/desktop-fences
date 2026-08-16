@@ -66,10 +66,12 @@ internal static class NativeMethods
     public const int WCA_ACCENT_POLICY = 19;
 
     public static readonly IntPtr HWND_BOTTOM = new(1);
+    public static readonly IntPtr HWND_TOP = IntPtr.Zero;
     public const uint SWP_NOSIZE = 0x0001;
     public const uint SWP_NOMOVE = 0x0002;
     public const uint SWP_NOZORDER = 0x0004;
     public const uint SWP_NOACTIVATE = 0x0010;
+    public const uint SWP_NOOWNERZORDER = 0x0200;
     public const uint SWP_SHOWWINDOW = 0x0040;
     public const uint SWP_HIDEWINDOW = 0x0080;
     public const int WS_EX_TOPMOST = 0x00000008;
@@ -80,6 +82,7 @@ internal static class NativeMethods
     public const int SC_MINIMIZE = 0xF020;
     public const int SIZE_MINIMIZED = 1;
     public const int SW_SHOWNOACTIVATE = 4;
+    public const uint GW_HWNDPREV = 3;
     public const uint MONITOR_DEFAULTTONEAREST = 2;
     public const uint MONITOR_DEFAULTTONULL = 0;
 
@@ -227,6 +230,9 @@ internal static class NativeMethods
 
     [DllImport("user32.dll")]
     public static extern bool IsWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetWindow(IntPtr hWnd, uint uCmd);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);

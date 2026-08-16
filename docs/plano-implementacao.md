@@ -7,7 +7,7 @@ Convenção:
 - `[x]` feito no repositório (agente) e/ou confirmado pelo desenvolvedor na sessão.
 - `[ ]` pendente — **não implementar** sem o gate no `SESSION-HEADER.md` **e** pedido explícito.
 - A Fase 1 abaixo está **fechada**. N fences, Configurações, cores por fence, Sobre, iniciar com o Windows (portable), mutex.
-- A Fase 4 (snap) está **fechada** (validada no Windows 11). A Fase 5 (Explorer / DPI / Win+D) está **no código**; o gate do desenvolvedor no Windows 11 ainda está aberto. A Fase 6 de custódia transacional dos itens do Desktop está planejada, mas não implementada. O instalador passa a ser a Fase 7. Duplo clique no vazio do desktop e packs de tema estão fora deste ciclo.
+- As Fases 4 (snap) e 5 (Explorer / DPI / Win+D) estão **fechadas e validadas no Windows 11**. A release `v0.4.0` está preparada. A Fase 6 de custódia transacional dos itens do Desktop está planejada, mas não implementada. O instalador é a Fase 7. Duplo clique no vazio do desktop e packs de tema estão fora deste ciclo.
 
 ---
 
@@ -48,7 +48,7 @@ Convenção:
 | **2** | Idioma da UI: português e inglês | Baixa | Só texto da App. Não mexe em Native, hide/restore, drop nem no schema dos ícones. Quanto antes, menos string nova para extrair nas fases seguintes. |
 | **3** | Arrastar item de uma fence para outra | Média | **Fechada** (validada no Windows 11). Reusa o ghost; N fences sem isso são ilhas. |
 | **4** | Snap a bordas da tela e a outras fences | Média | **Fechada** (validada no Windows 11). Posicionamento livre estável primeiro (fase 1); ímã no soltar da alça. |
-| **5** | Explorer reiniciado / DPI / Win+D | Média–alta | **No código** (gate Windows 11 pendente). Sobrevivência no Windows real. Piora com N fences. |
+| **5** | Explorer reiniciado / DPI / Win+D | Média–alta | **Fechada** (validada no Windows 11). Sobrevivência no Windows real e ancoragem correta após Win+D. |
 | **6** | Custódia transacional de itens do Desktop | Alta | Store por `ItemId`, JSON atômico/backup/recovery, transferência por metadados e lote. Um único gate; sem itens externos. |
 | **7** | Instalador (path estável no arranque) | Baixa–média | Distribuição somente depois do gate de integridade. Ajustar o “iniciar com o Windows” para a pasta de instalação. Sem packs de tema. |
 
@@ -330,20 +330,23 @@ Ao soltar a alça ⋮⋮, e ao terminar o resize: ímã nas bordas da área de t
 
 ## Fase 5 — Explorer / DPI / Win+D
 
-**Status:** no código. Gate do desenvolvedor pendente.
+**Status:** fechada. Validada pelo desenvolvedor no Windows 11. Incluída na release preparada `v0.4.0`.
 
-Reaplicar hide se o Explorer reiniciar (ficheiros já estão no store; reaplicar só CLSID). Hide: mover para `%LocalAppData%\DesktopFences\Items\{FenceId}` — **não** Hidden, **não** coordenadas. Namespace (Lixeira etc.) via registry. Sem COM `IFolderView` no arranque e sem loop de 1s. `PerMonitorV2` + clip no DPI; Win+D: bloquear minimize/`SWP_HIDEWINDOW`.
+Reaplicar hide se o Explorer reiniciar (ficheiros já estão no store; reaplicar só CLSID). Hide: mover para `%LocalAppData%\DesktopFences\Items\{FenceId}` — **não** Hidden, **não** coordenadas. Namespace (Lixeira etc.) via registry. Sem COM `IFolderView` no arranque e sem loop de 1s para re-hide. `PerMonitorV2` + clip no DPI.
+
+Win+D teve uma primeira tentativa baseada em bloquear minimize, `WM_SHOWWINDOW`, `SWP_HIDEWINDOW`, coordenadas negativas e cloak do DWM. O gate real mostrou que isso não bastava: a fence pode continuar `visible`/normal e apenas ficar atrás de Progman/WorkerW. A correção revisada mantém a janela top-level e reposiciona o grupo de fences logo acima da banda do Desktop, abaixo dos aplicativos, em eventos da Shell e na verificação de sobrevivência. Não usa `topmost`, owner Progman nem `SetParent`.
 
 ### Checklist (agente marca `[x]` só depois de implementar)
 
 - [x] `DesktopHide` + `FenceItemStore` + testes (move vs CLSID vs none)
 - [x] `ExplorerListViewGuard`: ListView morta → nova → `RebindAfterExplorer`
 - [x] `WM_SYSCOMMAND` / `WINDOWPOSCHANGING` / `WM_SHOWWINDOW`: fence não some com Win+D
+- [x] Revisão Win+D: detectar host `SHELLDLL_DefView` e reancorar todas as fences acima de Progman/WorkerW, mesmo quando `IsWindowVisible` continua verdadeiro
 - [x] Hide via move para o store + registry (sem Hidden; sem LVM coordenadas; sem watchdog de 1s)
 - [x] `DpiChanged`: clip + z-order; manifest `PerMonitorV2` intacto
 - [x] `dotnet test` verde
 
-**Gate do desenvolvedor:** `[ ]` — Task Manager → finalizar o Windows Explorer, deixar voltar; ícones das fences somem de novo no desktop. Mudar escala DPI. Win+D: fences continuam no ambiente de trabalho. Pausar/Sair restaura.
+**Gate do desenvolvedor:** `[x]` — Explorer/DPI e Win+D validados no Windows 11; fences permanecem no ambiente de trabalho e Pausar/Sair continua restaurando.
 
 ---
 

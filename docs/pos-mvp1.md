@@ -2,7 +2,7 @@
 
 Mapa curto do ciclo. O detalhe operacional está em [`plano-implementacao.md`](plano-implementacao.md). Cada fase pede autorização no `SESSION-HEADER.md` **e** pedido explícito.
 
-**MVP 2** (`v0.3.1`) = Fases 1 + 2. Fases 3–4 **fechadas**. A Fase 5 (Explorer / DPI / Win+D) está no código.
+**MVP 2** (`v0.3.1`) = Fases 1 + 2. As Fases 3–5 estão **fechadas**. Release preparada: `v0.4.0`. A Fase 6 é a próxima.
 
 ---
 
@@ -14,7 +14,7 @@ Mapa curto do ciclo. O detalhe operacional está em [`plano-implementacao.md`](p
 | 2 | Idioma da UI: português e inglês | Baixa — **fechada** |
 | 3 | Arrastar item entre fences | Média — **fechada** |
 | 4 | Snap a bordas e a outras fences | Média — **fechada** |
-| 5 | Explorer reiniciado / DPI / Win+D | Média–alta — **no código** (validar no Windows 11) |
+| 5 | Explorer reiniciado / DPI / Win+D | Média–alta — **fechada** |
 | 6 | Custódia transacional de itens do Desktop | Alta — **planejada** |
 | 7 | Instalador (path estável no arranque) | Baixa–média |
 
@@ -54,8 +54,8 @@ Arrastar um ou vários itens da grade de uma fence para o corpo de outra. O ghos
 
 Ao soltar a alça ⋮⋮ (e ao terminar o resize), a fence cola nas bordas da área de trabalho e nas arestas das outras. Não empurra o vizinho. Fence recolhida só muda de sítio, não estica a barra.
 
-## Fase 5 (no código)
+## Fase 5 (fechada)
 
-Se o Explorer morrer, os ficheiros já não estão no Desktop (estão no store); CLSID de namespace é reaplicado. Mudança de DPI atualiza o clip. Win+D / Mostrar ambiente de trabalho não faz a fence desaparecer. Pausar/Sair continua a devolver os ícones reais.
+Validada no Windows 11. Se o Explorer morrer, os ficheiros já não estão no Desktop (estão no store); CLSID de namespace é reaplicado. Mudança de DPI atualiza o clip. Para Win+D / Mostrar ambiente de trabalho, a fence é reancorada acima da banda Progman/WorkerW e abaixo dos aplicativos, inclusive quando o Windows ainda a reporta como visível. Pausar/Sair continua a devolver os ícones reais.
 
 A seguir no plano, depois do gate da Fase 5 e só com pedido: Fase 6 — store por `ItemId`, transação/recovery, transferência por metadados e lote, somente para itens do Desktop. Depois do gate dela: instalador (Fase 7), com path estável no arranque e sem packs de tema.

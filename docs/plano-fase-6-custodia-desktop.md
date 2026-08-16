@@ -42,7 +42,7 @@ Estimativa inicial para uma pessoa familiarizada com o projeto: **3 a 5 semanas*
 
 ## 3. Preparação e linha de base
 
-- [ ] Confirmar gate da Fase 5 no Windows 11 e registrar o resultado.
+- [x] Confirmar gate da Fase 5 no Windows 11 e registrar o resultado.
 - [ ] Criar uma cópia de teste com layout v1 e payloads reais representativos.
 - [ ] Medir a versão anterior com 1, 10, 50 e 100 itens: tempo, capturas do Explorer, saves, notificações e moves.
 - [ ] Mapear todos os caminhos atuais de entrada, saída, Pausar, Sair, remover fence e transferência.

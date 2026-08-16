@@ -12,7 +12,7 @@ App Windows 11 que agrupa ícones **reais** da área de trabalho em fences retan
 | `DesktopFences.Native` | SysListView32, COM Shell, OLE drop, DWM, âncora | Sim, e só aqui |
 | `DesktopFences.App` | XAML, fence, bandeja, ghost | Só via serviços Native |
 
-**Estado:** MVP 2 (`v0.3.1`) + Fases 3–4 fechadas + Fase 5 no código (Explorer/DPI/Win+D; gate Windows 11 pendente). N fences, Configurações, hide/restore, arrastar entre fences, snap. Próxima: Fase 6, custódia transacional de itens do Desktop; depois, instalador (Fase 7). Ambas só com gate e pedido explícito. Duplo clique no desktop, packs de tema e empurrar vizinhos estão **fora** deste ciclo. Detalhe: [plano-implementacao.md](plano-implementacao.md).
+**Estado:** release `v0.4.0` preparada; MVP 2 + Fases 3–5 fechadas e validadas no Windows 11. N fences, Configurações, hide/restore, arrastar entre fences, snap, sobrevivência ao Explorer/DPI e Win+D. Próxima: Fase 6, custódia transacional de itens do Desktop; depois, instalador (Fase 7). Ambas só com gate e pedido explícito. Duplo clique no desktop, packs de tema e empurrar vizinhos estão **fora** deste ciclo. Detalhe: [plano-implementacao.md](plano-implementacao.md).
 
 ---
 
@@ -73,7 +73,7 @@ Ver [ADR-0003](adr/0003-ancoragem-desktop-e-acrylic.md).
 
 - `AllowsTransparency=True`; vidro = brush alfa no `Border` (`#A80C0C12`), `CornerRadius=8`.
 - **Não** usar `SetWindowCompositionAttribute` enquanto a janela for layered (cinza opaco no W11 testado).
-- Z-order: `HWND_BOTTOM` + `WS_EX_TOOLWINDOW`. **Não** `GWL_HWNDPARENT` → Progman (isso impedia o OLE drop).
+- Z-order: janela top-level + `WS_EX_TOOLWINDOW`; a Native encontra o host `SHELLDLL_DefView` e coloca as fences imediatamente acima da banda Progman/WorkerW e abaixo da primeira janela de aplicativo. `HWND_BOTTOM` é somente fallback. **Não** usar `GWL_HWNDPARENT` → Progman (isso impedia o OLE drop e acoplaria a vida da fence ao Explorer).
 - Sem minimize/maximize box.
 
 ### 2.3 App — fence
@@ -146,6 +146,7 @@ Coordenadas da fence em **DIPs** WPF; posições de ícone em **pixels** do List
 | Crash a meio do move | Risco vigente; Fase 6: journal durável, commit atômico, backup e recovery idempotente |
 | DPI por monitor | DIPs vs pixels documentados; `PerMonitorV2` + `DpiChanged` (Fase 5) |
 | Restart do Explorer | Ficheiro já não está no Desktop; reaplicar só CLSID de namespace |
+| Win+D eleva Progman/WorkerW acima da fence sem marcá-la oculta | Reancorar o grupo de fences acima da banda do Desktop por shell hook + verificação de sobrevivência; gate Windows 11 obrigatório |
 | Defender / `WriteProcessMemory` | `asInvoker`; signing só quando houver release assinado |
 | Acrylic + WPF layered | ADR-0003: vidro alfa, sem composition attribute |
 | OLE inbound + janela layered | ADR-0004: alvo no cursor + override da seta |
