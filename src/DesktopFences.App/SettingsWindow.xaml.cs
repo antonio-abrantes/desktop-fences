@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -6,8 +8,10 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using DesktopFences.App.Localization;
 using DesktopFences.App.Services;
+using DesktopFences.Core;
 using DesktopFences.Core.Fences;
 using DesktopFences.Core.Models;
+using DesktopFences.Core.Persistence;
 using ColorDialog = System.Windows.Forms.ColorDialog;
 using WinColor = System.Drawing.Color;
 using MediaColor = System.Windows.Media.Color;
@@ -75,6 +79,13 @@ public partial class SettingsWindow : Window
         SetComboItem(0, Loc.T("LanguageSystem"));
         SetComboItem(1, Loc.T("LanguagePortuguese"));
         SetComboItem(2, Loc.T("LanguageEnglish"));
+        TxtFolders.Text = Loc.T("FoldersSection");
+        BtnOpenLayout.Content = Loc.T("OpenLayout");
+        BtnOpenLayout.ToolTip = Loc.T("OpenLayoutTooltip");
+        BtnOpenItems.Content = Loc.T("OpenItems");
+        BtnOpenItems.ToolTip = Loc.T("OpenItemsTooltip");
+        TxtLayoutPath.Text = LayoutStore.DefaultPath();
+        TxtItemsPath.Text = FenceItemStore.Root();
         TxtFenceListLabel.Text = Loc.T("FenceListLabel");
         ApplyAllCheck.Content = Loc.T("ApplyAll");
         ApplyAllCheck.ToolTip = Loc.T("ApplyAllTooltip");
@@ -130,6 +141,32 @@ public partial class SettingsWindow : Window
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
 
     private void About_Click(object sender, RoutedEventArgs e) => AboutWindow.ShowOrActivate();
+
+    private void OpenLayout_Click(object sender, RoutedEventArgs e) =>
+        OpenInExplorer(LayoutStore.DefaultPath(), selectFile: true);
+
+    private void OpenItems_Click(object sender, RoutedEventArgs e) =>
+        OpenInExplorer(FenceItemStore.Root(), selectFile: false);
+
+    private static void OpenInExplorer(string path, bool selectFile)
+    {
+        try
+        {
+            string? folder = selectFile ? Path.GetDirectoryName(path) : path;
+            if (string.IsNullOrEmpty(folder))
+                return;
+            Directory.CreateDirectory(folder);
+
+            string args = selectFile && File.Exists(path)
+                ? $"/select,\"{path}\""
+                : $"\"{folder}\"";
+            Process.Start(new ProcessStartInfo("explorer.exe", args) { UseShellExecute = true });
+        }
+        catch
+        {
+            /* pasta em falta / Explorador recusou */
+        }
+    }
 
     private void StartWithWindows_Changed(object sender, RoutedEventArgs e)
     {

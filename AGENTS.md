@@ -18,7 +18,7 @@ Documentos de apoio (ler quando o assunto for relevante):
 
 ## O que este projeto é
 
-App nativo Windows 11 (C# / .NET 8 / WPF) que agrupa ícones reais da área de trabalho em “fences” translúcidas, no espírito do Stardock Fences. O **MVP 2** (`v0.3.1`) entrega N fences, Configurações (cores, idioma pt/en, iniciar com o Windows) e o hide/restore do MVP 1. A Fase 3 (arrastar item entre fences) está fechada. A Fase 4 (snap) está no código; a seguinte (Explorer/DPI/Win+D) só com autorização no `SESSION-HEADER.md` e pedido explícito.
+App nativo Windows 11 (C# / .NET 8 / WPF) que agrupa ícones reais da área de trabalho em “fences” translúcidas, no espírito do Stardock Fences. O **MVP 2** (`v0.3.1`) entrega N fences, Configurações (cores, idioma pt/en, iniciar com o Windows) e o hide/restore do MVP 1. Fases 3–4 fechadas. A Fase 5 (Explorer/DPI/Win+D) está no código; a seguinte (instalador) só com autorização no `SESSION-HEADER.md` e pedido explícito. Duplo clique no desktop e packs de tema estão fora deste ciclo.
 
 Diferencial em relação aos clones open source: **esconder os ícones reais do `SysListView32` e desenhar a nossa grade por cima**. DeskFrame, NoFences e OpenFences não fazem isso — eles mostram atalhos/pastas em janelas flutuantes enquanto os ícones originais continuam no desktop.
 
@@ -59,7 +59,7 @@ Se uma feature precisa de Win32, a Native expõe um serviço com tipos de Core (
 
 ## Como gerenciar fases
 
-1. A etapa vigente está em `docs/SESSION-HEADER.md` e o detalhe operacional em `docs/plano-implementacao.md`. O MVP 1, o MVP 2 (Fases 1–2) e a Fase 3 estão fechados. A Fase 4 está no código (gate Windows 11 pendente). O ciclo restante (Fases 5–7) está no plano; o mapa curto é `docs/pos-mvp1.md`. Empurrar vizinhos ao expandir **não** entra neste ciclo.
+1. A etapa vigente está em `docs/SESSION-HEADER.md` e o detalhe operacional em `docs/plano-implementacao.md`. O MVP 1, o MVP 2 (Fases 1–2) e as Fases 3–4 estão fechados. A Fase 5 está no código (gate Windows 11 pendente). A Fase 6 é o instalador. Duplo clique no desktop, packs de tema e empurrar vizinhos **não** entram neste ciclo.
 2. Cada passo tem um **gate de validação do desenvolvedor**. O agente marca `[x]` só o que **ele** implementou e testou no código; o gate `[ ]` do desenvolvedor permanece até o humano validar no Windows 11 real.
 3. Ao concluir uma etapa, o agente atualiza:
    - `docs/SESSION-HEADER.md` (contexto + checklist)

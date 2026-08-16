@@ -22,6 +22,11 @@ public partial class App : Application
         {
             _singleInstance.Dispose();
             _singleInstance = null;
+            System.Windows.MessageBox.Show(
+                "O DesktopFences já está a correr (ícone na bandeja). Fecha-o aí antes de abrir outra vez.",
+                "DesktopFences",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
             Shutdown();
             return;
         }

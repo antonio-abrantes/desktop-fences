@@ -30,6 +30,11 @@
   <data name="StartWithWindows" xml:space="preserve"><value>Start with Windows</value></data>
   <data name="StartWithWindowsTooltip" xml:space="preserve"><value>Opens this .exe when you sign in. If you move the folder, open the app once from the new location.</value></data>
   <data name="StartupHint" xml:space="preserve"><value>Portable: the shortcut points to this folder. Moving the program and opening it again updates the path.</value></data>
+  <data name="FoldersSection" xml:space="preserve"><value>Folders</value></data>
+  <data name="OpenLayout" xml:space="preserve"><value>Open settings file</value></data>
+  <data name="OpenLayoutTooltip" xml:space="preserve"><value>Opens Explorer at layout.json (fences, colors, language).</value></data>
+  <data name="OpenItems" xml:space="preserve"><value>Open grouped files</value></data>
+  <data name="OpenItemsTooltip" xml:space="preserve"><value>Opens the folder where shortcuts and files in fences are stored.</value></data>
   <data name="Language" xml:space="preserve"><value>Language</value></data>
   <data name="LanguageSystem" xml:space="preserve"><value>System</value></data>
   <data name="LanguagePortuguese" xml:space="preserve"><value>Portuguese</value></data>

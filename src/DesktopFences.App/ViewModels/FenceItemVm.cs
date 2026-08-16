@@ -11,7 +11,8 @@ public sealed class FenceItemVm : INotifyPropertyChanged
     private bool _isDragging;
 
     public required string Name { get; init; }
-    public string? Path { get; init; }
+    public string? Path { get; set; }
+    public string? OriginalPath { get; set; }
     public ImageSource? Icon { get; init; }
     public int? OriginalX { get; init; }
     public int? OriginalY { get; init; }
@@ -49,6 +50,7 @@ public sealed class FenceItemVm : INotifyPropertyChanged
     {
         Name = Name,
         Path = Path,
+        OriginalPath = OriginalPath,
         OriginalX = OriginalX,
         OriginalY = OriginalY
     };

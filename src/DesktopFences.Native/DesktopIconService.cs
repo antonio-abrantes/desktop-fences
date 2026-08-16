@@ -9,6 +9,7 @@ namespace DesktopFences.Native;
 public sealed class DesktopIconService
 {
     private const int MaxNameChars = 260;
+    private readonly DesktopVisibility _visibility = new();
 
     public IntPtr ListViewHandle { get; private set; }
 
@@ -45,31 +46,41 @@ public sealed class DesktopIconService
             (IntPtr)lParam);
     }
 
-    public void HideIcons(IEnumerable<DesktopIcon> icons, HiddenIconTracker tracker)
+    public IReadOnlyList<PixelRect> WorkAreasInClient()
     {
-        ArgumentNullException.ThrowIfNull(tracker);
-        EnsureConnected();
-
-        foreach (DesktopIcon icon in icons)
-        {
-            tracker.Remember(icon);
-            SetItemPosition(icon.Index, NativeMethods.HiddenIconX, NativeMethods.HiddenIconY);
-        }
-    }
-
-    public void Restore(HiddenIconTracker tracker)
-    {
-        ArgumentNullException.ThrowIfNull(tracker);
         if (!IsConnected)
             Capture();
         if (!IsConnected)
-            return;
+            return [];
 
-        foreach (var (index, x, y) in tracker.Snapshot())
-            SetItemPosition(index, x, y);
-
-        tracker.Clear();
+        return MonitorWorkArea.WorkAreasInListViewClient(ListViewHandle);
     }
+
+    public int HiddenCount => _visibility.Count;
+
+    public DesktopConcealResult ConcealDesktopItem(
+        Guid fenceId,
+        string? path,
+        string? displayName,
+        string? originalPath) =>
+        _visibility.Conceal(fenceId, path, displayName, originalPath);
+
+    public bool TryRevealDesktopItem(
+        string? path,
+        string? displayName,
+        string? originalPath,
+        out string? restoredPath)
+    {
+        restoredPath = _visibility.Reveal(path, displayName, originalPath);
+        return restoredPath is not null;
+    }
+
+    public bool RevealAllHidden() => _visibility.RevealAll();
+
+    public void ForgetHidden(string? path, string? displayName, string? originalPath) =>
+        _visibility.Forget(path, displayName, originalPath);
+
+    public void FlushShell() => _visibility.FlushShell();
 
     public DesktopIcon? HitTestScreen(int screenX, int screenY)
     {
@@ -133,6 +144,20 @@ public sealed class DesktopIconService
         else
             SetItemPosition(match.Index, originalX ?? match.X, originalY ?? match.Y);
 
+        return true;
+    }
+
+    public bool SetItemPositionAfterReveal(string nameOrPath, int clientX, int clientY)
+    {
+        DesktopSnapshot snap = Capture();
+        if (!snap.Connected || ListViewHandle == IntPtr.Zero)
+            return false;
+
+        DesktopIcon? match = DesktopFences.Core.DesktopIconMatcher.Find(snap.Icons, nameOrPath);
+        if (match is null)
+            return false;
+
+        SetItemPosition(match.Index, clientX, clientY);
         return true;
     }
 

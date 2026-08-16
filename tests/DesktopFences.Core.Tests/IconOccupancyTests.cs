@@ -79,4 +79,23 @@ public sealed class IconOccupancyTests
 
         IconOccupancy.HitOrNearest(icons, 10, 10)!.Name.Should().Be("Visible");
     }
+
+    [Fact]
+    public void IsVisibleInWorkAreas_TreatsOtherMonitorAsVisible()
+    {
+        var primary = new PixelRect(0, 0, 1920, 1040);
+        var secondary = new PixelRect(1920, 0, 1080, 1872);
+        var icon = new DesktopIcon(0, "teste.xlsx", 1928, 40);
+
+        IconOccupancy.IsVisibleInWorkAreas(icon, [primary, secondary]).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsVisibleInWorkAreas_IgnoresTaskbarBand()
+    {
+        var work = new PixelRect(0, 0, 1920, 1040);
+        var icon = new DesktopIcon(0, "Hidden", 4, 1040);
+
+        IconOccupancy.IsVisibleInWorkAreas(icon, [work]).Should().BeFalse();
+    }
 }

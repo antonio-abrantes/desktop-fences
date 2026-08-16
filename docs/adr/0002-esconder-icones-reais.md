@@ -1,51 +1,48 @@
-# ADR-0002: Esconder ícones reais via SysListView32
+# ADR-0002: Esconder ícones reais (mover para store + namespace)
 
-**Date**: 2026-08-14
+**Date**: 2026-08-15
 **Status**: accepted
 **Deciders**: Antonio + agente
 
 ## Context
 
-DeskFrame, NoFences e OpenFences mostram fences/frames mas **deixam os ícones originais no desktop**. O Fences original lê a `SysListView32` (`Progman`/`WorkerW` → `SHELLDLL_DefView` → `FolderView`), move os ícones que caem no retângulo da fence para fora da área visível, e desenha a própria representação.
+Não existe API pública do Shell (`IFolderView`) para “não desenhar este ícone” enquanto o ficheiro continua na pasta Desktop. Coordenadas no ListView falham com vários monitores (ecrã virtual). `FILE_ATTRIBUTE_HIDDEN` some com a opção **Exibir → Itens ocultos**. `Hidden + System` ainda depende de “mostrar ficheiros de sistema” e é semanticamente errado num `.docx`.
+
+O requisito: **enquanto o item pertence a um Fence, não pode aparecer solto no Desktop**, mesmo com itens ocultos ligados.
 
 ## Decision
 
-O MVP replica esse modelo:
+1. Atalho / ficheiro / pasta: **mover** para `%LocalAppData%\DesktopFences\Items\{FenceId}` (`IFileOperation` se o COM responder; senão `File.Move` / `Directory.Move`). O Explorer não tem o que desenhar.
+2. Guardar `originalPath` no `layout.json` para devolver o objeto no Pausar, Sair, ejetar, remover fence.
+3. Lixeira / Este computador / Rede: DWORD `1` em `HKCU\...\Explorer\HideDesktopIcons\NewStartPanel` e `ClassicStartMenu` (não são ficheiros).
+4. Um `SHChangeNotify` no lote. Sem coordenadas no ListView, sem `FileAttributes.Hidden` como mecanismo, sem `FileSystemWatcher`, sem loop de 1s.
 
-1. Localizar o ListView (Progman, fallback enumerando WorkerW).
-2. Ler índice, nome e posição (memória remota no `explorer.exe` quando o `lParam` é ponteiro).
-3. Hit-test contra o retângulo da fence (lógica em Core, coordenadas em pixels de tela).
-4. `LVM_SETITEMPOSITION` para um ponto fora da vista (ex. -32000,-32000), guardando a posição original.
-5. Restaurar sempre no close, crash path e “Restore” da POC.
-
-Não usamos pasta backing / `.lnk` como modelo principal (OpenFences). Não usamos “hide all desktop icons” como substituto.
+`SysListView32` continua só para hit-test de drop e reposicionar o ícone **depois** de voltar ao Desktop.
 
 ## Alternatives Considered
 
-### Pasta backing + atalhos (OpenFences / NoFences)
-- **Pros**: simples, sem WriteProcessMemory, AV mais calmo.
-- **Cons**: ícones reais continuam lá; não é Fences.
-- **Why not**: é exatamente a falha que o usuário apontou nos clones.
+### `LVM_SETITEMPOSITION` fora da vista
+- **Why not**: ecrã virtual; snap-to-grid manda o ícone para outro monitor.
+
+### `FILE_ATTRIBUTE_HIDDEN`
+- **Why not**: “Mostrar itens ocultos” volta a pintá-los (`SFGAO_HIDDEN`).
+
+### `Hidden + System`
+- **Why not**: ainda reversível; abusa o atributo System.
 
 ### Toggle global de ícones do desktop
-- **Pros**: uma chamada, efeito imediato.
-- **Cons**: some com a Lixeira e tudo que não está em fence.
-- **Why not**: granularidade errada.
-
-### Injetar DLL no Explorer
-- **Pros**: controle máximo.
-- **Cons**: AV, estabilidade, manutenção por build.
-- **Why not**: desproporcional; mensagens de ListView bastam para o MVP.
+- **Why not**: some com tudo, inclusive o que não está em fence.
 
 ## Consequences
 
 ### Positive
-- Comportamento alinhado ao Fences original.
-- Native isolado: quando uma build do W11 mudar a árvore de janelas, o conserto é num projeto.
+- Independente de N monitores, DPI, “itens ocultos”, restart do Explorer.
+- Pausar/Sair/ejetar devolve o ficheiro ao `originalPath` (pasta Desktop do utilizador/público, ou a origem se não era o Desktop).
 
 ### Negative
-- `OpenProcess` + `WriteProcessMemory` no `explorer.exe` pode alertar Defender. Mitigação: `asInvoker`, documentar, code signing no Passo 4.
-- “Alinhar à grade” / “Auto organizar” do Explorer pode desfazer posições. Detectar e avisar (Passo 1); não desligar no registry no Passo 0.
+- O path físico muda enquanto o item está na fence (um `Contrato.docx` passa a viver no store). Conceito: a fence é dona do objeto até o ejetar.
+- Mover da Desktop pública pode falhar sem permissão; nesse caso o ícone fica visível.
 
 ### Risks
-- `LVM_GETITEMPOSITION` **não** é marshallado automaticamente cross-process. A POC aloca `POINT` no espaço do Explorer. Implementações que passam `ref POINT` no nosso processo falham de forma intermitente.
+- Crash a meio do move: gravar o layout **depois** do move. Arranque: se o store não existe, `ResolveExisting` volta a achar o ficheiro no Desktop pelo nome.
+- `IFileOperation` COM: fallback para `File.Move` (já houve AV com COM do FolderView).

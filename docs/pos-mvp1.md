@@ -2,7 +2,7 @@
 
 Mapa curto do ciclo. O detalhe operacional está em [`plano-implementacao.md`](plano-implementacao.md). Cada fase pede autorização no `SESSION-HEADER.md` **e** pedido explícito.
 
-**MVP 2** (`v0.3.1`) = Fases 1 + 2: N fences, Configurações (cores, idioma, iniciar com o Windows), hide/restore do MVP 1. Ícones de sistema (Lixeira, Este computador, Rede) mostram o pictograma da Shell. A Fase 3 (arrastar item entre fences) está **fechada**. A Fase 4 (snap) está no código.
+**MVP 2** (`v0.3.1`) = Fases 1 + 2. Fases 3–4 **fechadas**. A Fase 5 (Explorer / DPI / Win+D) está no código.
 
 ---
 
@@ -13,20 +13,23 @@ Mapa curto do ciclo. O detalhe operacional está em [`plano-implementacao.md`](p
 | 1 | Várias fences + settings (bandeja, criar/remover, alinhamento, cores, iniciar com o Windows) | Média — **fechada** |
 | 2 | Idioma da UI: português e inglês | Baixa — **fechada** |
 | 3 | Arrastar item entre fences | Média — **fechada** |
-| 4 | Snap a bordas e a outras fences | Média — **no código** (validar no Windows 11) |
-| 5 | Explorer reiniciado / DPI / Win+D | Média–alta |
-| 6 | Duplo clique no vazio do desktop cria fence | Média |
-| 7 | Instalador (ajustar arranque com o Windows); packs de tema só com pedido | Baixa–média |
+| 4 | Snap a bordas e a outras fences | Média — **fechada** |
+| 5 | Explorer reiniciado / DPI / Win+D | Média–alta — **no código** (validar no Windows 11) |
+| 6 | Instalador (path estável no arranque) | Baixa–média |
 
-Não pular a 5. A 6 é atalho; a Settings continua sendo o jeito confiável de criar fence.
+Não pular a 6. Criar fence continua nas Settings.
 
 ---
 
 ## Fora deste ciclo
 
-**Empurrar a fence de baixo ao expandir** não faz parte deste plano. Se um dia existir, é outra versão, depois de 1–7 prontos, e só como pilha explícita — nunca física global entre fences soltas.
+**Empurrar a fence de baixo ao expandir** — outra versão, se um dia, só como pilha explícita.
 
-**Novo → Fence no Explorer** fica em reserva no `plano-implementacao.md`: reavaliar no fim do ciclo, não implementar até estar planejada e validada.
+**Duplo clique no vazio do desktop cria fence** — reserva. Settings é o caminho. Só depois de validar necessidade real.
+
+**Packs de tema** — reserva. O vidro fica travado.
+
+**Novo → Fence no Explorer** — reserva no `plano-implementacao.md`.
 
 ---
 
@@ -46,8 +49,12 @@ UI em português (default) e inglês. Nas Configurações: seletor **Sistema** /
 
 Arrastar um ou vários itens da grade de uma fence para o corpo de outra. O ghost é o mesmo. O ícone real no Explorer continua escondido — só muda o dono no `layout.json`. Soltar no desktop ainda devolve o ícone. Soltar na barra de título ou numa fence recolhida não tira o item da origem.
 
-## Fase 4 (no código)
+## Fase 4 (fechada)
 
 Ao soltar a alça ⋮⋮ (e ao terminar o resize), a fence cola nas bordas da área de trabalho e nas arestas das outras. Não empurra o vizinho. Fence recolhida só muda de sítio, não estica a barra.
 
-A seguir no plano (só com pedido): Explorer / DPI / Win+D (Fase 5).
+## Fase 5 (no código)
+
+Se o Explorer morrer, os ficheiros já não estão no Desktop (estão no store); CLSID de namespace é reaplicado. Mudança de DPI atualiza o clip. Win+D / Mostrar ambiente de trabalho não faz a fence desaparecer. Pausar/Sair continua a devolver os ícones reais.
+
+A seguir no plano (só com pedido): instalador (Fase 6) — path estável no arranque, sem packs de tema.

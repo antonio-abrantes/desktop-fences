@@ -74,22 +74,10 @@
                 </Grid>
             </Border>
 
-            <StackPanel DockPanel.Dock="Bottom" Margin="16,8,16,16" Orientation="Horizontal">
-                <Button x:Name="BtnNewFence"
-                        Style="{StaticResource FenceButton}"
-                        Click="AddFence_Click"/>
-                <Button x:Name="BtnRemove"
-                        Style="{StaticResource FenceButton}"
-                        Click="RemoveFence_Click"/>
-                <Button x:Name="BtnResetTheme"
-                        Style="{StaticResource FenceButton}"
-                        Click="ResetTheme_Click"/>
-            </StackPanel>
-
-            <StackPanel Margin="16,12,16,8">
+            <StackPanel DockPanel.Dock="Bottom" Margin="16,0,16,16">
                     <CheckBox x:Name="StartWithWindows"
                               Foreground="#F2FFFFFF"
-                              Margin="0,0,0,4"
+                              Margin="0,8,0,4"
                               VerticalAlignment="Center"
                               Checked="StartWithWindows_Changed"
                               Unchecked="StartWithWindows_Changed"/>
@@ -110,6 +98,51 @@
                         <ComboBoxItem Tag="en"/>
                     </ComboBox>
 
+                    <TextBlock x:Name="TxtFolders"
+                               Style="{StaticResource HintLabel}"
+                               Margin="0,0,0,8"/>
+                    <Button x:Name="BtnOpenLayout"
+                            Style="{StaticResource FenceButton}"
+                            HorizontalAlignment="Left"
+                            Margin="0,0,0,4"
+                            Click="OpenLayout_Click"/>
+                    <TextBox x:Name="TxtLayoutPath"
+                             IsReadOnly="True"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             Foreground="#B3FFFFFF"
+                             FontSize="11"
+                             TextWrapping="Wrap"
+                             Margin="0,0,0,10"
+                             Cursor="IBeam"/>
+                    <Button x:Name="BtnOpenItems"
+                            Style="{StaticResource FenceButton}"
+                            HorizontalAlignment="Left"
+                            Margin="0,0,0,4"
+                            Click="OpenItems_Click"/>
+                    <TextBox x:Name="TxtItemsPath"
+                             IsReadOnly="True"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             Foreground="#B3FFFFFF"
+                             FontSize="11"
+                             TextWrapping="Wrap"
+                             Cursor="IBeam"/>
+            </StackPanel>
+
+            <StackPanel DockPanel.Dock="Bottom" Margin="16,8,16,8" Orientation="Horizontal">
+                <Button x:Name="BtnNewFence"
+                        Style="{StaticResource FenceButton}"
+                        Click="AddFence_Click"/>
+                <Button x:Name="BtnRemove"
+                        Style="{StaticResource FenceButton}"
+                        Click="RemoveFence_Click"/>
+                <Button x:Name="BtnResetTheme"
+                        Style="{StaticResource FenceButton}"
+                        Click="ResetTheme_Click"/>
+            </StackPanel>
+
+            <StackPanel Margin="16,12,16,8">
                     <TextBlock x:Name="TxtFenceListLabel"
                                Style="{StaticResource HintLabel}"
                                Margin="0,0,0,8"/>

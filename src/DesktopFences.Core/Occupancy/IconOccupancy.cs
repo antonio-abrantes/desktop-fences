@@ -77,4 +77,26 @@ public static class IconOccupancy
 
     public static bool IsPlacedOnDesktop(DesktopIcon icon) =>
         icon.X > HiddenAwayThreshold && icon.Y > HiddenAwayThreshold;
+
+    /// <summary>
+    /// Visível se o canto do ícone está numa área útil. Origem na faixa da
+    /// taskbar (parque) ou fora de todos os monitores não conta.
+    /// </summary>
+    public static bool IsVisibleInWorkAreas(
+        DesktopIcon icon,
+        IReadOnlyList<PixelRect> workAreas)
+    {
+        ArgumentNullException.ThrowIfNull(icon);
+        ArgumentNullException.ThrowIfNull(workAreas);
+        if (workAreas.Count == 0)
+            return IsPlacedOnDesktop(icon);
+
+        foreach (PixelRect work in workAreas)
+        {
+            if (work.Contains(icon.X, icon.Y))
+                return true;
+        }
+
+        return false;
+    }
 }

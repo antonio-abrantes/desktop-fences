@@ -1,9 +1,11 @@
+using System.Windows.Threading;
 using DesktopFences.App.Localization;
 using DesktopFences.App.ViewModels;
 using DesktopFences.Core.Fences;
 using DesktopFences.Core.Models;
 using DesktopFences.Core.Occupancy;
 using DesktopFences.Core.Persistence;
+using DesktopFences.Native;
 
 namespace DesktopFences.App;
 
@@ -11,6 +13,8 @@ public sealed class FenceHost
 {
     private readonly LayoutStore _store = new();
     private readonly List<FenceWindow> _windows = [];
+    private readonly ExplorerListViewGuard _explorer = new();
+    private DispatcherTimer? _explorerWatch;
     private bool _saving;
     private bool _paused;
     private FenceWindow? _itemDragSource;
@@ -37,6 +41,31 @@ public sealed class FenceHost
 
         SaveAll();
         FencesChanged?.Invoke();
+        _explorer.Arm();
+        _explorerWatch = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _explorerWatch.Tick += OnExplorerWatch;
+        _explorerWatch.Start();
+    }
+
+    private void OnExplorerWatch(object? sender, EventArgs e)
+    {
+        if (_paused)
+            return;
+
+        foreach (FenceWindow window in _windows)
+        {
+            try { window.EnsureDesktopSurvival(); }
+            catch { /* Win+D não pode deixar uma fence a bloquear as outras */ }
+        }
+
+        if (!_explorer.TryConsumeReconnect())
+            return;
+
+        foreach (FenceWindow window in _windows)
+        {
+            try { window.RebindAfterExplorer(); }
+            catch { /* uma fence não pode impedir o re-hide das outras */ }
+        }
     }
 
     public void SetUiLanguage(string? code)
@@ -72,6 +101,13 @@ public sealed class FenceHost
 
     public void PrepareExit()
     {
+        if (_explorerWatch is not null)
+        {
+            _explorerWatch.Stop();
+            _explorerWatch.Tick -= OnExplorerWatch;
+            _explorerWatch = null;
+        }
+
         SaveAll();
         foreach (FenceWindow window in _windows.ToList())
         {
@@ -105,8 +141,10 @@ public sealed class FenceHost
         if (window is null)
             return false;
 
+        if (!window.RestoreHiddenIcons())
+            return false;
+
         window.LayoutChanged -= OnWindowLayoutChanged;
-        window.RestoreHiddenIcons();
         window.SuppressPersistOnClose = true;
         _windows.Remove(window);
         if (System.Windows.Application.Current.MainWindow == window || System.Windows.Application.Current.MainWindow is null)
@@ -255,8 +293,8 @@ public sealed class FenceHost
         if (moving.Count == 0)
             return false;
 
-        IReadOnlyList<DesktopIcon> tracked = source.ReleaseTracked(moving);
-        dest.AcceptTransferredItems(source.DetachForTransfer(moving), tracked, screenX, screenY);
+        source.DetachHidden(moving);
+        dest.AcceptTransferredItems(source.DetachForTransfer(moving), screenX, screenY);
         return true;
     }
 

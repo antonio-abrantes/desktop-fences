@@ -30,6 +30,11 @@
   <data name="StartWithWindows" xml:space="preserve"><value>Iniciar com o Windows</value></data>
   <data name="StartWithWindowsTooltip" xml:space="preserve"><value>Abre este .exe ao entrar na conta. Se mover a pasta, abra o app uma vez no sítio novo.</value></data>
   <data name="StartupHint" xml:space="preserve"><value>Portable: o atalho aponta para esta pasta. Mover o programa e abrir de novo atualiza o caminho.</value></data>
+  <data name="FoldersSection" xml:space="preserve"><value>Pastas</value></data>
+  <data name="OpenLayout" xml:space="preserve"><value>Abrir configuração</value></data>
+  <data name="OpenLayoutTooltip" xml:space="preserve"><value>Abre o Explorador no ficheiro layout.json (fences, cores, idioma).</value></data>
+  <data name="OpenItems" xml:space="preserve"><value>Abrir ficheiros agrupados</value></data>
+  <data name="OpenItemsTooltip" xml:space="preserve"><value>Abre a pasta onde o app guarda os atalhos e ficheiros que estão nas fences.</value></data>
   <data name="Language" xml:space="preserve"><value>Idioma</value></data>
   <data name="LanguageSystem" xml:space="preserve"><value>Sistema</value></data>
   <data name="LanguagePortuguese" xml:space="preserve"><value>Português</value></data>

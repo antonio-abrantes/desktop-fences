@@ -12,7 +12,7 @@ App Windows 11 que agrupa ícones **reais** da área de trabalho em fences retan
 | `DesktopFences.Native` | SysListView32, COM Shell, OLE drop, DWM, âncora | Sim, e só aqui |
 | `DesktopFences.App` | XAML, fence, bandeja, ghost | Só via serviços Native |
 
-**Estado:** MVP 2 (`v0.3.1`) + Fase 3 fechada + Fase 4 no código (snap; gate Windows 11 pendente). N fences, Configurações (cores, idioma pt/en, iniciar com o Windows), hide/restore do MVP 1. Ícones virtuais do desktop (Lixeira, Este computador, Rede) usam o namespace da Shell, não um ficheiro. Próxima: Explorer/DPI/Win+D (Fase 5), só com pedido. Resto do ciclo: [plano-implementacao.md](plano-implementacao.md). Empurrar a fence de baixo ao expandir está **fora** deste ciclo.
+**Estado:** MVP 2 (`v0.3.1`) + Fases 3–4 fechadas + Fase 5 no código (Explorer/DPI/Win+D; gate Windows 11 pendente). N fences, Configurações, hide/restore, arrastar entre fences, snap. Próxima: instalador (Fase 6), só com pedido. Duplo clique no desktop, packs de tema e empurrar vizinhos estão **fora** deste ciclo. Detalhe: [plano-implementacao.md](plano-implementacao.md).
 
 ---
 
@@ -35,22 +35,21 @@ A busca tenta Progman primeiro e cai para `EnumWindows` procurando `SHELLDLL_Def
 | Mensagem | lParam | Cross-process |
 |---|---|---|
 | `LVM_GETITEMCOUNT` | — | SendMessage direto |
-| `LVM_SETITEMPOSITION` | `MAKELPARAM(x,y)` | SendMessage direto |
+| `LVM_SETITEMPOSITION` | `MAKELPARAM(x,y)` | SendMessage direto (só reposicionar ícone **visível**, no ejetar) |
 | `LVM_GETITEMPOSITION` | ponteiro para `POINT` | **alocar no explorer.exe** |
 | `LVM_GETITEMTEXTW` | ponteiro para `LVITEM` + buffer | **alocar no explorer.exe** |
 
 A Native aloca o `POINT` / `LVITEM` remoto. Não confiar em marshalling automático dessas mensagens.
 
-Fluxo de hide (MVP 1):
+Fluxo de hide:
 
-1. Ler posições.
-2. Hit-test Core: ícone ∩ retângulo da fence (célula ~76×92 px, ajustável).
-3. Guardar posição original em memória e no JSON.
-4. Mover para `(-32000, -32000)`.
-5. Desenhar a grade WPF (`SHGetFileInfo`).
-6. Restaurar no shutdown, no Pausar, ao remover o item e se o hide falhar.
+1. Resolver o item: pasta Desktop (`DesktopPaths`) ou CLSID do namespace (`::{GUID}` / `shell:`).
+2. Atalho, ficheiro ou pasta: **mover** para `%LocalAppData%\DesktopFences\Items\{FenceId}`. Lixeira / Este computador / Rede: registry `HideDesktopIcons` com o CLSID.
+3. Persistir `path` (store) e `originalPath` (origem). Um `SHChangeNotify` no fim do lote.
+4. Desenhar a grade WPF (`SHGetFileInfo` no path do store).
+5. Restaurar (mover de volta / registry `0`) no shutdown, Pausar, ejetar, remover fence.
 
-**Limitação:** “Auto organizar ícones” / “Alinhar à grade” no menu do desktop desfaz o hide. Detectar e avisar não é Fase 1. Não escrever no registry.
+**Não** usar `FILE_ATTRIBUTE_HIDDEN` nem coordenadas no ListView. Itens ocultos no Explorer não voltam a pintar o que já não está na pasta Desktop.
 
 ---
 
@@ -60,11 +59,11 @@ Fluxo de hide (MVP 1):
 
 - Localizar `SysListView32` (Progman + WorkerW).
 - Enumerar: índice, nome, posição. Um `OpenProcess` por varredura, não por ícone.
-- Mover / esconder / restaurar.
+- Esconder: mover para o store do Fence / registry (ADR-0002). Reposicionar no ListView só depois de o ícone voltar ao Desktop.
 - `SHGetFileInfo` para bitmap PNG.
 - Resolver nome → path (`DesktopPaths`: Desktop do usuário + público).
-- Reconectar após restart do Explorer — Fase 5 do ciclo.
-- DPI: manifest Per-Monitor V2.
+- Reconectar após restart do Explorer — Fase 5.
+- DPI: manifest Per-Monitor V2; clip/z-order no `DpiChanged`.
 
 ### 2.2 Native — chrome da janela
 
@@ -79,7 +78,7 @@ Ver [ADR-0003](adr/0003-ancoragem-desktop-e-acrylic.md).
 
 Uma janela por fence: título editável (duplo clique **no texto**); Enter, LostFocus, clique fora do campo **grava**; Escape cancela. Alinhamento do título: esquerda (padrão) ou centro, nas Configurações — por fence, com checkbox para aplicar a todas (vale também para cores). Alça ⋮⋮ para mover; ao soltar (e ao terminar o resize), ímã nas bordas da área de trabalho e nas arestas de outras fences, sem empurrar vizinhos. Roll-up ▴; resize ao vivo; grade WrapPanel; scrollbar custom; menu de contexto (recolher, diagnóstico). Remover fence só nas Settings.
 
-O `App` usa `FenceHost`: N instâncias de `FenceWindow`, um único `layout.json`. Aparência por fence (fundo, borda, header, texto + alfa); radius 8 e `AllowsTransparency` continuam fixos. Packs de tema nomeados, se existirem, são Fase 7. Grade: atalho/pasta/ficheiro → `SHGetFileInfo` no path (igual ao MVP 1). Só se **não** existir no disco (Lixeira, Este computador, Rede) é que se usa o PIDL do `IShellFolder` do desktop. Abrir esses itens só via `::{CLSID}` / `shell:` — não se substitui o `Process.Start` de um `.lnk`.
+O `App` usa `FenceHost`: N instâncias de `FenceWindow`, um único `layout.json`. Aparência por fence (fundo, borda, header, texto + alfa); radius 8 e `AllowsTransparency` continuam fixos. Packs de tema nomeados estão fora deste ciclo. Grade: atalho/pasta/ficheiro → `SHGetFileInfo` no path (igual ao MVP 1). Só se **não** existir no disco (Lixeira, Este computador, Rede) é que se usa o PIDL do `IShellFolder` do desktop. Abrir esses itens só via `::{CLSID}` / `shell:` — não se substitui o `Process.Start` de um `.lnk`.
 
 ### 2.4 Drag & drop
 
@@ -90,11 +89,11 @@ Contrato vigente — [ADR-0004](adr/0004-ole-inbound-drop.md):
 - **Inbound:** `RegisterDragDrop` nativo + alvo OLE minúsculo no cursor; ghost WPF próprio (com `+N` se a seleção do desktop tiver vários ícones); cursor de “proibido” substituído pela seta só enquanto o ponteiro está sobre a fence. A seleção do `SysListView32` é lida no início do arraste (`LVM_GETNEXTITEM` / `LVNI_SELECTED`).
 - **Outbound / reorder:** não usamos `DoDragDrop` do Explorer; hook `WH_MOUSE_LL` + `DragGhostWindow` (click-through).
 - Soltar na fence esconde o ícone real e adiciona na grade; soltar fora restaura.
-- Entre fences: soltar no **corpo** de outra fence muda o dono (JSON). O hide do ícone real permanece; o tracker segue o item. Barra de título / fence recolhida não transfere nem ejetar.
+- Entre fences: soltar no **corpo** de outra fence muda o dono (JSON) e move o ficheiro entre pastas do store. Barra de título / fence recolhida não transfere nem ejetar.
 
 ### 2.5 Persistência
 
-Arquivo único `%AppData%\DesktopFences\layout.json` (`LayoutStore`). Lista de fences persistida pelo `FenceHost`. `titleAlignment`: `"left"` | `"center"` (ausente = `left`). `theme` opcional (ausente = vidro do MVP 1). `uiLanguage` opcional: `"system"` | `"pt"` | `"en"` (ausente = `system`; `version` permanece 1). Fundo da fence: alfa do fill limitado a 45–85%. Sempre ≥ 1 fence.
+Arquivo único `%AppData%\DesktopFences\layout.json` (`LayoutStore`). Itens de fence em `%LocalAppData%\DesktopFences\Items\{FenceId}`. Lista de fences persistida pelo `FenceHost`. `titleAlignment`: `"left"` | `"center"` (ausente = `left`). `theme` opcional (ausente = vidro do MVP 1). `uiLanguage` opcional: `"system"` | `"pt"` | `"en"` (ausente = `system`; `version` permanece 1). `originalPath` opcional (origem para restore). Fundo da fence: alfa do fill limitado a 45–85%. Sempre ≥ 1 fence.
 
 ```json
 {
@@ -115,7 +114,7 @@ Arquivo único `%AppData%\DesktopFences\layout.json` (`LayoutStore`). Lista de f
       "monitorDeviceName": "\\\\.\\DISPLAY1",
       "collapsed": false,
       "items": [
-        { "name": "Relatorio.docx", "path": "C:\\\\Users\\\\…\\\\Desktop\\\\Relatorio.docx", "originalX": 12, "originalY": 48 }
+        { "name": "Relatorio.docx", "path": "C:\\\\Users\\\\…\\\\AppData\\\\Local\\\\DesktopFences\\\\Items\\\\guid\\\\Relatorio.docx", "originalPath": "C:\\\\Users\\\\…\\\\Desktop\\\\Relatorio.docx", "originalX": 12, "originalY": 48 }
       ]
     }
   ]
@@ -126,10 +125,8 @@ Coordenadas da fence em **DIPs** WPF; posições de ícone em **pixels** do List
 
 ### 2.6 Fora do que já está no código (ciclo em `plano-implementacao.md`)
 
-- Fase 5: Explorer reiniciado / DPI / Win+D.
-- Fase 6: duplo clique em vazio do desktop → cria fence.
-- Fase 7: instalador (ajustar o arranque com o Windows para path estável); packs de tema só com pedido.
-- **Fora do ciclo:** empurrar a fence de baixo ao expandir.
+- Fase 6: instalador (path estável no arranque). Sem packs de tema.
+- **Fora do ciclo:** empurrar a fence de baixo ao expandir; duplo clique no vazio do desktop cria fence; packs de tema.
 - **Reserva (reavaliar no fim):** Novo → Fence no Explorer. Não implementar até planejada e validada.
 
 ---
@@ -139,9 +136,9 @@ Coordenadas da fence em **DIPs** WPF; posições de ícone em **pixels** do List
 | Risco | Mitigação |
 |---|---|
 | Árvore Progman/WorkerW muda | 100% em Native; fallback duplo |
-| Auto-arrange desfaz hide | Avisar mais tarde; não desligar registry agora |
-| DPI por monitor | DIPs vs pixels documentados; `WM_DPICHANGED` na Fase 5 |
-| Restart do Explorer | Redetectar handle e reaplicar hide (Fase 5) |
+| Crash a meio do move | Gravar layout depois do move; arranque resolve pelo nome no Desktop se o store falhar |
+| DPI por monitor | DIPs vs pixels documentados; `PerMonitorV2` + `DpiChanged` (Fase 5) |
+| Restart do Explorer | Ficheiro já não está no Desktop; reaplicar só CLSID de namespace |
 | Defender / `WriteProcessMemory` | `asInvoker`; signing só quando houver release assinado |
 | Acrylic + WPF layered | ADR-0003: vidro alfa, sem composition attribute |
 | OLE inbound + janela layered | ADR-0004: alvo no cursor + override da seta |

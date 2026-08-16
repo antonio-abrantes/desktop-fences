@@ -37,6 +37,8 @@ public sealed class FenceItemState
 {
     public string Name { get; set; } = string.Empty;
     public string? Path { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? OriginalPath { get; set; }
     public int? OriginalX { get; set; }
     public int? OriginalY { get; set; }
 }

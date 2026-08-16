@@ -59,6 +59,36 @@ public sealed class LayoutStoreTests : IDisposable
     }
 
     [Fact]
+    public void Save_ThenLoad_RoundTripsOriginalPath()
+    {
+        var store = new LayoutStore(_file);
+        store.Save(new LayoutDocument
+        {
+            Fences =
+            [
+                new FenceState
+                {
+                    Title = "Dev",
+                    Items =
+                    [
+                        new FenceItemState
+                        {
+                            Name = "VS Code",
+                            Path = @"C:\Users\Test\AppData\Local\DesktopFences\Items\aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\VS Code.lnk",
+                            OriginalPath = @"C:\Users\Test\Desktop\VS Code.lnk"
+                        }
+                    ]
+                }
+            ]
+        });
+
+        FenceItemState item = store.LoadOrEmpty().Fences.Should().ContainSingle().Subject.Items.Should().ContainSingle().Subject;
+        item.OriginalPath.Should().Be(@"C:\Users\Test\Desktop\VS Code.lnk");
+        string json = File.ReadAllText(_file);
+        json.Should().Contain("originalPath");
+    }
+
+    [Fact]
     public void Save_ThenLoad_RoundTripsTitleAlignmentCenter()
     {
         var store = new LayoutStore(_file);

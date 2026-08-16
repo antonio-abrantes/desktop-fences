@@ -13,6 +13,7 @@ internal static class NativeMethods
     public const int LVM_GETNEXTITEM = LVM_FIRST + 12;
     public const int LVM_SETITEMPOSITION = LVM_FIRST + 15;
     public const int LVM_GETITEMPOSITION = LVM_FIRST + 16;
+    public const int LVM_SETITEMPOSITION32 = LVM_FIRST + 49;
     public const int LVM_GETITEMTEXTW = LVM_FIRST + 115;
     public const int LVNI_SELECTED = 0x0002;
 
@@ -46,6 +47,16 @@ internal static class NativeMethods
 
     public static readonly IntPtr HWND_TOPMOST = new(-1);
 
+    public const uint SHCNE_UPDATEDIR = 0x00001000;
+    public const uint SHCNE_ASSOCCHANGED = 0x08000000;
+    public const uint SHCNF_IDLIST = 0x0000;
+    public const uint SHCNF_PATHW = 0x0005;
+    public const uint SHCNF_FLUSHNOWAIT = 0x2000;
+
+    public const int DWMWA_DISALLOW_PEEK = 11;
+    public const int DWMWA_EXCLUDED_FROM_PEEK = 12;
+    public const int DWMWA_CLOAK = 13;
+    public const int DWMWA_CLOAKED = 14;
     public const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
     public const int DWMWCP_DEFAULT = 0;
     public const int DWMWCP_DONOTROUND = 1;
@@ -54,22 +65,55 @@ internal static class NativeMethods
 
     public const int WCA_ACCENT_POLICY = 19;
 
-    public const int HiddenIconX = -32000;
-    public const int HiddenIconY = -32000;
-
     public static readonly IntPtr HWND_BOTTOM = new(1);
     public const uint SWP_NOSIZE = 0x0001;
     public const uint SWP_NOMOVE = 0x0002;
+    public const uint SWP_NOZORDER = 0x0004;
     public const uint SWP_NOACTIVATE = 0x0010;
     public const uint SWP_SHOWWINDOW = 0x0040;
+    public const uint SWP_HIDEWINDOW = 0x0080;
     public const int WS_EX_TOPMOST = 0x00000008;
+    public const int WM_SHOWWINDOW = 0x0018;
+    public const int WM_SIZE = 0x0005;
+    public const int WM_WINDOWPOSCHANGING = 0x0046;
+    public const int WM_SYSCOMMAND = 0x0112;
+    public const int SC_MINIMIZE = 0xF020;
+    public const int SIZE_MINIMIZED = 1;
+    public const int SW_SHOWNOACTIVATE = 4;
     public const uint MONITOR_DEFAULTTONEAREST = 2;
+    public const uint MONITOR_DEFAULTTONULL = 0;
 
     [DllImport("user32.dll")]
     public static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
 
     [DllImport("user32.dll")]
+    public static extern IntPtr MonitorFromPoint(POINT pt, uint dwFlags);
+
+    [DllImport("user32.dll")]
     public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+    public delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdcMonitor, IntPtr lprcMonitor, IntPtr dwData);
+
+    [DllImport("user32.dll")]
+    public static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr lprcClip, MonitorEnumProc lpfnEnum, IntPtr dwData);
+
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    public static extern bool IsWindowVisible(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern bool RegisterShellHookWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern bool DeregisterShellHookWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern uint RegisterWindowMessage(string lpString);
 
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
     public struct RECT
@@ -104,6 +148,18 @@ internal static class NativeMethods
 
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool SetLayeredWindowAttributes(IntPtr hwnd, uint crKey, byte bAlpha, uint dwFlags);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct WINDOWPOS
+    {
+        public IntPtr hwnd;
+        public IntPtr hwndInsertAfter;
+        public int x;
+        public int y;
+        public int cx;
+        public int cy;
+        public uint flags;
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     public struct POINT
@@ -169,6 +225,9 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
 
+    [DllImport("user32.dll")]
+    public static extern bool IsWindow(IntPtr hWnd);
+
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
 
@@ -210,6 +269,9 @@ internal static class NativeMethods
 
     [DllImport("dwmapi.dll")]
     public static extern int DwmSetWindowAttribute(IntPtr hwnd, int dwAttribute, ref int pvAttribute, int cbAttribute);
+
+    [DllImport("dwmapi.dll")]
+    public static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out int pvAttribute, int cbAttribute);
 
     [DllImport("user32.dll")]
     public static extern int SetWindowCompositionAttribute(IntPtr hwnd, ref WindowCompositionAttributeData data);
@@ -277,6 +339,12 @@ internal static class NativeMethods
         ref SHFILEINFO psfi,
         uint cbFileInfo,
         uint uFlags);
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    public static extern void SHChangeNotify(uint wEventId, uint uFlags, string? dwItem1, IntPtr dwItem2);
+
+    [DllImport("shell32.dll")]
+    public static extern void SHChangeNotify(uint wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
 
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool DestroyIcon(IntPtr hIcon);

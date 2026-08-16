@@ -7,8 +7,8 @@
 ## Contexto da Sessão ou fase
 
 **Projeto:** DesktopFences 1.0
-**Etapa atual:** Fase 4 — snap (**no código**; gate do desenvolvedor pendente).
-**Objetivo desta sessão:** validar o ímã no Windows 11. Não avançar para a Fase 5 (Explorer/DPI/Win+D) sem pedido.
+**Etapa atual:** Fase 5 — Explorer / DPI / Win+D (**no código**; gate do desenvolvedor pendente).
+**Objetivo desta sessão:** validar no Windows 11 o hide por move para o store (não Hidden, não coordenadas). Não avançar para a Fase 6 (instalador) sem pedido.
 
 ---
 
@@ -18,7 +18,7 @@ Leia os seguintes arquivos integralmente, nesta ordem, antes de responder:
 
 1. `AGENTS.md` — regras de comportamento, o que pode e não pode fazer, como gerenciar fases
 2. `docs/SPEC.md` — arquitetura, stack, modelo de ícones, UI, persistência, riscos
-3. `docs/plano-implementacao.md` — estado atual **e** o detalhe da Fase 5 (próxima)
+3. `docs/plano-implementacao.md` — estado atual **e** o detalhe da Fase 6 (próxima: instalador)
 4. `README.md` — o que o produto é e como rodar
 
 Apoio (quando o assunto for relevante):
@@ -32,13 +32,12 @@ Apoio (quando o assunto for relevante):
 
 ## Instrução de Revisão
 
-A Fase 4 está **no repositório** (ímã no soltar da alça ⋮⋮ e no resize). Não empurra vizinhos nem empilha. Explorer/DPI, duplo clique no desktop, instalador e empurrar vizinhos continuam fechados.
+A Fase 4 (snap) está **fechada**. A Fase 5 está **no repositório**: re-hide se o Explorer reiniciar (store + registry), `PerMonitorV2` + clip no DPI, a fence não some com Win+D / Mostrar ambiente de trabalho. Instalador (Fase 6) só com pedido. Duplo clique no vazio do desktop, packs de tema e empurrar vizinhos estão **fora** deste ciclo.
 
 ```
-ETAPA ATUAL    : Fase 4 — snap (código pronto; validar no Windows 11)
-ETAPA SEGUINTE : Fase 5 — Explorer/DPI/Win+D (só com pedido)
-RESTANTES      : 6 duplo clique no desktop · 7 instalador
-FORA DO CICLO  : empurrar fence de baixo ao expandir
+ETAPA ATUAL    : Fase 5 — Explorer / DPI / Win+D (código pronto; validar no Windows 11)
+ETAPA SEGUINTE : Fase 6 — instalador (path estável no arranque; sem packs de tema)
+FORA DO CICLO  : duplo clique no vazio do desktop · packs de tema · empurrar fence de baixo ao expandir
 ```
 
 ---
@@ -49,7 +48,7 @@ FORA DO CICLO  : empurrar fence de baixo ao expandir
 
 - [x] Documentação de contexto (`AGENTS.md`, `SESSION-HEADER`, spec, plano, ADRs)
 - [x] Solution fatiada em Core / Native / App + testes de domínio
-- [x] Native lê/move/restaura ícones no `SysListView32` (Progman e fallback WorkerW)
+- [x] Native lê ícones no `SysListView32` (Progman e fallback WorkerW); hide via store + registry
 - [x] Fence translúcida (vidro escuro, wallpaper visível), radius 8, atrás dos apps
 - [x] Drop inbound (desktop/Explorer) com ghost + seta; vários ícones de uma vez; drop outbound devolve o ícone
 - [x] Grade própria (`SHGetFileInfo`), seleção, reordenação, hide/restore dos ícones reais
@@ -62,9 +61,11 @@ FORA DO CICLO  : empurrar fence de baixo ao expandir
 - [x] Desenvolvedor validou no Windows 11: Lixeira / Este computador / Rede visíveis na fence (patch `v0.3.1`)
 - [x] Fase 3 fechada: soltar no corpo de outra fence muda o dono; chrome/recolhida não ejetar; desktop ejetar; tracker de hide segue o item
 - [x] Desenvolvedor validou no Windows 11: arrastar um ou vários itens de uma fence para outra (ícone real continua escondido)
-- [x] Fase 4 no código: ímã às bordas da área de trabalho e às arestas de outras fences ao soltar a alça e no resize; não empurra vizinhos
-- [ ] Desenvolvedor validou no Windows 11: soltar a alça ⋮⋮ perto da borda da tela / de outra fence cola; resize idem; vizinho não se mexe
-- [ ] Não implementar fases 5–7 (Explorer/DPI, duplo clique no desktop, instalador / packs de tema) sem pedido
-- [ ] Não implementar empurrar a fence de baixo ao expandir neste ciclo
+- [x] Fase 4 fechada: ímã às bordas da área de trabalho e às arestas de outras fences ao soltar a alça e no resize; não empurra vizinhos
+- [x] Desenvolvedor validou no Windows 11: soltar a alça ⋮⋮ perto da borda da tela / de outra fence cola; resize idem; vizinho não se mexe
+- [x] Fase 5 no código: Explorer morre → re-Conceal; DPI atualiza clip; Win+D não esconde a fence; hide por move para o store
+- [ ] Desenvolvedor validou no Windows 11: matar o Explorer e ver os ícones voltarem a esconder; mudar DPI; Win+D / Mostrar ambiente de trabalho — fences continuam visíveis; Pausar/Sair ainda restaura
+- [ ] Não implementar a Fase 6 (instalador / path estável no arranque) sem pedido
+- [ ] Não implementar duplo clique no vazio do desktop, packs de tema, nem empurrar a fence de baixo ao expandir
 
 Se qualquer inconsistência for encontrada na revisão, reporte antes de sugerir qualquer ação.

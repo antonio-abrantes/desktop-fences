@@ -8,6 +8,9 @@ public static class DesktopPaths
         yield return Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory);
     }
 
+    public static IReadOnlyList<string> FolderList() =>
+        Folders().Where(folder => !string.IsNullOrEmpty(folder)).ToList();
+
     /// <summary>
     /// Atalho .lnk / .url ganha de pasta com o mesmo nome visível
     /// (senão o ícone do atalho vira pasta).

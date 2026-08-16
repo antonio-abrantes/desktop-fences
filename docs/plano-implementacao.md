@@ -7,7 +7,7 @@ Convenção:
 - `[x]` feito no repositório (agente) e/ou confirmado pelo desenvolvedor na sessão.
 - `[ ]` pendente — **não implementar** sem o gate no `SESSION-HEADER.md` **e** pedido explícito.
 - A Fase 1 abaixo está **fechada**. N fences, Configurações, cores por fence, Sobre, iniciar com o Windows (portable), mutex.
-- A Fase 3 (arrastar item entre fences) está **fechada** (validada no Windows 11). A Fase 4 (snap) está **no código**; o gate do desenvolvedor no Windows 11 ainda está aberto. Explorer/DPI (Fase 5) só com pedido.
+- A Fase 4 (snap) está **fechada** (validada no Windows 11). A Fase 5 (Explorer / DPI / Win+D) está **no código**; o gate do desenvolvedor no Windows 11 ainda está aberto. Instalador (Fase 6) só com pedido. Duplo clique no vazio do desktop e packs de tema estão fora deste ciclo.
 
 ---
 
@@ -19,7 +19,7 @@ Convenção:
 
 - [x] Docs de contexto: `AGENTS.md`, `SESSION-HEADER.md`, spec, este plano, ADRs
 - [x] Solution em três projetos + testes de domínio (ocupância, reorder, paths, `LayoutStore`)
-- [x] Native: achar ListView (Progman / WorkerW), ler nome+posição com memória remota, hide/restore
+- [x] Native: achar ListView (Progman / WorkerW), ler nome+posição com memória remota; hide via store + registry
 - [x] Core: modelos, hit-test, schema JSON, match de ícone por nome, `DesktopPaths`
 - [x] Fence translúcida (`AllowsTransparency` + brush alfa, radius 8), atrás dos apps (`HWND_BOTTOM`), sem `GWL_HWNDPARENT` no Progman
 - [x] Ícones extraídos via `SHGetFileInfo`; abrir com duplo clique
@@ -47,16 +47,19 @@ Convenção:
 | **1** | Várias fences + settings (bandeja, criar/remover, alinhamento do título) | Média | Sem host de N janelas e sem UI de criar, nada do resto existe. O JSON já tem lista; a App ainda abre uma janela e **grava só ela**. |
 | **2** | Idioma da UI: português e inglês | Baixa | Só texto da App. Não mexe em Native, hide/restore, drop nem no schema dos ícones. Quanto antes, menos string nova para extrair nas fases seguintes. |
 | **3** | Arrastar item de uma fence para outra | Média | **Fechada** (validada no Windows 11). Reusa o ghost; N fences sem isso são ilhas. |
-| **4** | Snap a bordas da tela e a outras fences | Média | **No código** (gate Windows 11 pendente). Posicionamento livre estável primeiro (fase 1); ímã no soltar da alça. |
-| **5** | Explorer reiniciado / DPI / Win+D | Média–alta | Sobrevivência no Windows real. Piora com N fences. Antes de atalhos frágeis no desktop. |
-| **6** | Duplo clique no vazio do desktop cria fence | Média | Atalho. Settings (fase 1) continua sendo o caminho confiável. O hook já existe. |
-| **7** | Instalador. Temas só com pedido. | Baixa–média | Distribuição. Ajustar o “iniciar com o Windows” para o path do instalador (hoje é portable). Visual da fence **travado** até pedido de tema. |
+| **4** | Snap a bordas da tela e a outras fences | Média | **Fechada** (validada no Windows 11). Posicionamento livre estável primeiro (fase 1); ímã no soltar da alça. |
+| **5** | Explorer reiniciado / DPI / Win+D | Média–alta | **No código** (gate Windows 11 pendente). Sobrevivência no Windows real. Piora com N fences. |
+| **6** | Instalador (path estável no arranque) | Baixa–média | Distribuição. Ajustar o “iniciar com o Windows” para a pasta de instalação. Sem packs de tema. |
 
-Não implementar 5–7 sem fechar o gate da fase anterior **e** pedido explícito.
+Não implementar a Fase 6 sem fechar o gate da 5 **e** pedido explícito.
 
 ### Fora deste ciclo (outra versão, se um dia)
 
-**Empurrar a fence de baixo ao expandir** — fora do plano. Não é fase, não tem checklist, não entra na landing. Se for feito, é depois de 1–7 estarem prontos, como recorte de outra versão, e só como pilha explícita (nunca física global).
+**Empurrar a fence de baixo ao expandir** — fora do plano. Não é fase, não tem checklist, não entra na landing. Se for feito, é depois do ciclo atual, como recorte de outra versão, e só como pilha explícita (nunca física global).
+
+**Duplo clique no vazio do desktop cria fence** — fora do plano. Settings continua o caminho de criar. Reavaliar mais tarde, só com validação e necessidade reais. O `WH_MOUSE_LL` já existe; o risco é criar fence ao clicar ícone ou ao abrir o menu do desktop.
+
+**Packs de tema** — fora do plano. O vidro da fence fica travado. Sem packs nomeados neste ciclo.
 
 ---
 
@@ -194,7 +197,7 @@ O Windows já expõe “iniciar com o sistema” por utilizador na chave:
 - Default **desligado**.
 - Mutex `Local\DesktopFences.SingleInstance`: a segunda instância sai sem tocar nos ícones.
 
-Na Fase 7 o instalador pode passar a um path estável; até lá o portable atualiza o Run key em cada arranque.
+Na Fase 6 o instalador pode passar a um path estável; até lá o portable atualiza o Run key em cada arranque.
 
 ### Checklist
 
@@ -290,7 +293,7 @@ Lixeira / Este computador / Rede não são ficheiros. `SHGetFileInfo` no path de
 
 **Status:** fechada (validada no Windows 11).
 
-Ghost já segue o cursor. No soltar, se o ponto está no **corpo** de outra fence (não recolhida), o item muda de dono: sai da lista de origem, entra na de destino na célula sob o cursor. O hide no `SysListView32` **não** é restaurado nem refeito — o `HiddenIconTracker` passa o índice/posição original para a fence nova. Soltar no desktop continua a ejetar. Soltar na barra de título ou numa fence recolhida não transfere nem devolve o ícone ao desktop.
+Ghost já segue o cursor. No soltar, se o ponto está no **corpo** de outra fence (não recolhida), o item muda de dono: sai da lista de origem, entra na de destino na célula sob o cursor. O ficheiro **não** volta ao Desktop — move-se entre pastas do store. Soltar no desktop continua a ejetar. Soltar na barra de título ou numa fence recolhida não transfere nem devolve o ícone ao desktop.
 
 Sem isto, várias fences são ilhas. Fora: snap.
 
@@ -308,7 +311,7 @@ Sem isto, várias fences são ilhas. Fora: snap.
 
 ## Fase 4 — snap
 
-**Status:** no código. Gate do desenvolvedor pendente.
+**Status:** fechada (validada no Windows 11).
 
 Ao soltar a alça ⋮⋮, e ao terminar o resize: ímã nas bordas da área de trabalho (`rcWork`, respeita a taskbar) e nas arestas de outras fences. Folga de captura: 12 DIP; alinhamento encostado (sem margem extra). Não cria pilha automática nem empurra vizinhos. Recolhida: só posição, não mexe na altura da barra.
 
@@ -320,31 +323,34 @@ Ao soltar a alça ⋮⋮, e ao terminar o resize: ímã nas bordas da área de t
 - [x] Vizinhos não se mexem; fence recolhida não estica a barra
 - [x] `dotnet test` verde
 
-**Gate do desenvolvedor:** `[ ]` — arrastar uma fence até ~uma dúzia de pixels da borda da tela e de outra fence; soltar cola. Resize da aresta leste/sul perto de vizinho ou da tela cola. A outra fence não se desloca.
+**Gate do desenvolvedor:** `[x]` — arrastar uma fence até ~uma dúzia de pixels da borda da tela e de outra fence; soltar cola. Resize da aresta leste/sul perto de vizinho ou da tela cola. A outra fence não se desloca.
 
 ---
 
 ## Fase 5 — Explorer / DPI / Win+D
 
-**Não implementar agora.**
+**Status:** no código. Gate do desenvolvedor pendente.
 
-Reaplicar hide no `SysListView32` novo se o Explorer reiniciar; `WM_DPICHANGED`; a fence não desaparecer com Mostrar ambiente de trabalho. Importante com N fences; não é feature de produto.
+Reaplicar hide se o Explorer reiniciar (ficheiros já estão no store; reaplicar só CLSID). Hide: mover para `%LocalAppData%\DesktopFences\Items\{FenceId}` — **não** Hidden, **não** coordenadas. Namespace (Lixeira etc.) via registry. Sem COM `IFolderView` no arranque e sem loop de 1s. `PerMonitorV2` + clip no DPI; Win+D: bloquear minimize/`SWP_HIDEWINDOW`.
+
+### Checklist (agente marca `[x]` só depois de implementar)
+
+- [x] `DesktopHide` + `FenceItemStore` + testes (move vs CLSID vs none)
+- [x] `ExplorerListViewGuard`: ListView morta → nova → `RebindAfterExplorer`
+- [x] `WM_SYSCOMMAND` / `WINDOWPOSCHANGING` / `WM_SHOWWINDOW`: fence não some com Win+D
+- [x] Hide via move para o store + registry (sem Hidden; sem LVM coordenadas; sem watchdog de 1s)
+- [x] `DpiChanged`: clip + z-order; manifest `PerMonitorV2` intacto
+- [x] `dotnet test` verde
+
+**Gate do desenvolvedor:** `[ ]` — Task Manager → finalizar o Windows Explorer, deixar voltar; ícones das fences somem de novo no desktop. Mudar escala DPI. Win+D: fences continuam no ambiente de trabalho. Pausar/Sair restaura.
 
 ---
 
-## Fase 6 — duplo clique no vazio cria fence
+## Fase 6 — instalador (path estável no arranque)
 
 **Não implementar agora.**
 
-O `WH_MOUSE_LL` já está no processo. Risco: criar fence ao clicar ícone ou ao abrir o menu do desktop. Settings continua o caminho confiável. Só depois da fase 1 existir.
-
----
-
-## Fase 7 — instalador, temas
-
-**Não implementar agora.**
-
-Instalador = distribuição. **Iniciar com o Windows já existe** (fecho da Fase 1, chave `HKCU\...\Run` com o path do `.exe` atual). Na Fase 7 **há de se ajustar** essa inicialização: o instalador deve gravar um path estável (Program Files / pasta de instalação) em vez do portable, sem duplicar o valor Run, e repor o atalho na atualização. **Não** mexer no vidro da fence sem pedido de tema.
+Instalador = distribuição (release com instalador, não só zip portable). **Iniciar com o Windows já existe** (fecho da Fase 1, chave `HKCU\...\Run` com o path do `.exe` atual). Nesta fase **há de se ajustar** essa inicialização: o instalador grava um path estável (pasta de instalação) em vez do portable, sem duplicar o valor Run, e repor o atalho na atualização. Sem packs de tema. O vidro da fence permanece travado.
 
 ---
 
@@ -360,6 +366,10 @@ Instalador = distribuição. **Iniciar com o Windows já existe** (fecho da Fase
 
 ## Ideias em reserva (não implementar)
 
-Reavaliar **depois** das fases 1–7, só com recorte planejado **e** validação explícita. Não são fase, não têm checklist, não entram no ciclo atual.
+Reavaliar **depois** do ciclo atual (1–6), só com recorte planejado **e** validação explícita. Não são fase, não têm checklist, não entram no ciclo.
+
+**Duplo clique no vazio do desktop cria fence.** Settings continua o caminho confiável. O hook de rato já existe; o risco é criar fence ao clicar ícone ou ao abrir o menu do desktop. Só com análise de necessidade real.
 
 **Novo → Fence no Explorer** (`ShellNew\Command` ou verbo no fundo do desktop). Tem fundamento, complexidade média: mutex exige IPC se o app já estiver aberto; o ShellNew costuma deixar um ficheiro `.ext` no desktop; no Windows 11 o item pode ir só para “Mostrar mais opções”; `IExplorerCommand` é COM/instalador. Reutilizar `FenceHost.TryAddNew()`. Não implementar até estar planejada e validada.
+
+**Packs de tema** nomeados. O vidro (alfa, radius, `AllowsTransparency`) fica travado até haver pedido e ADR.
