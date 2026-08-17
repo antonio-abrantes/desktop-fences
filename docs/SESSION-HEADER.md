@@ -7,8 +7,8 @@
 ## Contexto da Sessão ou fase
 
 **Projeto:** DesktopFences 1.0
-**Etapa atual:** Hotfix `v0.6.0` — ícones de sistema (CLSID canónico no Registro) + Fase 7 implementada (**gate manual da Fase 7 e deste hotfix pendentes**).
-**Objetivo desta sessão:** corrigir hide de Este Computador / Rede / Lixeira (normalizar `{GUID}`, limpar `::{GUID}` legado, CLSID da Lixeira `5081`); não avançar instalador além do já entregue.
+**Etapa atual:** Hotfix — `SHChangeNotify` só quando o lote mexeu no Desktop (**código pronto; gate Windows 11 pendente**).
+**Objetivo desta sessão:** no Resume/arranque, não disparar `UPDATEDIR`/`ASSOCCHANGED` se os ficheiros já estão no store e o hide de namespace não mudou; sem mexer no reancoramento/Win+D.
 
 ---
 
@@ -39,12 +39,12 @@ Apoio (quando o assunto for relevante):
 
 ## Instrução de Revisão
 
-A Fase 6 e o hotfix `v0.5.1` foram concluídos e salvos. A Fase 7 foi implementada para a `0.6.0`. Hotfix dos ícones de sistema: o hide via Registro gravava `::{GUID}` (ignorado pelo Explorer) e o alias da Lixeira usava CLSID `5084` em vez de `5081`; normalização canónica, limpeza do legado e testes automatizados estão no código. Validação automática: 211 testes (145 Core + 66 App/Native). O gate manual da Fase 7 e o gate deste hotfix de namespace permanecem pendentes.
+A Fase 6 e o hotfix `v0.5.1` foram concluídos e salvos. A Fase 7 foi implementada para a `0.6.0`. Hotfix dos ícones de sistema: CLSID canónico no Registro. Ajuste seguinte: o lote só notifica a Shell (`UPDATEDIR` se moveu ficheiro, `ASSOCCHANGED` se o hide de namespace mudou). Resume no-op no arranque/hibernação deixa de mandar `ASSOCCHANGED`. Reancoramento/Win+D não foram alterados.
 
 ```
 ETAPA FECHADA  : Fase 6 + hotfix v0.5.1
-ETAPA ATUAL    : Fase 7 (v0.6.0) + hotfix ícones de sistema (código pronto)
-GATE PENDENTE  : instalação/upgrade/desinstalação + Este Computador/Rede/Lixeira no Windows 11
+ETAPA ATUAL    : Fase 7 (v0.6.0) + hotfix ícones de sistema + FlushShell condicional (código pronto)
+GATE PENDENTE  : hibernar/acordar (ícones soltos) + instalação + Este Computador/Rede/Lixeira no Windows 11
 FORA DO CICLO  : duplo clique no vazio do desktop · packs de tema · empurrar fence de baixo ao expandir
 ```
 
@@ -93,8 +93,10 @@ FORA DO CICLO  : duplo clique no vazio do desktop · packs de tema · empurrar f
 - [x] Fase 7 implementada e validada automaticamente: 197 testes, dois publishes e dois setups
 - [x] Ajuste emergencial da Fase 7: item apagado enquanto o app estava fechado perde somente sua referência; estado ambíguo preserva metadados e mantém o bloqueio seguro
 - [x] Hotfix ícones de sistema: NamespaceKey canónico `{GUID}`; remove legado `::{GUID}`; Lixeira `5081`; 211 testes verdes
+- [x] FlushShell condicional: `UPDATEDIR` só com move físico; `ASSOCCHANGED` só se o hide de namespace mudou; Resume no-op não notifica; 215 testes verdes
 - [ ] Desenvolvedor validar a Fase 7 no Windows 11
 - [ ] Desenvolvedor validar hide/restore de Este Computador, Rede e Lixeira (incl. reinício Explorer / novo arranque)
+- [ ] Desenvolvedor validar hibernar/acordar: ícones soltos no Desktop mantêm a posição; Pausar/Sair/drop/Win+D inalterados
 - [ ] Não implementar duplo clique no vazio do desktop, packs de tema, nem empurrar a fence de baixo ao expandir
 
 Se qualquer inconsistência for encontrada na revisão, reporte antes de sugerir qualquer ação.

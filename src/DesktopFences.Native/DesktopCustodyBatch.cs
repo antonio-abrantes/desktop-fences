@@ -23,12 +23,21 @@ public sealed record DesktopCustodyPlan(
     string? StorageName,
     string? NamespaceKey);
 
+public readonly record struct ShellNotifyRequest(bool UpdateDirectory, bool AssocChanged)
+{
+    public static ShellNotifyRequest None => default;
+    public static ShellNotifyRequest Full => new(true, true);
+    public bool Any => UpdateDirectory || AssocChanged;
+}
+
 public sealed record DesktopCustodyBatchResult(
     bool Success,
     IReadOnlyList<DesktopCustodyPlan> Applied,
-    string? Error)
+    string? Error,
+    ShellNotifyRequest Notify = default)
 {
-    public static DesktopCustodyBatchResult Failed(string error) => new(false, [], error);
+    public static DesktopCustodyBatchResult Failed(string error) =>
+        new(false, [], error, ShellNotifyRequest.None);
 }
 
 /// <summary>Planeia o lote inteiro antes de tocar no Desktop e compensa falhas parciais.</summary>
@@ -39,7 +48,7 @@ public interface IDesktopCustodyBatch
     DesktopCustodyBatchResult ExecuteInbound(IReadOnlyList<DesktopCustodyPlan> plans);
     DesktopCustodyBatchResult ExecuteOutbound(IReadOnlyList<DesktopCustodyPlan> plans);
     bool Compensate(IReadOnlyList<DesktopCustodyPlan> plans, bool wasInbound);
-    void FlushShell();
+    void FlushShell(ShellNotifyRequest notify);
 }
 
 public sealed class DesktopCustodyBatch : IDesktopCustodyBatch
@@ -169,24 +178,33 @@ public sealed class DesktopCustodyBatch : IDesktopCustodyBatch
         return result.Success;
     }
 
-    public void FlushShell()
+    public void FlushShell(ShellNotifyRequest notify)
     {
-        foreach (string folder in DesktopPaths.FolderList())
+        if (!notify.Any)
+            return;
+
+        if (notify.UpdateDirectory)
         {
-            if (!Directory.Exists(folder))
-                continue;
-            NativeMethods.SHChangeNotify(
-                NativeMethods.SHCNE_UPDATEDIR,
-                NativeMethods.SHCNF_PATHW | NativeMethods.SHCNF_FLUSHNOWAIT,
-                folder,
-                IntPtr.Zero);
+            foreach (string folder in DesktopPaths.FolderList())
+            {
+                if (!Directory.Exists(folder))
+                    continue;
+                NativeMethods.SHChangeNotify(
+                    NativeMethods.SHCNE_UPDATEDIR,
+                    NativeMethods.SHCNF_PATHW | NativeMethods.SHCNF_FLUSHNOWAIT,
+                    folder,
+                    IntPtr.Zero);
+            }
         }
 
-        NativeMethods.SHChangeNotify(
-            NativeMethods.SHCNE_ASSOCCHANGED,
-            NativeMethods.SHCNF_IDLIST | NativeMethods.SHCNF_FLUSHNOWAIT,
-            IntPtr.Zero,
-            IntPtr.Zero);
+        if (notify.AssocChanged)
+        {
+            NativeMethods.SHChangeNotify(
+                NativeMethods.SHCNE_ASSOCCHANGED,
+                NativeMethods.SHCNF_IDLIST | NativeMethods.SHCNF_FLUSHNOWAIT,
+                IntPtr.Zero,
+                IntPtr.Zero);
+        }
     }
 
     private static DesktopCustodyBatchResult Execute(
@@ -194,16 +212,32 @@ public sealed class DesktopCustodyBatch : IDesktopCustodyBatch
         bool forward,
         bool hideNamespace)
     {
+        bool notifyDirectory = false;
+        bool notifyAssoc = false;
+
         bool Apply(DesktopCustodyPlan plan)
         {
             if (plan.Kind == FenceItemKind.Namespace)
-                return !string.IsNullOrWhiteSpace(plan.NamespaceKey)
-                       && DesktopVisibility.SetNamespaceHidden(plan.NamespaceKey, hideNamespace);
+            {
+                if (string.IsNullOrWhiteSpace(plan.NamespaceKey))
+                    return false;
+                if (!DesktopVisibility.SetNamespaceHidden(
+                        plan.NamespaceKey, hideNamespace, out bool changed))
+                    return false;
+                if (changed)
+                    notifyAssoc = true;
+                return true;
+            }
+
             string? source = forward ? plan.SourcePath : plan.DestinationPath;
             string? destination = forward ? plan.DestinationPath : plan.SourcePath;
-            return !string.IsNullOrWhiteSpace(source)
-                   && !string.IsNullOrWhiteSpace(destination)
-                   && MoveExact(source, destination);
+            if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(destination))
+                return false;
+            if (!MoveExact(source, destination, out bool moved))
+                return false;
+            if (moved)
+                notifyDirectory = true;
+            return true;
         }
 
         bool Undo(DesktopCustodyPlan plan)
@@ -212,24 +246,30 @@ public sealed class DesktopCustodyBatch : IDesktopCustodyBatch
                 return DesktopVisibility.SetNamespaceHidden(plan.NamespaceKey!, !hideNamespace);
             string from = forward ? plan.DestinationPath! : plan.SourcePath!;
             string to = forward ? plan.SourcePath! : plan.DestinationPath!;
-            return MoveExact(from, to);
+            return MoveExact(from, to, out _);
         }
 
         CompensatingBatchResult<DesktopCustodyPlan> result =
             CompensatingBatch.Execute(plans, Apply, Undo);
+        var notify = new ShellNotifyRequest(notifyDirectory, notifyAssoc);
         if (result.Success)
-            return new DesktopCustodyBatchResult(true, result.Applied, null);
+            return new DesktopCustodyBatchResult(true, result.Applied, null, notify);
         string suffix = result.CompensationComplete
             ? " O lote foi compensado."
             : " A compensação ficou incompleta.";
         return new DesktopCustodyBatchResult(
             false,
             result.Applied,
-            $"Falha ao mover {result.FailedItem?.Name ?? "item"}.{suffix}");
+            $"Falha ao mover {result.FailedItem?.Name ?? "item"}.{suffix}",
+            ShellNotifyRequest.None);
     }
 
-    internal static bool MoveExact(string source, string destination)
+    internal static bool MoveExact(string source, string destination) =>
+        MoveExact(source, destination, out _);
+
+    internal static bool MoveExact(string source, string destination, out bool moved)
     {
+        moved = false;
         if (SamePath(source, destination))
             return Exists(source);
         bool sourceExists = Exists(source);
@@ -241,7 +281,8 @@ public sealed class DesktopCustodyBatch : IDesktopCustodyBatch
         string? folder = Path.GetDirectoryName(destination);
         if (string.IsNullOrWhiteSpace(folder))
             return false;
-        return ShellFileMove.Move(source, folder, Path.GetFileName(destination));
+        moved = ShellFileMove.Move(source, folder, Path.GetFileName(destination));
+        return moved;
     }
 
     private static string ReserveUnique(string folder, string fileName, HashSet<string> reserved)

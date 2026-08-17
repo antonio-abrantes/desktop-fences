@@ -265,23 +265,37 @@ public sealed class DesktopVisibility
         return true;
     }
 
-    internal static bool SetNamespaceHidden(string clsid, bool hidden)
+    internal static bool SetNamespaceHidden(string clsid, bool hidden) =>
+        SetNamespaceHidden(clsid, hidden, out _);
+
+    internal static bool SetNamespaceHidden(string clsid, bool hidden, out bool changed)
     {
+        changed = false;
         if (!DesktopHide.TryNamespaceKey(clsid, out string canonical))
             return false;
 
         try
         {
             int expected = hidden ? 1 : 0;
+            string legacy = "::" + canonical;
+            bool legacyPresent = ValueExists(NewStartPanel, legacy)
+                                 || ValueExists(ClassicStartMenu, legacy);
+            bool already =
+                ReadDword(NewStartPanel, canonical) == expected
+                && ReadDword(ClassicStartMenu, canonical) == expected
+                && !legacyPresent;
+            if (already)
+                return true;
+
             WriteDword(NewStartPanel, canonical, expected);
             WriteDword(ClassicStartMenu, canonical, expected);
-            // Valores legados ::{GUID} gravados pelo bug pré-hotfix — o Explorer ignora-os.
-            DeleteValue(NewStartPanel, "::" + canonical);
-            DeleteValue(ClassicStartMenu, "::" + canonical);
+            DeleteValue(NewStartPanel, legacy);
+            DeleteValue(ClassicStartMenu, legacy);
+            changed = true;
             return ReadDword(NewStartPanel, canonical) == expected
                    && ReadDword(ClassicStartMenu, canonical) == expected
-                   && !ValueExists(NewStartPanel, "::" + canonical)
-                   && !ValueExists(ClassicStartMenu, "::" + canonical);
+                   && !ValueExists(NewStartPanel, legacy)
+                   && !ValueExists(ClassicStartMenu, legacy);
         }
         catch
         {

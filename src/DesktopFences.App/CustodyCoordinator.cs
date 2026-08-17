@@ -120,7 +120,7 @@ internal sealed class CustodyCoordinator
             try { if (Directory.Exists(folder) && !Directory.EnumerateFileSystemEntries(folder).Any()) Directory.Delete(folder); }
             catch { }
         }
-        _batch.FlushShell();
+        _batch.FlushShell(moved.Notify);
         return plan.Document;
     }
 
@@ -253,7 +253,7 @@ internal sealed class CustodyCoordinator
             _journals.Save(transaction);
             _faults.Hit(CustodyCheckpoint.Completed, transaction);
             _journals.Delete(transaction.OperationId);
-            _batch.FlushShell();
+            _batch.FlushShell(changed.Notify);
             return true;
         }
         finally { Release(acquired); }

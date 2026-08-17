@@ -81,6 +81,71 @@ public sealed class DesktopCustodyBatchTests : IDisposable
         _output.WriteLine($"lote={count}; elapsedMs={stopwatch.Elapsed.TotalMilliseconds:F3}");
     }
 
+    [Fact]
+    public void ExecuteInbound_AlreadyAtDestination_DoesNotRequestShellNotify()
+    {
+        DesktopCustodyPlan plan = CreatePlan(1);
+        Directory.CreateDirectory(Path.GetDirectoryName(plan.DestinationPath!)!);
+        File.WriteAllText(plan.DestinationPath!, "já no store");
+        plan = plan with { SourcePath = plan.DestinationPath };
+
+        DesktopCustodyBatchResult result = new DesktopCustodyBatch().ExecuteInbound([plan]);
+
+        result.Success.Should().BeTrue(result.Error);
+        result.Notify.Should().Be(ShellNotifyRequest.None);
+        File.Exists(plan.DestinationPath!).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ExecuteInbound_PhysicalMove_RequestsDirectoryNotifyOnly()
+    {
+        DesktopCustodyPlan plan = CreatePlanWithSource(1);
+
+        DesktopCustodyBatchResult result = new DesktopCustodyBatch().ExecuteInbound([plan]);
+
+        result.Success.Should().BeTrue(result.Error);
+        result.Notify.UpdateDirectory.Should().BeTrue();
+        result.Notify.AssocChanged.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ExecuteInbound_Namespace_RequestsAssocOnlyWhenRegistryChanges()
+    {
+        string canonical = "{B2C3D4E5-F617-8901-BCDE-F12345678901}";
+        var plan = new DesktopCustodyPlan(
+            Guid.NewGuid(), FenceItemKind.Namespace, "Synthetic2", null, null, null, null, canonical);
+        var batch = new DesktopCustodyBatch();
+
+        try
+        {
+            DesktopCustodyBatchResult first = batch.ExecuteInbound([plan]);
+            first.Success.Should().BeTrue(first.Error);
+            first.Notify.UpdateDirectory.Should().BeFalse();
+            first.Notify.AssocChanged.Should().BeTrue();
+
+            DesktopCustodyBatchResult second = batch.ExecuteInbound([plan]);
+            second.Success.Should().BeTrue(second.Error);
+            second.Notify.Should().Be(ShellNotifyRequest.None);
+
+            DesktopCustodyBatchResult shown = batch.ExecuteOutbound([plan]);
+            shown.Success.Should().BeTrue(shown.Error);
+            shown.Notify.AssocChanged.Should().BeTrue();
+            shown.Notify.UpdateDirectory.Should().BeFalse();
+        }
+        finally
+        {
+            const string newPanel =
+                @"Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel";
+            const string classic =
+                @"Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\ClassicStartMenu";
+            foreach (string subkey in new[] { newPanel, classic })
+            {
+                using RegistryKey? key = Registry.CurrentUser.OpenSubKey(subkey, writable: true);
+                try { key?.DeleteValue(canonical, throwOnMissingValue: false); } catch { }
+            }
+        }
+    }
+
     [Theory]
     [InlineData("::{20D04FE0-3AEA-1069-A2D8-08002B30309D}", "{20D04FE0-3AEA-1069-A2D8-08002B30309D}")]
     [InlineData("{645FF040-5081-101B-9F08-00AA002F954E}", "{645FF040-5081-101B-9F08-00AA002F954E}")]
@@ -146,6 +211,8 @@ public sealed class DesktopCustodyBatchTests : IDisposable
 
             DesktopCustodyBatchResult hidden = new DesktopCustodyBatch().ExecuteInbound([plan]);
             hidden.Success.Should().BeTrue(hidden.Error);
+            hidden.Notify.AssocChanged.Should().BeTrue();
+            hidden.Notify.UpdateDirectory.Should().BeFalse();
 
             using (RegistryKey key = Registry.CurrentUser.OpenSubKey(newPanel)!)
             {

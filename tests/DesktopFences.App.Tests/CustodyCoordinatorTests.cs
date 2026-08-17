@@ -42,6 +42,25 @@ public sealed class CustodyCoordinatorTests
     }
 
     [Fact]
+    public void NoOpResume_DoesNotNotifyTheShell()
+    {
+        TestContext context = CreateContext();
+        context.Batch.ExecuteNotify = ShellNotifyRequest.None;
+
+        bool success = context.Coordinator.CommitInbound(
+            Document(revision: 4),
+            Document(revision: 4),
+            CustodyOperationKind.Resume,
+            Plans(3),
+            null,
+            out string? error);
+
+        success.Should().BeTrue(error);
+        context.Batch.InboundExecutions.Should().Be(1);
+        context.Batch.FlushCount.Should().Be(0);
+    }
+
+    [Fact]
     public void Outbound_UsesTheSameStageBudgetAsInbound()
     {
         TestContext context = CreateContext();
@@ -466,14 +485,14 @@ public sealed class CustodyCoordinatorTests
             LastInboundPlans = plans;
             return FailInbound
                 ? DesktopCustodyBatchResult.Failed("falha física injetada")
-                : new DesktopCustodyBatchResult(true, plans, null);
+                : new DesktopCustodyBatchResult(true, plans, null, ExecuteNotify);
         }
 
         public DesktopCustodyBatchResult ExecuteOutbound(IReadOnlyList<DesktopCustodyPlan> plans)
         {
             OutboundExecutions++;
             LastOutboundPlans = plans;
-            return new DesktopCustodyBatchResult(true, plans, null);
+            return new DesktopCustodyBatchResult(true, plans, null, ExecuteNotify);
         }
 
         public bool Compensate(IReadOnlyList<DesktopCustodyPlan> plans, bool wasInbound)
@@ -482,7 +501,13 @@ public sealed class CustodyCoordinatorTests
             return true;
         }
 
-        public void FlushShell() => FlushCount++;
+        public ShellNotifyRequest ExecuteNotify { get; set; } = ShellNotifyRequest.Full;
+
+        public void FlushShell(ShellNotifyRequest notify)
+        {
+            if (notify.Any)
+                FlushCount++;
+        }
     }
 
     private sealed class FakeRecoveryActions : ICustodyRecoveryActions
