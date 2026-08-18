@@ -204,6 +204,11 @@ public static class DesktopWindowAnchor
         if (insertAfter == IntPtr.Zero || IsTopMost(insertAfter))
             insertAfter = NativeMethods.HWND_TOP;
 
+        IntPtr currentAbove = NativeMethods.GetWindow(hwnd, NativeMethods.GW_HWNDNEXT);
+        if (!DesktopFences.Core.Fences.ZOrderPlacement.NeedsZOrderMove(
+                currentAbove.ToInt64(), insertAfter.ToInt64()))
+            return true;
+
         return NativeMethods.SetWindowPos(
             hwnd,
             insertAfter,

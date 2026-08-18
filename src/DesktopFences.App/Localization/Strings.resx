@@ -27,6 +27,18 @@
   <data name="RemoveLastTooltip" xml:space="preserve"><value>A última fence não pode ser removida</value></data>
   <data name="ResetTheme" xml:space="preserve"><value>Restaurar padrão</value></data>
   <data name="ResetThemeTooltip" xml:space="preserve"><value>Volta às cores do MVP 1. Se “aplicar a todas” estiver marcado, vale para todas.</value></data>
+  <data name="SetDefaultLayout" xml:space="preserve"><value>Definir como padrão</value></data>
+  <data name="SetDefaultLayoutTooltip" xml:space="preserve"><value>Novas fences nascem com estas cores e este alinhamento. As que já existem não mudam.</value></data>
+  <data name="ReturningOneItemToDesktop" xml:space="preserve"><value>A devolver 1 item ao Desktop…</value></data>
+  <data name="ReturningItemsToDesktop" xml:space="preserve"><value>A devolver {0} itens ao Desktop…</value></data>
+  <data name="RemoveFenceConfirmTitle" xml:space="preserve"><value>Remover fence</value></data>
+  <data name="RemoveFenceConfirmEmpty" xml:space="preserve"><value>Remover a fence «{0}»?</value></data>
+  <data name="RemoveFenceConfirmOneItem" xml:space="preserve"><value>Esta fence tem 1 item. Ele volta ao Desktop.
+
+Remover «{0}»?</value></data>
+  <data name="RemoveFenceConfirmItems" xml:space="preserve"><value>Esta fence tem {0} itens. Eles voltam ao Desktop.
+
+Remover «{1}»?</value></data>
   <data name="StartWithWindows" xml:space="preserve"><value>Iniciar com o Windows</value></data>
   <data name="StartWithWindowsTooltip" xml:space="preserve"><value>Abre este .exe ao entrar na conta. Se mover a pasta, abra o app uma vez no sítio novo.</value></data>
   <data name="StartupHint" xml:space="preserve"><value>Portable: o atalho aponta para esta pasta. Mover o programa e abrir de novo atualiza o caminho.</value></data>

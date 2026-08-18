@@ -18,7 +18,7 @@ Documentos de apoio (ler quando o assunto for relevante):
 
 ## O que este projeto é
 
-App nativo Windows 11 (C# / .NET 8 / WPF) que agrupa ícones reais da área de trabalho em “fences” translúcidas, no espírito do Stardock Fences. As Fases 1–6 e o hotfix `v0.5.1` estão fechados. A Fase 7 entrega na `v0.6.0` instaladores por usuário x64/ARM64, upgrade no lugar, idioma inicial, desinstalação segura e reconciliação conservadora de itens apagados enquanto o app esteve fechado; implementação automática concluída, com gate manual pendente. Duplo clique no desktop e packs de tema estão fora deste ciclo.
+App nativo Windows 11 (C# / .NET 8 / WPF) que agrupa ícones reais da área de trabalho em “fences” translúcidas, no espírito do Stardock Fences. As Fases 1–6 e o hotfix `v0.5.1` estão fechados. A Fase 7 entrega na `v0.6.0` instaladores por usuário x64/ARM64, upgrade no lugar, idioma inicial, desinstalação segura e reconciliação conservadora de itens apagados enquanto o app esteve fechado; implementação automática concluída, com gate manual pendente. O hotfix `v0.6.3` acrescenta arranque multi-monitor, layout padrão de novas fences, correção de flicker em sobreposição e remoção de fence com confirmação + barreira de devolução. Duplo clique no desktop e packs de tema estão fora deste ciclo.
 
 Diferencial em relação aos clones open source: **esconder os ícones reais do `SysListView32` e desenhar a nossa grade por cima**. DeskFrame, NoFences e OpenFences não fazem isso — eles mostram atalhos/pastas em janelas flutuantes enquanto os ícones originais continuam no desktop.
 

@@ -17,10 +17,11 @@ internal static class AppInfo
             string? info = Assembly.GetExecutingAssembly()
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                 ?.InformationalVersion;
+
             if (string.IsNullOrWhiteSpace(info))
             {
                 Version? v = Assembly.GetExecutingAssembly().GetName().Version;
-                info = v is null ? "0.6.0" : $"{v.Major}.{v.Minor}.{v.Build}";
+                info = v is null ? "0.0.0" : $"{v.Major}.{v.Minor}.{v.Build}";
             }
 
             int plus = info.IndexOf('+');

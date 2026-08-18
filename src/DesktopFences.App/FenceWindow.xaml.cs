@@ -63,6 +63,14 @@ public partial class FenceWindow : Window
     private bool _dropBorderLit;
     private FenceTheme _theme = FenceTheme.Default();
     private bool _stayOnDesktop = true;
+    private DispatcherTimer? _monitorWait;
+    private DateTime _monitorWaitStartedUtc;
+    private double _savedTargetX;
+    private double _savedTargetY;
+    private string? _pendingMonitorDevice;
+
+    private const int MonitorWaitPollMs = 500;
+    private static readonly TimeSpan MonitorWaitTimeout = TimeSpan.FromSeconds(8);
 
     public event Action? LayoutChanged;
 
@@ -238,6 +246,7 @@ public partial class FenceWindow : Window
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         RestoreLayout();
+        ApplyStartupMonitorPlacement();
         ApplyChromeStrings();
         ShowResizeHandles(!_collapsed);
         UpdateEmptyHint();
@@ -278,6 +287,7 @@ public partial class FenceWindow : Window
         }
 
         UiLocale.Changed -= OnUiLanguageChanged;
+        StopMonitorWait();
         DetachDesktopDropIntake();
         if (!SuppressPersistOnClose)
             SaveLayout();
@@ -487,7 +497,7 @@ public partial class FenceWindow : Window
     }
 
     private bool ShouldIgnoreDesktopInbound() =>
-        _host is { IsBlockingDesktopInbound: true } && _draggingItems is null;
+        _host is { BlocksDesktopInbound: true } && _draggingItems is null;
 
     private int DragThresholdPx()
     {
@@ -1262,7 +1272,13 @@ public partial class FenceWindow : Window
         IReadOnlyList<FenceItemVm> items,
         int? screenX = null,
         int? screenY = null) =>
-        TryPlaceRestoredIcons(items, screenX, screenY);
+        _ = PlaceRestoredItemsAsync(items, screenX, screenY);
+
+    internal Task PlaceRestoredItemsAsync(
+        IReadOnlyList<FenceItemVm> items,
+        int? screenX = null,
+        int? screenY = null) =>
+        TryPlaceRestoredIconsAsync(items, screenX, screenY);
 
     internal void ApplyReleasedPaths(IReadOnlyList<DesktopCustodyPlan> plans)
     {
@@ -1425,10 +1441,10 @@ public partial class FenceWindow : Window
 
     private void TryPlaceRestoredIcon(FenceItemVm item, int? screenX = null, int? screenY = null)
     {
-        TryPlaceRestoredIcons([item], screenX, screenY);
+        _ = TryPlaceRestoredIconsAsync([item], screenX, screenY);
     }
 
-    private void TryPlaceRestoredIcons(
+    private Task TryPlaceRestoredIconsAsync(
         IReadOnlyList<FenceItemVm> items,
         int? screenX = null,
         int? screenY = null)
@@ -1436,27 +1452,39 @@ public partial class FenceWindow : Window
         IReadOnlyList<DesktopPlacement> placements = BuildRestoredPlacements(
             items, screenX, screenY);
         if (placements.Count == 0)
-            return;
+            return Task.CompletedTask;
 
-        // SHChangeNotify usa FLUSHNOWAIT; a primeira captura pode acontecer antes
-        // de o Explorer materializar o novo item. Uma segunda passagem também
-        // estabiliza os índices depois que o ListView resolve a inserção inicial.
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         int attempts = 0;
-        var retry = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
+        var retry = new DispatcherTimer(DispatcherPriority.Background)
+        {
+            Interval = TimeSpan.FromMilliseconds(120)
+        };
+
+        void Complete()
+        {
+            retry.Stop();
+            retry.Tick -= OnTick;
+            tcs.TrySetResult();
+        }
+
+        void OnTick(object? sender, EventArgs e) => Attempt();
+
         void Attempt()
         {
             int positioned = 0;
             try { positioned = _desktop.PlaceRevealedItems(placements); }
             catch { /* o Store e o layout já estão consistentes */ }
             attempts++;
-            if (attempts >= 8 || (attempts >= 2 && positioned >= placements.Count))
-                retry.Stop();
+            if (DesktopPlacementRetryRules.IsComplete(attempts, positioned, placements.Count))
+                Complete();
         }
 
-        retry.Tick += (_, _) => Attempt();
+        retry.Tick += OnTick;
         Attempt();
-        if (attempts < 2 || retry.IsEnabled)
+        if (!tcs.Task.IsCompleted)
             retry.Start();
+        return tcs.Task;
     }
 
     internal static IReadOnlyList<DesktopPlacement> BuildRestoredPlacements(
@@ -1628,9 +1656,129 @@ public partial class FenceWindow : Window
             Y = Top,
             Width = Width,
             Height = height,
+            MonitorDeviceName = CaptureMonitorDeviceName(),
             Collapsed = _collapsed,
             Items = _items.Select(i => i.ToState()).ToList()
         };
+    }
+
+    private string? CaptureMonitorDeviceName()
+    {
+        IntPtr hwnd = new WindowInteropHelper(this).Handle;
+        return hwnd != IntPtr.Zero ? DisplayMonitors.DeviceNameForWindow(hwnd) : null;
+    }
+
+    private void ApplyStartupMonitorPlacement()
+    {
+        if (_bootState is null)
+            return;
+
+        string? saved = _bootState.MonitorDeviceName;
+        if (string.IsNullOrWhiteSpace(saved))
+            return;
+
+        IReadOnlyList<string> devices = DisplayMonitors.DeviceNames();
+        if (!MonitorStartupRules.ShouldWaitForMonitor(saved, devices))
+            return;
+
+        _savedTargetX = _bootState.X;
+        _savedTargetY = _bootState.Y;
+        _pendingMonitorDevice = saved;
+
+        double height = Math.Max(TitleBarHeight + 80, _bootState.Height);
+        if (TryGetPrimaryWorkAreaDip(out double workX, out double workY, out double workW, out double workH))
+        {
+            (double x, double y) = FenceWindowPlacement.ClampToWorkArea(
+                _savedTargetX,
+                _savedTargetY,
+                Width,
+                height,
+                workX,
+                workY,
+                workW,
+                workH);
+            Left = x;
+            Top = y;
+        }
+
+        _monitorWaitStartedUtc = DateTime.UtcNow;
+        _monitorWait = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(MonitorWaitPollMs) };
+        _monitorWait.Tick += OnMonitorWaitTick;
+        _monitorWait.Start();
+    }
+
+    private void OnMonitorWaitTick(object? sender, EventArgs e)
+    {
+        if (_pendingMonitorDevice is null)
+        {
+            StopMonitorWait();
+            return;
+        }
+
+        if (DateTime.UtcNow - _monitorWaitStartedUtc >= MonitorWaitTimeout)
+        {
+            StopMonitorWait();
+            SaveLayout();
+            return;
+        }
+
+        IReadOnlyList<string> devices = DisplayMonitors.DeviceNames();
+        if (MonitorStartupRules.ShouldWaitForMonitor(_pendingMonitorDevice, devices))
+            return;
+
+        Left = _savedTargetX;
+        Top = _savedTargetY;
+        StopMonitorWait();
+        SaveLayout();
+    }
+
+    private void StopMonitorWait()
+    {
+        if (_monitorWait is null)
+            return;
+
+        _monitorWait.Stop();
+        _monitorWait.Tick -= OnMonitorWaitTick;
+        _monitorWait = null;
+        _pendingMonitorDevice = null;
+    }
+
+    private bool TryGetPrimaryWorkAreaDip(
+        out double workX,
+        out double workY,
+        out double workWidth,
+        out double workHeight)
+    {
+        if (!DisplayMonitors.TryGetPrimaryWorkAreaPixels(out MonitorWorkArea.Pixels px))
+        {
+            Rect work = SystemParameters.WorkArea;
+            workX = work.X;
+            workY = work.Y;
+            workWidth = work.Width;
+            workHeight = work.Height;
+            return true;
+        }
+
+        PresentationSource? source = PresentationSource.FromVisual(this);
+        if (source?.CompositionTarget is null)
+        {
+            Rect work = SystemParameters.WorkArea;
+            workX = work.X;
+            workY = work.Y;
+            workWidth = work.Width;
+            workHeight = work.Height;
+            return true;
+        }
+
+        Matrix toDip = source.CompositionTarget.TransformFromDevice;
+        System.Windows.Point topLeft = toDip.Transform(new System.Windows.Point(px.X, px.Y));
+        System.Windows.Point bottomRight = toDip.Transform(
+            new System.Windows.Point(px.X + px.Width, px.Y + px.Height));
+        workX = topLeft.X;
+        workY = topLeft.Y;
+        workWidth = Math.Max(1, bottomRight.X - topLeft.X);
+        workHeight = Math.Max(1, bottomRight.Y - topLeft.Y);
+        return true;
     }
 
     private void ApplyTitleAlignment()

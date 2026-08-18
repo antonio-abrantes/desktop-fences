@@ -26,9 +26,12 @@ public sealed class FenceHost
     private bool _paused;
     private FenceWindow? _itemDragSource;
     private bool _blockDesktopInbound;
+    private int _returningItemsToDesktop;
     private long _layoutRevision;
     private bool _payloadReleased;
     private LayoutDocument? _startupCustody;
+    private TitleAlignment? _defaultTitleAlignment;
+    private FenceTheme? _defaultTheme;
 
     public FenceHost()
     {
@@ -44,6 +47,12 @@ public sealed class FenceHost
     public IReadOnlyList<FenceWindow> Windows => _windows;
 
     public bool IsBlockingDesktopInbound => _blockDesktopInbound;
+
+    public bool IsReturningItemsToDesktop => _returningItemsToDesktop > 0;
+
+    public bool BlocksDesktopInbound => _blockDesktopInbound || IsReturningItemsToDesktop;
+
+    internal const int ReturnToDesktopMarginMs = 250;
 
     internal DesktopSnapshot CaptureDesktop(IDesktopSnapshotSource source) =>
         _custody.CaptureDesktop(source);
@@ -64,8 +73,14 @@ public sealed class FenceHost
         _startupCustody = doc;
         _layoutRevision = doc.Revision;
         UiLanguage = UiLanguageCodes.Normalize(doc.UiLanguage);
+        _defaultTitleAlignment = doc.DefaultTitleAlignment;
+        _defaultTheme = doc.DefaultTheme?.Normalized();
         UiLocale.Apply(UiLanguage);
-        FenceLayoutRules.EnsureAtLeastOne(doc.Fences, Loc.T("DefaultFenceTitle"));
+        FenceLayoutRules.EnsureAtLeastOne(
+            doc.Fences,
+            Loc.T("DefaultFenceTitle"),
+            _defaultTitleAlignment,
+            _defaultTheme);
         foreach (FenceState state in doc.Fences)
             Spawn(state);
         _startupCustody = null;
@@ -128,6 +143,8 @@ public sealed class FenceHost
 
     public bool PauseAll()
     {
+        if (_returningItemsToDesktop > 0)
+            return false;
         if (_paused)
             return true;
         if (!ReleaseAll(CustodyOperationKind.Pause))
@@ -166,6 +183,9 @@ public sealed class FenceHost
 
     public bool PrepareExit()
     {
+        if (_returningItemsToDesktop > 0)
+            return false;
+
         if (_explorerWatch is not null)
         {
             _explorerWatch.Stop();
@@ -191,7 +211,11 @@ public sealed class FenceHost
     public bool TryAddNew()
     {
         List<FenceState> current = _windows.Select(w => w.CaptureState()).ToList();
-        FenceState state = FenceLayoutRules.PlaceNew(current, Loc.T("DefaultFenceTitle"));
+        FenceState state = FenceLayoutRules.PlaceNew(
+            current,
+            Loc.T("DefaultFenceTitle"),
+            _defaultTitleAlignment,
+            _defaultTheme);
         FenceWindow window = Spawn(state);
         if (_paused)
             window.PauseVisual();
@@ -200,8 +224,11 @@ public sealed class FenceHost
         return true;
     }
 
-    public bool TryRemove(Guid id)
+    public async Task<bool> TryRemoveAsync(Guid id)
     {
+        if (_returningItemsToDesktop > 0)
+            return false;
+
         if (!FenceLayoutRules.CanRemove(_windows.Count))
             return false;
 
@@ -216,21 +243,41 @@ public sealed class FenceHost
         IReadOnlyList<DesktopCustodyPlan> plans;
         try { plans = _custody.PlanOutbound(items.Select(ToCustodyItem)); }
         catch { return false; }
-        if (!_custody.CommitOutbound(
-                before, after, CustodyOperationKind.RemoveFence, plans,
-                () => window.ApplyOutbound(items, plans), out _))
-            return false;
-        _layoutRevision = after.Revision;
-        window.PlaceRestoredItems(items);
 
-        window.LayoutChanged -= OnWindowLayoutChanged;
-        window.SuppressPersistOnClose = true;
-        _windows.Remove(window);
-        if (System.Windows.Application.Current.MainWindow == window || System.Windows.Application.Current.MainWindow is null)
-            System.Windows.Application.Current.MainWindow = _windows.FirstOrDefault();
-        window.Close();
-        FencesChanged?.Invoke();
-        return true;
+        bool restoreBarrier = items.Count > 0;
+        if (restoreBarrier)
+            Interlocked.Increment(ref _returningItemsToDesktop);
+
+        try
+        {
+            if (!_custody.CommitOutbound(
+                    before, after, CustodyOperationKind.RemoveFence, plans,
+                    () => window.ApplyOutbound(items, plans), out _))
+                return false;
+
+            _layoutRevision = after.Revision;
+
+            if (restoreBarrier)
+            {
+                await window.PlaceRestoredItemsAsync(items).ConfigureAwait(true);
+                await Task.Delay(ReturnToDesktopMarginMs).ConfigureAwait(true);
+            }
+
+            window.LayoutChanged -= OnWindowLayoutChanged;
+            window.SuppressPersistOnClose = true;
+            _windows.Remove(window);
+            if (System.Windows.Application.Current.MainWindow == window
+                || System.Windows.Application.Current.MainWindow is null)
+                System.Windows.Application.Current.MainWindow = _windows.FirstOrDefault();
+            window.Close();
+            FencesChanged?.Invoke();
+            return true;
+        }
+        finally
+        {
+            if (restoreBarrier)
+                Interlocked.Decrement(ref _returningItemsToDesktop);
+        }
     }
 
     public void SetTitleAlignment(Guid id, TitleAlignment alignment)
@@ -267,6 +314,19 @@ public sealed class FenceHost
     public void ResetTheme(Guid id) => SetTheme(id, FenceTheme.Default());
 
     public void ResetThemeAll() => SetThemeAll(FenceTheme.Default());
+
+    public void SetDefaultAppearanceFromFence(Guid id)
+    {
+        FenceWindow? window = _windows.FirstOrDefault(w => w.FenceId == id);
+        if (window is null)
+            return;
+
+        TitleAlignment alignment = window.CurrentTitleAlignment;
+        FenceTheme theme = window.CurrentTheme.Normalized();
+        _defaultTitleAlignment = alignment == TitleAlignment.Left ? null : alignment;
+        _defaultTheme = theme.IsDefault ? null : theme;
+        SaveAll();
+    }
 
     public FenceTheme GetTheme(Guid id)
     {
@@ -422,7 +482,11 @@ public sealed class FenceHost
             LayoutDocument before = CaptureDocument();
             LayoutDocument doc = LayoutStore.Clone(before);
             if (doc.Fences.Count == 0)
-                FenceLayoutRules.EnsureAtLeastOne(doc.Fences, Loc.T("DefaultFenceTitle"));
+                FenceLayoutRules.EnsureAtLeastOne(
+                    doc.Fences,
+                    Loc.T("DefaultFenceTitle"),
+                    _defaultTitleAlignment,
+                    _defaultTheme);
             _custody.CommitMetadata(before, doc);
             _layoutRevision = doc.Revision;
             return true;
@@ -436,6 +500,8 @@ public sealed class FenceHost
 
     internal bool AddItems(FenceWindow target, IReadOnlyList<FenceItemVm> candidates)
     {
+        if (_returningItemsToDesktop > 0)
+            return false;
         if (candidates.Count == 0)
             return true;
         IReadOnlyList<DesktopCustodyPlan> plans;
@@ -470,6 +536,8 @@ public sealed class FenceHost
         int? screenX,
         int? screenY)
     {
+        if (_returningItemsToDesktop > 0)
+            return false;
         IReadOnlyList<DesktopCustodyPlan> plans;
         try { plans = _custody.PlanOutbound(items.Select(ToCustodyItem)); }
         catch { return false; }
@@ -671,6 +739,8 @@ public sealed class FenceHost
         Version = LayoutDocument.CurrentVersion,
         Revision = _layoutRevision,
         UiLanguage = UiLanguage,
+        DefaultTitleAlignment = _defaultTitleAlignment,
+        DefaultTheme = _defaultTheme,
         Fences = _windows.Select(w => w.CaptureState()).ToList()
     };
 

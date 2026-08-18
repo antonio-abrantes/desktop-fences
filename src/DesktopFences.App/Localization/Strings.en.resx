@@ -27,6 +27,18 @@
   <data name="RemoveLastTooltip" xml:space="preserve"><value>The last fence cannot be removed</value></data>
   <data name="ResetTheme" xml:space="preserve"><value>Restore defaults</value></data>
   <data name="ResetThemeTooltip" xml:space="preserve"><value>Restores the MVP 1 colors. If “apply to all” is checked, it applies to every fence.</value></data>
+  <data name="SetDefaultLayout" xml:space="preserve"><value>Set as default</value></data>
+  <data name="SetDefaultLayoutTooltip" xml:space="preserve"><value>New fences start with these colors and title alignment. Existing fences stay unchanged.</value></data>
+  <data name="ReturningOneItemToDesktop" xml:space="preserve"><value>Returning 1 item to the Desktop…</value></data>
+  <data name="ReturningItemsToDesktop" xml:space="preserve"><value>Returning {0} items to the Desktop…</value></data>
+  <data name="RemoveFenceConfirmTitle" xml:space="preserve"><value>Remove fence</value></data>
+  <data name="RemoveFenceConfirmEmpty" xml:space="preserve"><value>Remove the fence “{0}”?</value></data>
+  <data name="RemoveFenceConfirmOneItem" xml:space="preserve"><value>This fence has 1 item. It will return to the Desktop.
+
+Remove “{0}”?</value></data>
+  <data name="RemoveFenceConfirmItems" xml:space="preserve"><value>This fence has {0} items. They will return to the Desktop.
+
+Remove “{1}”?</value></data>
   <data name="StartWithWindows" xml:space="preserve"><value>Start with Windows</value></data>
   <data name="StartWithWindowsTooltip" xml:space="preserve"><value>Opens this .exe when you sign in. If you move the folder, open the app once from the new location.</value></data>
   <data name="StartupHint" xml:space="preserve"><value>Portable: the shortcut points to this folder. Moving the program and opening it again updates the path.</value></data>

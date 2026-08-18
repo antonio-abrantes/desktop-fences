@@ -7,8 +7,8 @@
 ## Contexto da Sessão ou fase
 
 **Projeto:** DesktopFences 1.0
-**Etapa atual:** Hotfix — `SHChangeNotify` só quando o lote mexeu no Desktop (**código pronto; gate Windows 11 pendente**).
-**Objetivo desta sessão:** no Resume/arranque, não disparar `UPDATEDIR`/`ASSOCCHANGED` se os ficheiros já estão no store e o hide de namespace não mudou; sem mexer no reancoramento/Win+D.
+**Etapa atual:** Hotfix `v0.6.3` — arranque multi-monitor, layout padrão, flicker sobreposição, remover fence com confirmação + barreira (**código fechado; gates Windows 11 pendentes**).
+**Objetivo desta sessão:** versão `0.6.3`, documentação alinhada, texto de commit e tag para release.
 
 ---
 
@@ -32,6 +32,11 @@ Apoio (quando o assunto for relevante):
 
 7. `docs/pos-mvp1.md` — mapa curto do ciclo (sem empurrar vizinhos)
 8. `docs/adr/` — decisões já fechadas
+9. Specs implementadas no hotfix `v0.6.3` (gate Windows 11 pendente):
+   - `docs/spec-hotfix-monitor-arranque.md` — esperar o ecrã da fence no Start; senão clamp ao monitor vivo
+   - `docs/spec-layout-padrao-nova-fence.md` — tema + alinhamento do título como padrão de novas fences
+   - `docs/spec-hotfix-flicker-sobreposição.md` — não chamar `SetWindowPos` se o z-order já está certo
+   - Remover fence com itens: confirmação (Yes/No) + barreira outbound/posicionamento antes de fechar a janela
 
 > Não inicie nenhuma implementação antes de confirmar que leu todos os documentos obrigatórios acima.
 
@@ -42,9 +47,9 @@ Apoio (quando o assunto for relevante):
 A Fase 6 e o hotfix `v0.5.1` foram concluídos e salvos. A Fase 7 foi implementada para a `0.6.0`. Hotfix dos ícones de sistema: CLSID canónico no Registro. Ajuste seguinte: o lote só notifica a Shell (`UPDATEDIR` se moveu ficheiro, `ASSOCCHANGED` se o hide de namespace mudou). Resume no-op no arranque/hibernação deixa de mandar `ASSOCCHANGED`. Reancoramento/Win+D não foram alterados.
 
 ```
-ETAPA FECHADA  : Fase 6 + hotfix v0.5.1
-ETAPA ATUAL    : Fase 7 (v0.6.0) + hotfix ícones de sistema + FlushShell condicional (código pronto)
-GATE PENDENTE  : hibernar/acordar (ícones soltos) + instalação + Este Computador/Rede/Lixeira no Windows 11
+ETAPA FECHADA  : Hotfix v0.6.3 (multi-monitor · layout padrão · flicker · remover fence)
+ETAPA ATUAL    : aguardar gates Windows 11 do hotfix v0.6.3 + gates anteriores (Fase 7, ícones sistema, hibernar)
+GATE PENDENTE  : 3 ecrãs/logon · layout padrão · overlap idle · remover fence (resto da matriz)
 FORA DO CICLO  : duplo clique no vazio do desktop · packs de tema · empurrar fence de baixo ao expandir
 ```
 
@@ -94,6 +99,15 @@ FORA DO CICLO  : duplo clique no vazio do desktop · packs de tema · empurrar f
 - [x] Ajuste emergencial da Fase 7: item apagado enquanto o app estava fechado perde somente sua referência; estado ambíguo preserva metadados e mantém o bloqueio seguro
 - [x] Hotfix ícones de sistema: NamespaceKey canónico `{GUID}`; remove legado `::{GUID}`; Lixeira `5081`; 211 testes verdes
 - [x] FlushShell condicional: `UPDATEDIR` só com move físico; `ASSOCCHANGED` só se o hide de namespace mudou; Resume no-op não notifica; 215 testes verdes
+- [x] Hotfix arranque multi-monitor: `monitorDeviceName` gravado; espera até 8 s; clamp ao primário; polling só se ecrã falta
+- [x] Layout padrão: `defaultTheme` + `defaultTitleAlignment` no documento; botão Definir como padrão; Nova fence herda aparência
+- [x] Hotfix flicker sobreposição: `SetWindowPos` só se o vizinho Z-order mudou; Win+D intacto; 227 testes verdes
+- [x] Remover fence com itens: barreira curta (outbound + posicionamento + 250 ms); overlay nas Settings; inbound/custódia bloqueados; confirmação Yes/No antes de remover; 231 testes verdes
+- [x] Desenvolvedor validou no Windows 11: fluxo de remover fence com confirmação e devolução de itens ao Desktop
+- [x] Versão do aplicativo alinhada para `0.6.3` / tag `v0.6.3`
+- [ ] Desenvolvedor validar arranque multi-monitor (3 ecrãs, logon, Iniciar com o Windows)
+- [ ] Desenvolvedor validar layout padrão de novas fences
+- [ ] Desenvolvedor validar flicker com fences sobrepostas (idle ~30 s)
 - [ ] Desenvolvedor validar a Fase 7 no Windows 11
 - [ ] Desenvolvedor validar hide/restore de Este Computador, Rede e Lixeira (incl. reinício Explorer / novo arranque)
 - [ ] Desenvolvedor validar hibernar/acordar: ícones soltos no Desktop mantêm a posição; Pausar/Sair/drop/Win+D inalterados

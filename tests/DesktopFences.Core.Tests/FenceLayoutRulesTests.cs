@@ -82,4 +82,35 @@ public sealed class FenceLayoutRulesTests
         FenceLayoutRules.EnsureAtLeastOne(fences, "New fence");
         fences.Should().ContainSingle().Which.Title.Should().Be("New fence");
     }
+
+    [Fact]
+    public void PlaceNew_InheritsDocumentDefaults()
+    {
+        var theme = new FenceTheme
+        {
+            Fill = "#FF112233",
+            Border = "#FF445566",
+            Header = "#FF778899",
+            Text = "#FFEEDDCC"
+        };
+
+        FenceState created = FenceLayoutRules.PlaceNew(
+            [new FenceState { X = 10, Y = 20, Width = 300, Height = 200 }],
+            defaultAlignment: TitleAlignment.Center,
+            defaultTheme: theme);
+
+        created.TitleAlignment.Should().Be(TitleAlignment.Center);
+        created.Theme.Should().NotBeNull();
+        created.Theme!.Fill.Should().Be(theme.Normalized().Fill);
+        created.X.Should().Be(10 + FenceLayoutRules.PlaceOffset);
+        created.Y.Should().Be(20 + FenceLayoutRules.PlaceOffset);
+        created.Width.Should().Be(300);
+    }
+
+    [Fact]
+    public void PlaceNew_OmitsFactoryTheme_WhenDefaultThemeIsFactory()
+    {
+        FenceState created = FenceLayoutRules.PlaceNew([], defaultTheme: FenceTheme.Default());
+        created.Theme.Should().BeNull();
+    }
 }

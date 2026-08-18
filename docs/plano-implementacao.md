@@ -7,7 +7,7 @@ Convenção:
 - `[x]` feito no repositório (agente) e/ou confirmado pelo desenvolvedor na sessão.
 - `[ ]` pendente — **não implementar** sem o gate no `SESSION-HEADER.md` **e** pedido explícito.
 - A Fase 1 abaixo está **fechada**. N fences, Configurações, cores por fence, Sobre, iniciar com o Windows (portable), mutex.
-- As Fases 1–6 e o hotfix `v0.5.1` estão fechados. A Fase 7 foi implementada e validada automaticamente para a `v0.6.0`, incluindo a reconciliação emergencial de itens apagados externamente; o gate manual do instalador permanece pendente.
+- As Fases 1–6 e o hotfix `v0.5.1` estão fechados. A Fase 7 foi implementada para a `v0.6.0`; o hotfix `v0.6.3` acrescenta arranque multi-monitor, layout padrão, flicker sobreposição e remover fence com confirmação. Gates Windows 11 pendentes.
 
 ---
 
@@ -415,6 +415,24 @@ Contrato e matriz: [spec-fase-7-instalador.md](spec-fase-7-instalador.md) e [pla
 - [x] release de tag publica zip e setup para cada arquitetura
 - [x] 197 testes verdes; builds/publishes x64/ARM64 e dois scripts Inno compilados
 - [ ] gate manual no Windows 11
+
+---
+
+## Hotfix v0.6.3 — arranque, layout, flicker, remover fence
+
+**Status:** implementado e validado automaticamente; gates Windows 11 pendentes.
+
+Contratos: [spec-hotfix-monitor-arranque.md](spec-hotfix-monitor-arranque.md), [spec-layout-padrao-nova-fence.md](spec-layout-padrao-nova-fence.md), [spec-hotfix-flicker-sobreposição.md](spec-hotfix-flicker-sobreposição.md).
+
+- [x] `monitorDeviceName` persistido via `MONITORINFOEX`; espera até 8 s no arranque; clamp ao primário se o ecrã falta
+- [x] `LayoutDocument.DefaultTheme` + `DefaultTitleAlignment`; botão Definir como padrão; `PlaceNew` herda aparência
+- [x] `SetWindowPos` de z-order só quando o vizinho mudou (`ZOrderPlacement`); Win+D intacto
+- [x] Remover fence: confirmação Yes/No; barreira outbound + posicionamento + 250 ms; overlay nas Settings; inbound bloqueado
+- [x] 231 testes verdes; publish `win-x64` com os dois executáveis
+- [x] Desenvolvedor validou fluxo de remover fence com itens (confirmação + devolução)
+- [ ] gate multi-monitor (3 ecrãs, logon, Iniciar com o Windows)
+- [ ] gate layout padrão de novas fences
+- [ ] gate flicker com fences sobrepostas (idle)
 
 ---
 

@@ -82,7 +82,9 @@ internal static class NativeMethods
     public const int SC_MINIMIZE = 0xF020;
     public const int SIZE_MINIMIZED = 1;
     public const int SW_SHOWNOACTIVATE = 4;
+    public const uint GW_HWNDNEXT = 2;
     public const uint GW_HWNDPREV = 3;
+    public const uint MONITORINFOF_PRIMARY = 1;
     public const uint MONITOR_DEFAULTTONEAREST = 2;
     public const uint MONITOR_DEFAULTTONULL = 0;
 
@@ -94,6 +96,9 @@ internal static class NativeMethods
 
     [DllImport("user32.dll")]
     public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFOEX lpmi);
 
     public delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdcMonitor, IntPtr lprcMonitor, IntPtr dwData);
 
@@ -134,6 +139,18 @@ internal static class NativeMethods
         public RECT rcMonitor;
         public RECT rcWork;
         public uint dwFlags;
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode, Pack = 4)]
+    public struct MONITORINFOEX
+    {
+        public int cbSize;
+        public RECT rcMonitor;
+        public RECT rcWork;
+        public uint dwFlags;
+
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+        public string szDevice;
     }
 
     [DllImport("user32.dll", SetLastError = true)]

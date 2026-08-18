@@ -180,6 +180,30 @@ public sealed class LayoutStoreTests : IDisposable
         theme.Text.Should().Be("#F2FFEEDD");
     }
 
+    [Fact]
+    public void Save_ThenLoad_RoundTripsDefaultAppearance()
+    {
+        var store = new LayoutStore(_file);
+        var theme = new FenceTheme
+        {
+            Fill = "#A83264C8",
+            Border = "#80FF8800",
+            Header = "#40000000",
+            Text = "#F2FFEEDD"
+        };
+        store.Save(new LayoutDocument
+        {
+            DefaultTitleAlignment = TitleAlignment.Center,
+            DefaultTheme = theme,
+            Fences = [new FenceState { Title = "Trabalho" }]
+        });
+
+        LayoutDocument loaded = store.LoadOrEmpty();
+        loaded.DefaultTitleAlignment.Should().Be(TitleAlignment.Center);
+        loaded.DefaultTheme.Should().NotBeNull();
+        loaded.DefaultTheme!.Fill.Should().Be(theme.Fill);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_dir))

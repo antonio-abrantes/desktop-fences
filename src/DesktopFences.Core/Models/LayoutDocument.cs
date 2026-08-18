@@ -18,6 +18,12 @@ public sealed class LayoutDocument
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? UiLanguage { get; set; }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public TitleAlignment? DefaultTitleAlignment { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public FenceTheme? DefaultTheme { get; set; }
+
     public List<FenceState> Fences { get; set; } = [];
 }
 

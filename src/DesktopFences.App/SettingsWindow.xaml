@@ -39,6 +39,7 @@
             BorderThickness="1"
             Background="#F20C0C12"
             ClipToBounds="True">
+        <Grid>
         <DockPanel>
             <Border DockPanel.Dock="Top"
                     Height="44"
@@ -140,6 +141,9 @@
                 <Button x:Name="BtnResetTheme"
                         Style="{StaticResource FenceButton}"
                         Click="ResetTheme_Click"/>
+                <Button x:Name="BtnSetDefaultLayout"
+                        Style="{StaticResource FenceButton}"
+                        Click="SetDefaultLayout_Click"/>
             </StackPanel>
 
             <StackPanel Margin="16,12,16,8">
@@ -316,5 +320,20 @@
                     </Grid>
             </StackPanel>
         </DockPanel>
+        <Border x:Name="ReturnOverlay"
+                Visibility="Collapsed"
+                Background="#CC0C0C12"
+                CornerRadius="8">
+            <TextBlock x:Name="TxtReturnOverlay"
+                       Style="{StaticResource HintLabel}"
+                       Foreground="#F2FFFFFF"
+                       FontSize="13"
+                       TextAlignment="Center"
+                       VerticalAlignment="Center"
+                       HorizontalAlignment="Center"
+                       Margin="24"
+                       TextWrapping="Wrap"/>
+        </Border>
+        </Grid>
     </Border>
 </Window>

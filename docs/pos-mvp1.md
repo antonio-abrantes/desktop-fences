@@ -2,7 +2,7 @@
 
 Mapa curto do ciclo. O detalhe operacional está em [`plano-implementacao.md`](plano-implementacao.md). Cada fase pede autorização no `SESSION-HEADER.md` **e** pedido explícito.
 
-**MVP 2** (`v0.3.1`) = Fases 1 + 2. As Fases 3–6 e o hotfix `v0.5.1` estão fechados. A Fase 7 está implementada para a `v0.6.0`, com gate manual pendente.
+**MVP 2** (`v0.3.1`) = Fases 1 + 2. As Fases 3–6 e o hotfix `v0.5.1` estão fechados. A Fase 7 está implementada para a `v0.6.0`, com gate manual pendente. O hotfix `v0.6.3` fecha arranque multi-monitor, layout padrão, flicker e remover fence; gates Windows 11 pendentes.
 
 ---
 

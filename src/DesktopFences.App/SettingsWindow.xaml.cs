@@ -72,6 +72,8 @@ public partial class SettingsWindow : Window
         BtnRemove.ToolTip = Loc.T("RemoveLastTooltip");
         BtnResetTheme.Content = Loc.T("ResetTheme");
         BtnResetTheme.ToolTip = Loc.T("ResetThemeTooltip");
+        BtnSetDefaultLayout.Content = Loc.T("SetDefaultLayout");
+        BtnSetDefaultLayout.ToolTip = Loc.T("SetDefaultLayoutTooltip");
         StartWithWindows.Content = Loc.T("StartWithWindows");
         StartWithWindows.ToolTip = Loc.T("StartWithWindowsTooltip");
         TxtStartupHint.Text = Loc.T("StartupHint");
@@ -189,13 +191,61 @@ public partial class SettingsWindow : Window
         Reload(selectLast: true);
     }
 
-    private void RemoveFence_Click(object sender, RoutedEventArgs e)
+    private async void RemoveFence_Click(object sender, RoutedEventArgs e)
     {
-        if (FenceList.SelectedItem is not FenceRow row)
+        if (_host.IsReturningItemsToDesktop || FenceList.SelectedItem is not FenceRow row)
             return;
-        if (!_host.TryRemove(row.Id))
+
+        int itemCount = _host.Windows.FirstOrDefault(w => w.FenceId == row.Id)?.Items.Count ?? 0;
+        if (!ConfirmRemoveFence(row.Title, itemCount))
             return;
-        Reload(selectFirst: true);
+
+        SetReturningOverlay(itemCount > 0, itemCount);
+        try
+        {
+            if (!await _host.TryRemoveAsync(row.Id).ConfigureAwait(true))
+                return;
+            Reload(selectFirst: true);
+        }
+        finally
+        {
+            SetReturningOverlay(false, 0);
+            UpdateRemoveEnabled();
+        }
+    }
+
+    private void SetReturningOverlay(bool visible, int itemCount)
+    {
+        ReturnOverlay.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        if (!visible)
+            return;
+
+        TxtReturnOverlay.Text = itemCount == 1
+            ? Loc.T("ReturningOneItemToDesktop")
+            : Loc.Format("ReturningItemsToDesktop", itemCount);
+        BtnNewFence.IsEnabled = false;
+        BtnRemove.IsEnabled = false;
+        BtnResetTheme.IsEnabled = false;
+        BtnSetDefaultLayout.IsEnabled = false;
+        FenceList.IsEnabled = false;
+    }
+
+    private bool ConfirmRemoveFence(string title, int itemCount)
+    {
+        string message = itemCount switch
+        {
+            0 => Loc.Format("RemoveFenceConfirmEmpty", title),
+            1 => Loc.Format("RemoveFenceConfirmOneItem", title),
+            _ => Loc.Format("RemoveFenceConfirmItems", itemCount, title)
+        };
+
+        return System.Windows.MessageBox.Show(
+            this,
+            message,
+            Loc.T("RemoveFenceConfirmTitle"),
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No) == MessageBoxResult.Yes;
     }
 
     private bool ApplyToAll => ApplyAllCheck.IsChecked == true;
@@ -213,6 +263,14 @@ public partial class SettingsWindow : Window
             return;
         _host.ResetTheme(row.Id);
         SyncAppearance();
+    }
+
+    private void SetDefaultLayout_Click(object sender, RoutedEventArgs e)
+    {
+        if (FenceList.SelectedItem is not FenceRow row)
+            return;
+
+        _host.SetDefaultAppearanceFromFence(row.Id);
     }
 
     private void FenceList_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -440,7 +498,12 @@ public partial class SettingsWindow : Window
 
     private void UpdateRemoveEnabled()
     {
-        BtnRemove.IsEnabled = FenceLayoutRules.CanRemove(_rows.Count) && FenceList.SelectedItem is FenceRow;
+        bool busy = _host.IsReturningItemsToDesktop;
+        BtnRemove.IsEnabled = !busy && FenceLayoutRules.CanRemove(_rows.Count) && FenceList.SelectedItem is FenceRow;
+        BtnNewFence.IsEnabled = !busy;
+        BtnResetTheme.IsEnabled = !busy;
+        BtnSetDefaultLayout.IsEnabled = !busy;
+        FenceList.IsEnabled = !busy;
     }
 
     private enum ThemeChannel { Fill, Border, Header, Text }

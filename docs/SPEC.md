@@ -12,7 +12,7 @@ App Windows 11 que agrupa ícones **reais** da área de trabalho em fences retan
 | `DesktopFences.Native` | SysListView32, COM Shell, OLE drop, DWM, âncora | Sim, e só aqui |
 | `DesktopFences.App` | XAML, fence, bandeja, ghost | Só via serviços Native |
 
-**Estado:** Fases 1–6 e hotfix `v0.5.1` fechados. A Fase 7 está implementada para a `v0.6.0`, com instaladores por usuário x64/ARM64, manutenção segura e desinstalação; gate manual no Windows 11 pendente. Duplo clique no desktop, packs de tema e empurrar vizinhos estão **fora** deste ciclo. Detalhe: [plano-implementacao.md](plano-implementacao.md).
+**Estado:** Fases 1–6 e hotfix `v0.5.1` fechados. A Fase 7 está implementada para a `v0.6.0`, com instaladores por usuário x64/ARM64, manutenção segura e desinstalação; gate manual no Windows 11 pendente. O hotfix `v0.6.3` acrescenta arranque multi-monitor, layout padrão, flicker em sobreposição e remover fence com confirmação. Duplo clique no desktop, packs de tema e empurrar vizinhos estão **fora** deste ciclo. Detalhe: [plano-implementacao.md](plano-implementacao.md).
 
 ---
 
@@ -136,6 +136,7 @@ Coordenadas da fence em **DIPs** WPF; posições de ícone em **pixels** do List
 
 - Fase 6 e hotfix `v0.5.1`: fechados, com custódia transacional, recuperação independente e snapshot de posições.
 - Fase 7 / `v0.6.0`: instaladores Inno Setup x64/ARM64, idioma inicial, upgrade, desinstalação segura e reconciliação conservadora de itens apagados com o app fechado implementados; gate manual pendente. Contrato em [spec-fase-7-instalador.md](spec-fase-7-instalador.md).
+- Hotfix `v0.6.3`: arranque multi-monitor, layout padrão de novas fences, flicker em sobreposição e remover fence com confirmação + barreira; gates Windows 11 pendentes. Specs em `docs/spec-hotfix-*.md` e `docs/spec-layout-padrao-nova-fence.md`.
 - **Fora do ciclo:** empurrar a fence de baixo ao expandir; duplo clique no vazio do desktop cria fence; packs de tema.
 - **Reserva (reavaliar no fim):** Novo → Fence no Explorer. Não implementar até planejada e validada.
 - **Stand-by da auditoria:** itens externos ao Desktop, OneDrive/redirected Desktop, progresso/cancelamento, ampliação geral de `IFileOperation` e demais melhorias não selecionadas para a Fase 6.

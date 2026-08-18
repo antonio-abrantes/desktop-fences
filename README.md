@@ -40,7 +40,7 @@ O hide/restore do MVP 1, mais várias fences no mesmo desktop:
 - Se um item devolvido ao Desktop for apagado enquanto o app estiver fechado, no próximo arranque somente sua referência é removida da fence; os demais itens continuam normalmente. Estados inacessíveis ou ambíguos permanecem bloqueados por segurança.
 - Snapshot atômico das posições dos ícones no arranque e `DesktopFences.Recovery.exe` separado para recuperação por um clique. A ferramenta copia os dados sem apagar o store e nunca sobrescreve um arquivo do Desktop.
 
-Explorer reiniciado, DPI e Win+D foram validados no Windows 11. A `v0.6.0` acrescenta instaladores x64/ARM64, idioma inicial e desinstalação segura. A implementação automática está concluída; o gate manual dos setups ainda precisa ser feito. Duplo clique no vazio do desktop não faz parte deste ciclo.
+Explorer reiniciado, DPI e Win+D foram validados no Windows 11. A `v0.6.0` acrescenta instaladores x64/ARM64, idioma inicial e desinstalação segura; o gate manual dos setups ainda precisa ser feito. A `v0.6.3` acrescenta arranque multi-monitor (espera o ecrã gravado no logon), layout padrão para novas fences (tema + alinhamento do título), correção de piscadelas quando fences se sobrepõem, e remoção de fence com confirmação + barreira enquanto os itens voltam ao Desktop. Duplo clique no vazio do desktop não faz parte deste ciclo.
 
 ## Instalação e desinstalação
 
@@ -90,8 +90,8 @@ dotnet test DesktopFences.sln
 O GitHub Action **não** roda em push de branch. Só em tag `v*`:
 
 ```powershell
-git tag -a v0.6.0 -m "DesktopFences v0.6.0"
-git push origin v0.6.0
+git tag -a v0.6.3 -m "DesktopFences v0.6.3"
+git push origin v0.6.3
 ```
 
 Isso publica, para `win-x64` e `win-arm64`, um setup e um zip portable self-contained, ambos com o aplicativo e o executável independente de recuperação. Download: [Releases](https://github.com/antonio-abrantes/desktop-fences/releases).
