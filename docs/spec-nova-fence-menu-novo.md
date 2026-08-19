@@ -1,10 +1,10 @@
-# Spec — Nova fence no menu Novo do desktop
+# Spec — Nova fence no menu de contexto do desktop
 
-> Recorte: o utilizador clica com o botão direito no vazio da área de trabalho, abre **Novo**, e escolhe **Fence**. Nasce uma fence com o visual padrão já gravado nas Configurações (`defaultTheme` / `defaultTitleAlignment`).
+> Recorte: o utilizador clica com o botão direito no vazio da área de trabalho e escolhe **Nova fence**. Nasce uma fence com o visual padrão já gravado nas Configurações (`defaultTheme` / `defaultTitleAlignment`). **Não** cria ficheiro no Desktop.
 >
-> **Status:** pronta; **não autorizada**. Não implementar até o desenvolvedor marcar o gate no `SESSION-HEADER.md` **e** pedir explicitamente esta etapa.
+> **Status:** implementado no código (`v0.6.4` / `v0.6.5`); gate Windows 11 pendente. O hotfix `v0.6.3` e os gates da Fase 7 permanecem abertos. Esta feature **não** fecha nem reabre fases anteriores.
 >
-> **Não é a etapa vigente.** O hotfix `v0.6.3` e os gates da Fase 7 permanecem como estão. Este ficheiro existe para a fase seguinte, quando for pedida. Ao implementar, **não** fechar nem reabrir fases anteriores só por causa desta feature.
+> Caminho vigente: verbo `Directory\Background` + `DesktopBackground\shell` (um clique corre `--create-fence`) **e** `ShellNew\Command` sem `NullFile` (submenu Novo corre o exe em vez de criar um documento). Stubs `.desktopfence` antigos são apagados, não custodiados.
 
 ---
 
@@ -61,23 +61,23 @@ Criar fence exige abrir Configurações. O sítio natural no Windows para “cri
 
 ## 3. Decisão (caminho escolhido)
 
-**Menu Novo (`ShellNew`)**, não o menu de contexto de topo, e não `IExplorerCommand` nesta fase.
+Dois verbos de instalação, **sem** `NullFile` e **sem** `IExplorerCommand` nesta fase.
 
 | Escolha | Porquê |
 |---|---|
-| Submenu **Novo** | É o contrato mental do Explorer para criar algo no sítio onde se clicou (o Desktop). |
-| `ShellNew` em HKCU + ProgID próprio | Sem COM novo, sem elevação, encaixa no instalador actual. |
-| Extensão `.desktopfence` | Identidade única; o Explorer precisa de um tipo para mostrar o item em Novo. |
+| `Directory\Background\shell` + `DesktopBackground\shell` | Corre o `.exe` no clique. **Não** cria ficheiro. Só o fundo do desktop (clássico / Mostrar mais opções). |
+| `ShellNew\Command` (sem `NullFile`) | Item **Novo → Fence**: o Explorer corre o exe em vez de deixar um documento. `NullFile` no Win11 cria `.desktopfence` e não abre o app. |
+| Cache `Explorer\Discardable\PostSetup\ShellNew\Classes` | Sem `.desktopfence` nesta lista o submenu Novo ignora o tipo. |
 | Comando `--create-fence` | O `.exe` já instalado é o handler; Settings continua a funcionar. |
 | IPC no pipe existente | O mutex já impede segunda UI; o 2.º processo só pede à instância viva. |
 
-Limite aceite do Windows 11: o submenu Novo de tipos personalizados pode aparecer só em **Mostrar mais opções** (menu clássico, Shift+F10), não no flyout moderno. Não é motivo para trocar para COM nesta fase. Não prometer ícone no menu compacto do Win11.
+Limite aceite do Windows 11: o item pode aparecer só em **Mostrar mais opções** (menu clássico, Shift+F10), não no flyout moderno. Não é motivo para trocar para COM nesta fase. Não prometer ícone no menu compacto do Win11.
 
 ---
 
 ## 4. Contrato de comportamento
 
-Uma escolha em **Novo → Fence** produz **exactamente uma** fence nova, com o mesmo resultado que o botão **Nova fence** nas Settings:
+Uma escolha em **Nova fence** (menu clássico do desktop) produz **exactamente uma** fence nova, com o mesmo resultado que o botão **Nova fence** nas Settings:
 
 - título `Loc.T("DefaultFenceTitle")` (já traduzido);
 - geometria via `PlaceNew` (offset + tamanho da última);
@@ -88,7 +88,7 @@ Não abre Settings. Não pede confirmação. Não posiciona no cursor (fora). N�
 
 ### 4.1 App já aberto
 
-1. O Explorer lança `{app}\DesktopFences.exe --create-fence "%1"` (ver §5).
+1. O Explorer lança `{app}\DesktopFences.exe --create-fence` (ver §5).
 2. O 2.º processo **não** mostra a MessageBox de instância única.
 3. Envia `create-fence` pelo pipe de manutenção, espera `ok` / `failed` (timeout curto, mesma ordem de grandeza do `prepare-exit`: ~10 s).
 4. Sai com código 0 se o pedido foi aceite; não cria janela, não chama `Start()`, não toca no store.
@@ -112,13 +112,13 @@ App a **devolver itens** ao Desktop (`IsReturningItemsToDesktop`): ainda assim c
 | Já havia ≥ 1 fence | `TryAddNew()` — o utilizador pediu **mais uma** |
 | Lista vazia (1.ª utilização ou reset) | **Não** chamar `TryAddNew()`. A fence criada por `EnsureAtLeastOne` **é** a fence pedida |
 
-Sem esta regra, o primeiro “Novo → Fence” num perfil vazio nasceria **duas** fences.
+Sem esta regra, o primeiro “Nova fence” num perfil vazio nasceria **duas** fences.
 
 3. Apagar o stub **antes** de qualquer inbound/custódia poder vê-lo (§6), inclusive neste arranque.
 
 ### 4.3 App não instalado / portable
 
-O item **Novo → Fence** só existe quando o **instalador** gravou as chaves. O zip portable **não** regista `ShellNew`. Não auto-registar no `OnStartup` da app (o path mudaria, ficava lixo no Novo, e o portable não é o contrato de desinstalação).
+O item **Nova fence** só existe quando o **instalador** gravou as chaves. O zip portable **não** as regista. Não auto-registar no `OnStartup` da app.
 
 Se o utilizador tiver instalação **e** portable: o mutex continua único; o menu aponta para o `.exe` instalado. Não tratar o portable neste recorte.
 
@@ -128,56 +128,60 @@ Se o utilizador tiver instalação **e** portable: o mutex continua único; o me
 
 Todas as chaves em **HKCU**. Nenhuma em HKLM. Sem UAC.
 
-ProgID sugerido: `DesktopFences.NewFence` (não reutilizar nomes genéricos).
-
 ```
+HKCU\Software\Classes\Directory\Background\shell\DesktopFencesNewFence
+  (Default) / MUIVerb = Nova fence / New fence
+  Icon = {app}\DesktopFences.exe,0
+  command = "{app}\DesktopFences.exe" --create-fence
+
+HKCU\Software\Classes\DesktopBackground\shell\DesktopFencesNewFence
+  (igual) + Position = Bottom
+
 HKCU\Software\Classes\.desktopfence
   (Default) = DesktopFences.NewFence
-
 HKCU\Software\Classes\.desktopfence\ShellNew
-  NullFile = (string vazia)     ← faz o item aparecer em Novo
+  Command = "{app}\DesktopFences.exe" --create-fence
+  ItemName = Fence
   IconPath = {app}\DesktopFences.exe,0
-  ItemName = texto localizado (ver §8)
-
+  (sem NullFile — NullFile cria o documento e o Win11 não abre o app)
 HKCU\Software\Classes\DesktopFences.NewFence
-  (Default) = mesmo texto que ItemName
+  (Default) = Fence
   DefaultIcon = {app}\DesktopFences.exe,0
-
-HKCU\Software\Classes\DesktopFences.NewFence\shell\open\command
-  (Default) = "{app}\DesktopFences.exe" --create-fence "%1"
 ```
+
+`Directory\Background` é a lista clássica (Mostrar mais opções). `ShellNew\Command` é o item **dentro de Novo**: o Explorer **corre o exe** no clique, em vez de deixar um ficheiro. No `finalize`, meter `.desktopfence` na cache `Explorer\Discardable\PostSetup\ShellNew\Classes` (sem isso o Novo ignora o tipo).
 
 Notas:
 
-- `{app}` é o `DefaultDirName` estável. Upgrade no lugar actualiza o comando (Inno `[Registry]` já reescreve valores no setup).
-- `NullFile` **vai** criar um ficheiro vazio no Desktop. Isso é o preço do Novo; o app **obriga-se** a apagá-lo (§6).
-- Não usar `ShellNew\Command` *em substituição* do `open\command` se isso impedir o Explorer de mostrar o item; o handler canónico é o `open` do ProgID com `--create-fence "%1"`.
-- Não associar `.desktopfence` a um editor. Não aparecer em “Abrir com”. Não criar `FriendlyTypeName` longo que pareça documento do utilizador.
+- `{app}` é o `DefaultDirName` estável. Upgrade no lugar actualiza o comando.
+- `ShellNew\Command` (não `NullFile`) para o submenu Novo. Se o Explorer ainda criar um `.desktopfence`, o app apaga-o.
+- No `finalize`, garantir `.desktopfence` na cache Novo e apagar stubs que restem no Desktop.
 
 Inno (`installer/DesktopFences.iss`):
 
-- Entradas `[Registry]` com `uninsdeletekey` / `uninsdeletevalue` adequados para o ProgID e a extensão **desaparecerem na desinstalação** (keep **e** remove: o programa sai, o menu não pode ficar órfão).
-- `ItemName` segundo o idioma do wizard (`portuguese` / `english`), alinhado a `AppLanguage` já usado em `--language=`.
-- `finalize` pode regravar `ItemName` se o idioma inicial mudar no setup; **não** é obrigatório actualizar o texto do menu quando o utilizador muda o idioma **dentro** da app (limite aceite).
+- Entradas `[Registry]` com `uninsdeletekey` para o verbo **desaparecer na desinstalação** (keep **e** remove).
+- Texto do item segundo o idioma do wizard (`portuguese` / `english`).
+- Página Finished: faixa visível a **recomendar** reinício do Windows. Não é `AlwaysRestart`; o utilizador pode Concluir sem reiniciar. O texto explica que, se Novo → Fence ainda não aparecer (Mostrar mais opções → Novo), aparece depois do reinício.
 
 Não tocar na política keep/reset/remove de dados, nem no bloqueio de downgrade, nem no `AppId`.
 
 ---
 
-## 6. Stub `.desktopfence` (obrigatório)
+## 6. Stub `.desktopfence` (só limpeza)
 
-O Explorer cria um ficheiro no Desktop (nome tipo `Fence.desktopfence` / `Nova fence.desktopfence`, possivelmente com `(2)`). Esse ficheiro **não é um ícone do utilizador**.
+Instalações antigas com `ShellNew` podem ter deixado `Fence.desktopfence` no Desktop. Esse ficheiro **não é um ícone do utilizador**.
 
 Regras:
 
-1. `--create-fence` aceita zero ou um caminho. Se vier `%1`, apagar esse ficheiro se existir, for ficheiro (não pasta), e a extensão for exactamente `.desktopfence` (case insensitive).
-2. Só apagar se o path estiver **no Desktop do utilizador ou no Desktop Público** (`DesktopPaths` no Core). Recusar path arbitrário (não apagar `C:\Windows\...`).
-3. Nunca mover o stub para o store. Nunca `PlanInbound` / hide / registry de namespace para esta extensão.
-4. Se o apagar falhar, **ainda assim** criar a fence; não bloquear o produto por um ficheiro vazio. Tentar de novo uma vez após um `UPDATEDIR` no directório pai **só se** o ficheiro ainda existir. Sem loop. Sem `ASSOCCHANGED` por causa do stub (o hotfix de FlushShell condicional permanece).
-5. Core: helper puro, ex. `DesktopFenceStubRules.IsStubPath(path, desktopRoots)` — testes em `DesktopFences.Core.Tests`.
-6. App: apagar no 2.º processo **e** na instância principal (o Explorer pode passar `%1` só ao processo lançado). Se o 2.º processo apagou, a principal recebe IPC sem path — aceitar `create-fence` sem argumento.
+1. `--create-fence` aceita zero ou um caminho. Se vier um path, apagar esse ficheiro se existir, for ficheiro (não pasta), e a extensão for exactamente `.desktopfence` (case insensitive).
+2. Só apagar se o path estiver **no Desktop do utilizador ou no Desktop Público** (`DesktopPaths` no Core). Recusar path arbitrário.
+3. Nunca mover o stub para o store. Nunca `PlanInbound` para esta extensão.
+4. No `finalize`, apagar leftovers `*.desktopfence` nos Desktop roots. Se o apagar falhar, ainda assim criar a fence; retry único após `UPDATEDIR`. Sem `ASSOCCHANGED` por causa do stub.
+5. Core: `DesktopFenceStubRules.IsStubPath` — testes em `DesktopFences.Core.Tests`.
 
 Não usar o stub como persistência da fence. A fence continua só no `layout.json`.
+
+O comando do menu vigente **não** passa `%1` (`--create-fence` sem path).
 
 ---
 
@@ -193,7 +197,7 @@ Novo parser **separado** de `InstallerMaintenanceArguments`. `--maintenance=` co
 --create-fence C:\Users\...\Desktop\Fence.desktopfence
 ```
 
-O Explorer envia `"%1"` no `open\command`. Aceitar as três formas. Path com espaços: já vem quoted pelo Shell.
+O comando vigente não envia path. As três formas do parser continuam aceites para limpar leftovers de instalações `ShellNew`.
 
 Arranque normal (zero args, ou args que não são maintenance nem create-fence): **inalterado**, incluindo a MessageBox de 2.ª instância.
 
@@ -219,14 +223,12 @@ Só o caminho **sem** `--create-fence` (e sem maintenance) mostra o aviso actual
 
 ## 8. Idioma e UI
 
-Texto do item em Novo:
+Texto do item no menu do desktop:
 
-| Idioma do setup | `ItemName` / default do ProgID |
+| Idioma do setup | Texto |
 |---|---|
-| Português | `Fence` |
-| Inglês | `Fence` |
-
-A palavra do produto é “fence” nos dois idiomas; não usar “Nova fence” no menu Novo (o Novo já significa criar). Não adicionar janela, toast, nem item na bandeja.
+| Português | `Nova fence` |
+| Inglês | `New fence` |
 
 O botão **Nova fence** nas Settings **não muda**.
 
@@ -238,7 +240,7 @@ Strings do app (`Strings.resx`): só se o parser ou um erro interno precisar; o 
 
 | Sítio | O quê |
 |---|---|
-| `installer/DesktopFences.iss` | `[Registry]` ShellNew + ProgID + `uninsdelete*` |
+| `installer/DesktopFences.iss` | `[Registry]` `DesktopBackground\shell` + `uninsdeletekey` |
 | `App.xaml.cs` | parse `--create-fence`; 2.ª instância silenciosa; após `Start()`, regra do §4.2 |
 | `Services/MaintenanceProtocol.cs` | constante `create-fence`; servidor distingue os dois comandos |
 | `FenceHost.cs` | sem lógica Shell; no máximo um método fino `TryAddNew` já existente |
@@ -272,8 +274,8 @@ Automatizado:
 
 Gate humano (instalação, não portable):
 
-- [ ] Direito no vazio do Desktop → Novo → Fence (se só no menu clássico, Shift+F10 / Mostrar mais opções: aceite, documentar no gate)
-- [ ] App aberto: uma fence nova, visual = padrão das Settings, **sem** MessageBox de instância, **sem** ficheiro `.desktopfence` no Desktop
+- [ ] Página Finished do setup: aviso de reinício **recomendado** visível antes de Concluir; Concluir sem reiniciar continua possível
+- [ ] App aberto: uma fence nova, visual = padrão das Settings, **sem** MessageBox de instância, **sem** ficheiro novo no Desktop
 - [ ] App fechado com fences já gravadas: app abre e acrescenta **uma**
 - [ ] Perfil/layout vazio: app abre com **uma** fence (não duas)
 - [ ] Upgrade do setup: o comando aponta para o `{app}` novo; o item Novo continua
@@ -286,7 +288,7 @@ Gate humano (instalação, não portable):
 ## 12. Fora (não fazer)
 
 - Duplo clique no vazio do desktop / `WH_MOUSE_LL` para criar fence.
-- Item no **topo** do menu de contexto do desktop como entrega principal (`Directory\Background\shell`).
+- `ShellNew` com **`NullFile`**: o Windows 11 cria um documento `.desktopfence` e não abre o app. `ShellNew\Command` (sem `NullFile`) está **dentro** desta spec.
 - `IExplorerCommand`, `IExplorerCommandState`, pacote Appx, menu moderno Win11.
 - Auto-update, serviço, tarefa agendada, HKLM, administrador.
 - Registar ShellNew a partir do portable ou em todo `OnStartup`.

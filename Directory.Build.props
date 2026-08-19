@@ -3,7 +3,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
-    <Version>0.6.3</Version>
+    <Version>0.6.5</Version>
     <InformationalVersion>$(Version)</InformationalVersion>
     <Authors>Antônio Abrantes</Authors>
     <Product>DesktopFences</Product>

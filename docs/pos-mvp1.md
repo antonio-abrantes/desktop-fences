@@ -2,7 +2,7 @@
 
 Mapa curto do ciclo. O detalhe operacional está em [`plano-implementacao.md`](plano-implementacao.md). Cada fase pede autorização no `SESSION-HEADER.md` **e** pedido explícito.
 
-**MVP 2** (`v0.3.1`) = Fases 1 + 2. As Fases 3–6 e o hotfix `v0.5.1` estão fechados. A Fase 7 está implementada para a `v0.6.0`, com gate manual pendente. O hotfix `v0.6.3` fecha arranque multi-monitor, layout padrão, flicker e remover fence; gates Windows 11 pendentes.
+**MVP 2** (`v0.3.1`) = Fases 1 + 2. As Fases 3–6 e o hotfix `v0.5.1` estão fechados. A Fase 7 está implementada para a `v0.6.0`, com gate manual pendente. O hotfix `v0.6.3` fecha arranque multi-monitor, layout padrão, flicker e remover fence; gates Windows 11 pendentes. A `v0.6.4` acrescenta Novo → Fence no Explorer (instalação); gate Windows 11 pendente. A `v0.6.5` corrige flicker em sobreposição (skip de z-order) e inbound ao mover fence. O hotfix do instalador está speccado para a versão seguinte.
 
 ---
 
@@ -18,7 +18,7 @@ Mapa curto do ciclo. O detalhe operacional está em [`plano-implementacao.md`](p
 | 6 | Custódia transacional de itens do Desktop | Alta — **fechada e validada** |
 | 7 | Instalador, upgrade e desinstalação segura | Média — **implementada; gate manual pendente** |
 
-Não fechar a Fase 7 sem validar os setups no Windows 11. Criar fence continua nas Settings.
+Não fechar a Fase 7 sem validar os setups no Windows 11. Criar fence: Configurações **ou** direito no desktop → Nova fence (instalação; no Windows 11 o item pode aparecer só em Mostrar mais opções).
 
 ---
 
@@ -26,11 +26,11 @@ Não fechar a Fase 7 sem validar os setups no Windows 11. Criar fence continua n
 
 **Empurrar a fence de baixo ao expandir** — outra versão, se um dia, só como pilha explícita.
 
-**Duplo clique no vazio do desktop cria fence** — reserva. Settings é o caminho. Só depois de validar necessidade real.
+**Duplo clique no vazio do desktop cria fence** — reserva. Settings e Novo → Fence (instalação) são os caminhos. Só depois de validar necessidade real.
 
 **Packs de tema** — reserva. O vidro fica travado.
 
-**Novo → Fence no Explorer** — reserva no `plano-implementacao.md`.
+**Novo → Fence no Explorer** — na `v0.6.4`: **Nova fence** no fundo do desktop (`Directory\Background` / `DesktopBackground\shell`) **e** Novo → Fence via `ShellNew\Command` (sem `NullFile`). Sem documento stub. Gate Windows 11 pendente. Portable não regista o menu.
 
 ---
 

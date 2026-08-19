@@ -13,10 +13,18 @@
 <p align="center">
   <a href="https://antonio-abrantes.github.io/desktop-fences/">Site</a>
   ·
+  <a href="https://antonio-abrantes.github.io/desktop-fences/#demo">Vídeo</a>
+  ·
   <a href="https://github.com/antonio-abrantes/desktop-fences/releases">Download</a>
   ·
   <a href="https://github.com/antonio-abrantes/desktop-fences">GitHub</a>
 </p>
+
+## Demo
+
+[Assistir no site](https://antonio-abrantes.github.io/desktop-fences/#demo) (GitHub Pages reproduz o MP4). Ficheiro no repositório: [`docs/assets/presentation.mp4`](docs/assets/presentation.mp4).
+
+O README no GitHub.com não incorpora o leitor de vídeo; o site sim.
 
 ## O problema
 
@@ -32,7 +40,7 @@ O hide/restore do MVP 1, mais várias fences no mesmo desktop:
 - Arrastar do desktop ou do Explorer para dentro: um ou vários ícones; somem de lá, entram na grade; o ponteiro permanece a seta. Arrastar para fora devolve o primeiro ícone no ponto do cursor e organiza os demais ao redor; o ghost acompanha o cursor. Itens do Desktop Público voltam para o Desktop gravável do usuário, sem pedir administrador. Arrastar **entre** fences muda o dono sem reaparecer o ícone real. Ícones de sistema (Este computador, Lixeira, Rede) usam o pictograma da Shell.
 - Seleção, multi-seleção e reordenação dentro da fence.
 - Mover só pela alça **⋮⋮** (ímã nas bordas da tela e nas outras fences ao soltar); redimensionar pelas bordas (ímã no fim do gesto); recolher para só a barra (▴); duplo clique no **texto** do título para renomear.
-- Sempre **pelo menos uma** fence. Nas Configurações: criar, remover (nunca a última), alinhar o título, **cores**, e botões para abrir a pasta do `layout.json` e a dos ficheiros agrupados.
+- Com o setup instalado, direito no vazio do Desktop → **Nova fence** cria a mesma fence que o botão nas Configurações.
 - **Idioma:** Sistema / Português / Inglês. Troca ao vivo. Título já gravado não muda.
 - **Iniciar com o Windows** em path estável quando instalado; o portable continua atualizando o path para a pasta em uso. Uma só instância.
 - Bandeja: Pausar / Retomar / Configurações / Sobre / Sair. Pausar e Sair restauram os ícones reais e reaplicam suas posições originais; se uma célula estiver ocupada, o Explorer resolve o alinhamento.
@@ -40,7 +48,7 @@ O hide/restore do MVP 1, mais várias fences no mesmo desktop:
 - Se um item devolvido ao Desktop for apagado enquanto o app estiver fechado, no próximo arranque somente sua referência é removida da fence; os demais itens continuam normalmente. Estados inacessíveis ou ambíguos permanecem bloqueados por segurança.
 - Snapshot atômico das posições dos ícones no arranque e `DesktopFences.Recovery.exe` separado para recuperação por um clique. A ferramenta copia os dados sem apagar o store e nunca sobrescreve um arquivo do Desktop.
 
-Explorer reiniciado, DPI e Win+D foram validados no Windows 11. A `v0.6.0` acrescenta instaladores x64/ARM64, idioma inicial e desinstalação segura; o gate manual dos setups ainda precisa ser feito. A `v0.6.3` acrescenta arranque multi-monitor (espera o ecrã gravado no logon), layout padrão para novas fences (tema + alinhamento do título), correção de piscadelas quando fences se sobrepõem, e remoção de fence com confirmação + barreira enquanto os itens voltam ao Desktop. Duplo clique no vazio do desktop não faz parte deste ciclo.
+Explorer reiniciado, DPI e Win+D foram validados no Windows 11. A `v0.6.0` acrescenta instaladores x64/ARM64, idioma inicial e desinstalação segura; o gate manual dos setups ainda precisa ser feito. A `v0.6.3` acrescenta arranque multi-monitor (espera o ecrã gravado no logon), layout padrão para novas fences (tema + alinhamento do título), flicker em sobreposição e remoção de fence com confirmação + barreira. A `v0.6.4` acrescenta **Nova fence** no menu de contexto do desktop (setup instalado; no Windows 11 o item clássico pode aparecer só em Mostrar mais opções; Novo → Fence usa `ShellNew\Command` sem criar ficheiro). A `v0.6.5` corrige o skip de z-order (fences sobrepostas deixam de piscar em idle porque o timer já não chama `SetWindowPos` à toa), deixa de tratar o arrastar de uma fence como drop de ficheiro, e reorganiza os botões das Configurações. O hotfix do instalador (upgrade com o app aberto) fica para a versão seguinte. Duplo clique no vazio do desktop não faz parte deste ciclo.
 
 ## Instalação e desinstalação
 
@@ -90,8 +98,8 @@ dotnet test DesktopFences.sln
 O GitHub Action **não** roda em push de branch. Só em tag `v*`:
 
 ```powershell
-git tag -a v0.6.3 -m "DesktopFences v0.6.3"
-git push origin v0.6.3
+git tag -a v0.6.5 -m "DesktopFences v0.6.5"
+git push origin v0.6.5
 ```
 
 Isso publica, para `win-x64` e `win-arm64`, um setup e um zip portable self-contained, ambos com o aplicativo e o executável independente de recuperação. Download: [Releases](https://github.com/antonio-abrantes/desktop-fences/releases).

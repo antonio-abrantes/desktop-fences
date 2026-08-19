@@ -51,6 +51,7 @@ internal static class NativeMethods
     public const uint SHCNE_ASSOCCHANGED = 0x08000000;
     public const uint SHCNF_IDLIST = 0x0000;
     public const uint SHCNF_PATHW = 0x0005;
+    public const uint SHCNF_FLUSH = 0x1000;
     public const uint SHCNF_FLUSHNOWAIT = 0x2000;
 
     public const int DWMWA_DISALLOW_PEEK = 11;

@@ -131,20 +131,24 @@
                              Cursor="IBeam"/>
             </StackPanel>
 
-            <StackPanel DockPanel.Dock="Bottom" Margin="16,8,16,8" Orientation="Horizontal">
-                <Button x:Name="BtnNewFence"
-                        Style="{StaticResource FenceButton}"
-                        Click="AddFence_Click"/>
-                <Button x:Name="BtnRemove"
-                        Style="{StaticResource FenceButton}"
-                        Click="RemoveFence_Click"/>
+            <Grid DockPanel.Dock="Bottom" Margin="16,8,16,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
                 <Button x:Name="BtnResetTheme"
+                        Grid.Column="0"
                         Style="{StaticResource FenceButton}"
+                        HorizontalAlignment="Stretch"
+                        Margin="0,0,8,0"
                         Click="ResetTheme_Click"/>
                 <Button x:Name="BtnSetDefaultLayout"
+                        Grid.Column="1"
                         Style="{StaticResource FenceButton}"
+                        HorizontalAlignment="Stretch"
+                        Margin="0"
                         Click="SetDefaultLayout_Click"/>
-            </StackPanel>
+            </Grid>
 
             <StackPanel Margin="16,12,16,8">
                     <TextBlock x:Name="TxtFenceListLabel"
@@ -213,6 +217,25 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
+                    </Grid>
+
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button x:Name="BtnNewFence"
+                                Grid.Column="0"
+                                Style="{StaticResource FenceButton}"
+                                HorizontalAlignment="Stretch"
+                                Margin="0,0,8,0"
+                                Click="AddFence_Click"/>
+                        <Button x:Name="BtnRemove"
+                                Grid.Column="1"
+                                Style="{StaticResource FenceButton}"
+                                HorizontalAlignment="Stretch"
+                                Margin="0"
+                                Click="RemoveFence_Click"/>
                     </Grid>
 
                     <CheckBox x:Name="ApplyAllCheck"

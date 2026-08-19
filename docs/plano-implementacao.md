@@ -7,7 +7,7 @@ Convenção:
 - `[x]` feito no repositório (agente) e/ou confirmado pelo desenvolvedor na sessão.
 - `[ ]` pendente — **não implementar** sem o gate no `SESSION-HEADER.md` **e** pedido explícito.
 - A Fase 1 abaixo está **fechada**. N fences, Configurações, cores por fence, Sobre, iniciar com o Windows (portable), mutex.
-- As Fases 1–6 e o hotfix `v0.5.1` estão fechados. A Fase 7 foi implementada para a `v0.6.0`; o hotfix `v0.6.3` acrescenta arranque multi-monitor, layout padrão, flicker sobreposição e remover fence com confirmação. Gates Windows 11 pendentes.
+- As Fases 1–6 e o hotfix `v0.5.1` estão fechados. A Fase 7 foi implementada para a `v0.6.0`; o hotfix `v0.6.3` acrescenta arranque multi-monitor, layout padrão, flicker sobreposição e remover fence com confirmação. A `v0.6.4` acrescenta Nova fence no menu de contexto do desktop. A `v0.6.5` fecha o skip correcto de z-order, o inbound ao mover fence e o layout das Settings. Gates Windows 11 pendentes. O hotfix do instalador está speccado e **não** entra nesta versão.
 
 ---
 
@@ -426,13 +426,48 @@ Contratos: [spec-hotfix-monitor-arranque.md](spec-hotfix-monitor-arranque.md), [
 
 - [x] `monitorDeviceName` persistido via `MONITORINFOEX`; espera até 8 s no arranque; clamp ao primário se o ecrã falta
 - [x] `LayoutDocument.DefaultTheme` + `DefaultTitleAlignment`; botão Definir como padrão; `PlaceNew` herda aparência
-- [x] `SetWindowPos` de z-order só quando o vizinho mudou (`ZOrderPlacement`); Win+D intacto
+- [x] `SetWindowPos` de z-order só quando a fence não está já acima do host do Desktop (`ZOrderPlacement`); irmãs sobrepostas não se reordenam em idle; Win+D intacto
 - [x] Remover fence: confirmação Yes/No; barreira outbound + posicionamento + 250 ms; overlay nas Settings; inbound bloqueado
 - [x] 231 testes verdes; publish `win-x64` com os dois executáveis
 - [x] Desenvolvedor validou fluxo de remover fence com itens (confirmação + devolução)
 - [ ] gate multi-monitor (3 ecrãs, logon, Iniciar com o Windows)
 - [ ] gate layout padrão de novas fences
 - [ ] gate flicker com fences sobrepostas (idle)
+
+---
+
+## v0.6.4 — Nova fence no menu do desktop
+
+**Status:** implementado e validado automaticamente; gate Windows 11 pendente.
+
+Contrato: [spec-nova-fence-menu-novo.md](spec-nova-fence-menu-novo.md).
+
+- [x] `Directory\Background` + `DesktopBackground\shell\DesktopFencesNewFence` em HKCU; `ShellNew\Command` (sem `NullFile`) + cache Novo; `uninsdeletekey`; zip portable não regista
+- [x] `--create-fence` (flag, `=path`, espaço); `--maintenance=` prevalece; 2.ª instância silenciosa
+- [x] Pipe: `create-fence` chama `TryAddNew()` sem shutdown; `prepare-exit` intacto; lixo → `failed`
+- [x] Stub `.desktopfence` só apagado no Desktop do utilizador ou Público; retry único após `UPDATEDIR`; nunca vai à custódia
+- [x] Arranque a frio: layout vazio → a fence de `EnsureAtLeastOne` é a pedida; já havia fences → `TryAddNew()`
+- [x] Testes automatizados do parser, stub, pipe e regra de arranque a frio (268 verdes: 182 Core + 86 App)
+- [x] Página Finished do setup: faixa informativa a recomendar reinício (não obrigatório; sem `AlwaysRestart`)
+- [ ] gate Windows 11 da spec §11 (menu Novo, app aberto/fechado, perfil vazio, upgrade, desinstalação, pausa)
+
+---
+
+## v0.6.5 — flicker, mover fence, Settings
+
+**Status:** implementado no código; gates Windows 11 anteriores continuam abertos. **Não** inclui o hotfix do instalador.
+
+- [x] `ZOrderPlacement.AlreadyAboveDesktop`: skip se o host do Desktop está abaixo (`GW_HWNDNEXT`, saltando irmãs) e nenhuma banda do Desktop está acima (`GW_HWNDPREV`); `HWND_TOP` deixa de forçar `SetWindowPos`
+- [x] Clique que começa em qualquer fence: `_pressOnFence` via `AnyFenceContainsScreenPoint`; OLE inbound não trata arrastar a fence como drop de ficheiro
+- [x] Settings: Nova fence / Remover na lista; Restaurar esta fence | Restaurar todas e Definir como padrão na linha de aparência
+- [x] Demo `docs/assets/presentation.mp4` no site e ligação no README
+- [x] Spec do instalador escrita (`spec-hotfix-instalador-upgrade-seguro.md`); **não implementada**
+
+---
+
+## Próximo (outra versão, não autorizado)
+
+Contrato: [spec-hotfix-instalador-upgrade-seguro.md](spec-hotfix-instalador-upgrade-seguro.md). Upgrade keep sem `ReleaseCustody`; pipe de saída sem devolver ícones; sem `RaiseException` no wizard; Recovery em vez de beco. **Não implementar** até o SESSION-HEADER marcar o gate **e** o desenvolvedor pedir.
 
 ---
 
@@ -451,7 +486,5 @@ Contratos: [spec-hotfix-monitor-arranque.md](spec-hotfix-monitor-arranque.md), [
 Reavaliar **depois** do ciclo atual (1–7), só com recorte planejado **e** validação explícita. Não são fase, não têm checklist, não entram no ciclo.
 
 **Duplo clique no vazio do desktop cria fence.** Settings continua o caminho confiável. O hook de rato já existe; o risco é criar fence ao clicar ícone ou ao abrir o menu do desktop. Só com análise de necessidade real.
-
-**Novo → Fence no Explorer** (`ShellNew\Command` ou verbo no fundo do desktop). Tem fundamento, complexidade média: mutex exige IPC se o app já estiver aberto; o ShellNew costuma deixar um ficheiro `.ext` no desktop; no Windows 11 o item pode ir só para “Mostrar mais opções”; `IExplorerCommand` é COM/instalador. Reutilizar `FenceHost.TryAddNew()`. Não implementar até estar planejada e validada.
 
 **Packs de tema** nomeados. O vidro (alfa, radius, `AllowsTransparency`) fica travado até haver pedido e ADR.

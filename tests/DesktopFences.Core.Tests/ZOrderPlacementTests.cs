@@ -7,20 +7,34 @@ namespace DesktopFences.Core.Tests;
 public sealed class ZOrderPlacementTests
 {
     [Fact]
-    public void NeedsZOrderMove_IsFalse_WhenNeighborMatches()
+    public void IdleOverlap_DoesNotMove_WhenHostIsBelowAndNothingCoversFromDesktop()
     {
-        ZOrderPlacement.NeedsZOrderMove(42, 42).Should().BeFalse();
+        ZOrderPlacement.NeedsZOrderMove(
+            desktopHostIsBelow: true,
+            desktopBandIsAbove: false).Should().BeFalse();
     }
 
     [Fact]
-    public void NeedsZOrderMove_IsTrue_WhenNeighborDiffers()
+    public void WinD_Moves_WhenDesktopBandIsAbove()
     {
-        ZOrderPlacement.NeedsZOrderMove(42, 99).Should().BeTrue();
+        ZOrderPlacement.NeedsZOrderMove(
+            desktopHostIsBelow: true,
+            desktopBandIsAbove: true).Should().BeTrue();
     }
 
     [Fact]
-    public void NeedsZOrderMove_IsTrue_WhenInsertAfterIsTop()
+    public void BuriedUnderDesktop_Moves_WhenHostIsNotBelow()
     {
-        ZOrderPlacement.NeedsZOrderMove(42, 0).Should().BeTrue();
+        ZOrderPlacement.NeedsZOrderMove(
+            desktopHostIsBelow: false,
+            desktopBandIsAbove: false).Should().BeTrue();
+    }
+
+    [Fact]
+    public void BehindApps_DoesNotMove_HostBelowEvenIfAnAppIsAbove()
+    {
+        ZOrderPlacement.AlreadyAboveDesktop(
+            desktopHostIsBelow: true,
+            desktopBandIsAbove: false).Should().BeTrue();
     }
 }

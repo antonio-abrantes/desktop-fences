@@ -189,6 +189,14 @@ public static class DesktopWindowAnchor
         if (desktopHost == IntPtr.Zero)
             return false;
 
+        // Irmãs fences não contam como “fora do sítio”. O skip antigo
+        // comparava GW_HWNDNEXT (janela de baixo) com insertAfter (a de cima)
+        // e tratava HWND_TOP=0 como mover sempre → SetWindowPos a 1 Hz.
+        if (!DesktopFences.Core.Fences.ZOrderPlacement.NeedsZOrderMove(
+                desktopHostIsBelow: IsDesktopHostBelow(hwnd, desktopHost),
+                desktopBandIsAbove: IsDesktopBandAbove(hwnd)))
+            return true;
+
         // Caminhamos de baixo para cima desde a view do Desktop. Ignoramos os
         // outros hosts WorkerW/Progman e as demais fences; a primeira janela
         // restante é o app sob o qual todo o grupo de fences deve ficar.
@@ -204,11 +212,6 @@ public static class DesktopWindowAnchor
         if (insertAfter == IntPtr.Zero || IsTopMost(insertAfter))
             insertAfter = NativeMethods.HWND_TOP;
 
-        IntPtr currentAbove = NativeMethods.GetWindow(hwnd, NativeMethods.GW_HWNDNEXT);
-        if (!DesktopFences.Core.Fences.ZOrderPlacement.NeedsZOrderMove(
-                currentAbove.ToInt64(), insertAfter.ToInt64()))
-            return true;
-
         return NativeMethods.SetWindowPos(
             hwnd,
             insertAfter,
@@ -217,6 +220,42 @@ public static class DesktopWindowAnchor
             | NativeMethods.SWP_NOSIZE
             | NativeMethods.SWP_NOACTIVATE
             | NativeMethods.SWP_NOOWNERZORDER);
+    }
+
+    private static bool IsDesktopHostBelow(IntPtr hwnd, IntPtr desktopHost)
+    {
+        IntPtr below = NativeMethods.GetWindow(hwnd, NativeMethods.GW_HWNDNEXT);
+        while (below != IntPtr.Zero)
+        {
+            if (below == desktopHost)
+                return true;
+            if (IsFenceWindow(below) || IsDesktopBandWindow(below))
+            {
+                below = NativeMethods.GetWindow(below, NativeMethods.GW_HWNDNEXT);
+                continue;
+            }
+
+            return false;
+        }
+
+        return false;
+    }
+
+    private static bool IsDesktopBandAbove(IntPtr hwnd)
+    {
+        IntPtr above = NativeMethods.GetWindow(hwnd, NativeMethods.GW_HWNDPREV);
+        while (above != IntPtr.Zero)
+        {
+            if (IsFenceWindow(above))
+            {
+                above = NativeMethods.GetWindow(above, NativeMethods.GW_HWNDPREV);
+                continue;
+            }
+
+            return IsDesktopBandWindow(above);
+        }
+
+        return false;
     }
 
     private static IntPtr FindDesktopHost()

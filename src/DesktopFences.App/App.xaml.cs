@@ -2,6 +2,7 @@ using System.Windows;
 using System.Diagnostics;
 using System.IO;
 using DesktopFences.App.Services;
+using DesktopFences.Core.Fences;
 using Application = System.Windows.Application;
 
 namespace DesktopFences.App;
@@ -30,11 +31,22 @@ public partial class App : Application
             return;
         }
 
+        CreateFenceArguments.TryParse(e.Args, out CreateFenceArguments? createFence);
+
         _singleInstance = new Mutex(initiallyOwned: true, @"Local\DesktopFences.SingleInstance", out bool created);
         if (!created)
         {
             _singleInstance.Dispose();
             _singleInstance = null;
+            if (createFence is not null)
+            {
+                DesktopFenceStubCleaner.TryDelete(createFence.StubPath);
+                DesktopFenceStubCleaner.TryDeleteAllOnDesktop();
+                Environment.ExitCode = MaintenancePipeClient.RequestCreateFence(TimeSpan.FromSeconds(10)) ? 0 : 1;
+                Shutdown(Environment.ExitCode);
+                return;
+            }
+
             System.Windows.MessageBox.Show(
                 "O DesktopFences já está a correr (ícone na bandeja). Fecha-o aí antes de abrir outra vez.",
                 "DesktopFences",
@@ -44,12 +56,23 @@ public partial class App : Application
             return;
         }
 
+        if (createFence is not null)
+        {
+            DesktopFenceStubCleaner.TryDelete(createFence.StubPath);
+            DesktopFenceStubCleaner.TryDeleteAllOnDesktop();
+        }
+
         StartupRegistration.RefreshPathIfEnabled();
 
         _host = new FenceHost();
         try
         {
-            _host.Start();
+            int existingFenceCount = _host.Start();
+            if (createFence is not null
+                && CreateFenceOnColdStart.ShouldAddAnother(existingFenceCount))
+            {
+                _host.TryAddNew();
+            }
         }
         catch (Exception ex)
         {
@@ -74,6 +97,7 @@ public partial class App : Application
         _maintenancePipe = new MaintenancePipeServer(
             Dispatcher,
             () => _host?.PrepareExit() == true,
+            () => _host?.TryAddNew() == true,
             () => Shutdown());
     }
 

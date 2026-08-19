@@ -58,11 +58,88 @@ public sealed class InstallerMaintenanceArgumentsTests
 
     [Theory]
     [InlineData("prepare-exit", true)]
+    [InlineData("create-fence", false)]
     [InlineData("remove", false)]
     [InlineData("prepare-exit ", false)]
     [InlineData(null, false)]
-    public void LocalPipeAcceptsOnlyTheNonDestructiveExitCommand(string? command, bool expected)
+    public void LocalPipeTreatsOnlyPrepareExitAsDestructiveShutdown(string? command, bool expected)
     {
-        MaintenanceProtocol.IsPrepareExitCommand(command).Should().Be(expected);
+        MaintenanceProtocol.IsDestructiveShutdownCommand(command).Should().Be(expected);
+    }
+
+    [Fact]
+    public void CreateFenceCommand_SucceedsWithoutShutdown()
+    {
+        bool added = false;
+        MaintenanceDispatch result = MaintenanceProtocol.Dispatch(
+            "create-fence",
+            prepareExit: () => true,
+            createFence: () =>
+            {
+                added = true;
+                return true;
+            });
+
+        added.Should().BeTrue();
+        result.Success.Should().BeTrue();
+        result.Shutdown.Should().BeFalse();
+    }
+
+    [Fact]
+    public void CreateFenceCommand_FailedCallback_DoesNotShutdown()
+    {
+        MaintenanceDispatch result = MaintenanceProtocol.Dispatch(
+            "create-fence",
+            prepareExit: () => true,
+            createFence: () => false);
+
+        result.Success.Should().BeFalse();
+        result.Shutdown.Should().BeFalse();
+    }
+
+    [Fact]
+    public void PrepareExitCommand_Failed_DoesNotShutdown()
+    {
+        MaintenanceDispatch result = MaintenanceProtocol.Dispatch(
+            "prepare-exit",
+            prepareExit: () => false,
+            createFence: () => true);
+
+        result.Success.Should().BeFalse();
+        result.Shutdown.Should().BeFalse();
+    }
+
+    [Fact]
+    public void PrepareExitCommand_StillShutsDownOnSuccess()
+    {
+        bool prepared = false;
+        MaintenanceDispatch result = MaintenanceProtocol.Dispatch(
+            "prepare-exit",
+            prepareExit: () =>
+            {
+                prepared = true;
+                return true;
+            },
+            createFence: () => throw new InvalidOperationException("create-fence não deve correr"));
+
+        prepared.Should().BeTrue();
+        result.Success.Should().BeTrue();
+        result.Shutdown.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("unknown")]
+    [InlineData("rm -rf")]
+    [InlineData("create-fence extra")]
+    [InlineData("CREATE-FENCE")]
+    public void UnknownCommands_FailWithoutShutdown(string command)
+    {
+        MaintenanceDispatch result = MaintenanceProtocol.Dispatch(
+            command,
+            prepareExit: () => true,
+            createFence: () => true);
+
+        result.Success.Should().BeFalse();
+        result.Shutdown.Should().BeFalse();
     }
 }

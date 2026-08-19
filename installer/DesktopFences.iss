@@ -1,5 +1,5 @@
 #ifndef MyVersion
-  #define MyVersion "0.6.3"
+  #define MyVersion "0.6.5"
 #endif
 #ifndef MyArch
   #define MyArch "win-x64"
@@ -63,6 +63,10 @@ portuguese.UninstallFailed=Não foi possível devolver todos os itens ao Desktop
 portuguese.DowngradeBlocked=Há uma versão mais nova do DesktopFences instalada. O downgrade foi bloqueado para proteger os dados.
 portuguese.DesktopIcon=Criar um atalho na Área de Trabalho
 portuguese.LaunchApp=Abrir o DesktopFences
+portuguese.NewFenceMenu=Nova fence
+portuguese.FinishedHeadingHint=Instalação concluída — um passo recomendado
+portuguese.RestartHint=Recomendado: reinicie o Windows depois de clicar em Concluir.%n%nNão é obrigatório agora — pode usar o computador na mesma. Se Novo → Fence ainda não aparecer (botão direito no Desktop vazio → Mostrar mais opções → Novo), o item aparece depois desse reinício.
+portuguese.FinishedContinue=Pode abrir o DesktopFences já; o reinício só atualiza o menu Novo do Explorer.
 english.DataPageTitle=Existing configuration
 english.DataPageDescription=Choose how this installation should handle the configuration already found.
 english.DataPageSubCaption=If fences contain items, they will be safely returned to the Desktop before the update.
@@ -75,6 +79,10 @@ english.UninstallFailed=Not every item could be returned safely to the Desktop. 
 english.DowngradeBlocked=A newer DesktopFences version is installed. Downgrade was blocked to protect your data.
 english.DesktopIcon=Create a Desktop shortcut
 english.LaunchApp=Open DesktopFences
+english.NewFenceMenu=New fence
+english.FinishedHeadingHint=Setup complete — one recommended step
+english.RestartHint=Recommended: restart Windows after you click Finish.%n%nIt is not required now — you can keep using the computer. If New → Fence is not on the desktop menu yet (right-click empty desktop → Show more options → New), it will appear after that restart.
+english.FinishedContinue=You can open DesktopFences now; the restart only refreshes Explorer's New menu.
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:DesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
@@ -90,6 +98,21 @@ Name: "{autodesktop}\DesktopFences"; Filename: "{app}\DesktopFences.exe"; Tasks:
 [Registry]
 Root: HKCU; Subkey: "Software\DesktopFences"; ValueType: string; ValueName: "InstallVersion"; ValueData: "{#MyVersion}"
 Root: HKCU; Subkey: "Software\DesktopFences"; ValueType: string; ValueName: "InstallArchitecture"; ValueData: "{#MyArch}"
+Root: HKCU; Subkey: "Software\Classes\Directory\Background\shell\DesktopFencesNewFence"; ValueType: string; ValueName: ""; ValueData: "{cm:NewFenceMenu}"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Directory\Background\shell\DesktopFencesNewFence"; ValueType: string; ValueName: "MUIVerb"; ValueData: "{cm:NewFenceMenu}"
+Root: HKCU; Subkey: "Software\Classes\Directory\Background\shell\DesktopFencesNewFence"; ValueType: string; ValueName: "Icon"; ValueData: "{app}\{#MyAppExeName},0"
+Root: HKCU; Subkey: "Software\Classes\Directory\Background\shell\DesktopFencesNewFence\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" --create-fence"
+Root: HKCU; Subkey: "Software\Classes\DesktopBackground\shell\DesktopFencesNewFence"; ValueType: string; ValueName: ""; ValueData: "{cm:NewFenceMenu}"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\DesktopBackground\shell\DesktopFencesNewFence"; ValueType: string; ValueName: "MUIVerb"; ValueData: "{cm:NewFenceMenu}"
+Root: HKCU; Subkey: "Software\Classes\DesktopBackground\shell\DesktopFencesNewFence"; ValueType: string; ValueName: "Icon"; ValueData: "{app}\{#MyAppExeName},0"
+Root: HKCU; Subkey: "Software\Classes\DesktopBackground\shell\DesktopFencesNewFence"; ValueType: string; ValueName: "Position"; ValueData: "Bottom"
+Root: HKCU; Subkey: "Software\Classes\DesktopBackground\shell\DesktopFencesNewFence\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" --create-fence"
+Root: HKCU; Subkey: "Software\Classes\.desktopfence"; ValueType: string; ValueName: ""; ValueData: "DesktopFences.NewFence"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.desktopfence\ShellNew"; ValueType: string; ValueName: "Command"; ValueData: """{app}\{#MyAppExeName}"" --create-fence"
+Root: HKCU; Subkey: "Software\Classes\.desktopfence\ShellNew"; ValueType: string; ValueName: "ItemName"; ValueData: "Fence"
+Root: HKCU; Subkey: "Software\Classes\.desktopfence\ShellNew"; ValueType: string; ValueName: "IconPath"; ValueData: "{app}\{#MyAppExeName},0"
+Root: HKCU; Subkey: "Software\Classes\DesktopFences.NewFence"; ValueType: string; ValueName: ""; ValueData: "Fence"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\DesktopFences.NewFence\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName},0"
 
 [Run]
 Filename: "{app}\DesktopFences.exe"; Description: "{cm:LaunchApp}"; Flags: nowait postinstall skipifsilent
@@ -98,6 +121,8 @@ Filename: "{app}\DesktopFences.exe"; Description: "{cm:LaunchApp}"; Flags: nowai
 var
   DataPage: TInputOptionWizardPage;
   UninstallMode: String;
+  RestartBanner: TPanel;
+  RestartHint: TNewStaticText;
 
 function HasExistingData: Boolean;
 begin
@@ -184,6 +209,54 @@ begin
     DataPage.Add(ExpandConstant('{cm:ResetData}'));
     DataPage.SelectedValueIndex := 0;
   end;
+
+  RestartBanner := TPanel.Create(WizardForm);
+  RestartBanner.Parent := WizardForm.FinishedPage;
+  RestartBanner.BevelOuter := bvNone;
+  RestartBanner.ParentBackground := False;
+  RestartBanner.Color := $00C8F4FF;
+  RestartBanner.Visible := False;
+
+  RestartHint := TNewStaticText.Create(WizardForm);
+  RestartHint.Parent := RestartBanner;
+  RestartHint.AutoSize := False;
+  RestartHint.WordWrap := True;
+  RestartHint.Font.Style := [fsBold];
+  RestartHint.Font.Size := WizardForm.FinishedLabel.Font.Size + 1;
+  RestartHint.Font.Color := $0014334C;
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+var
+  ContentLeft: Integer;
+  ContentWidth: Integer;
+  BannerTop: Integer;
+begin
+  if CurPageID <> wpFinished then
+    Exit;
+
+  WizardForm.FinishedHeadingLabel.Caption := ExpandConstant('{cm:FinishedHeadingHint}');
+
+  ContentLeft := WizardForm.FinishedLabel.Left;
+  ContentWidth := WizardForm.FinishedLabel.Width;
+  BannerTop := WizardForm.FinishedHeadingLabel.Top + WizardForm.FinishedHeadingLabel.Height + ScaleY(12);
+
+  RestartBanner.Left := ContentLeft;
+  RestartBanner.Width := ContentWidth;
+  RestartBanner.Top := BannerTop;
+  RestartBanner.Height := ScaleY(108);
+
+  RestartHint.Caption := ExpandConstant('{cm:RestartHint}');
+  RestartHint.Left := ScaleX(12);
+  RestartHint.Top := ScaleY(10);
+  RestartHint.Width := RestartBanner.Width - ScaleX(24);
+  RestartHint.Height := RestartBanner.Height - ScaleY(20);
+
+  RestartBanner.Visible := True;
+
+  WizardForm.FinishedLabel.Caption := ExpandConstant('{cm:FinishedContinue}');
+  WizardForm.FinishedLabel.Top := RestartBanner.Top + RestartBanner.Height + ScaleY(10);
+  WizardForm.RunList.Top := WizardForm.FinishedLabel.Top + WizardForm.FinishedLabel.Height + ScaleY(8);
 end;
 
 function RunMaintenance(const Executable, Mode: String; IncludeLanguage: Boolean): Boolean;

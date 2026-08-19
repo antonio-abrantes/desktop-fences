@@ -25,10 +25,12 @@
   <data name="NewFence" xml:space="preserve"><value>Nova fence</value></data>
   <data name="Remove" xml:space="preserve"><value>Remover</value></data>
   <data name="RemoveLastTooltip" xml:space="preserve"><value>A última fence não pode ser removida</value></data>
-  <data name="ResetTheme" xml:space="preserve"><value>Restaurar padrão</value></data>
-  <data name="ResetThemeTooltip" xml:space="preserve"><value>Volta às cores do MVP 1. Se “aplicar a todas” estiver marcado, vale para todas.</value></data>
+  <data name="ResetTheme" xml:space="preserve"><value>Restaurar esta fence</value></data>
+  <data name="ResetThemeAll" xml:space="preserve"><value>Restaurar todas</value></data>
+  <data name="ResetThemeTooltip" xml:space="preserve"><value>Volta às cores originais só nesta fence. Não muda o visual das fences novas.</value></data>
+  <data name="ResetThemeAllTooltip" xml:space="preserve"><value>Volta às cores originais em todas as fences. Não muda o visual das fences novas.</value></data>
   <data name="SetDefaultLayout" xml:space="preserve"><value>Definir como padrão</value></data>
-  <data name="SetDefaultLayoutTooltip" xml:space="preserve"><value>Novas fences nascem com estas cores e este alinhamento. As que já existem não mudam.</value></data>
+  <data name="SetDefaultLayoutTooltip" xml:space="preserve"><value>Fences novas nascem com estas cores e este alinhamento. As que já existem não mudam.</value></data>
   <data name="ReturningOneItemToDesktop" xml:space="preserve"><value>A devolver 1 item ao Desktop…</value></data>
   <data name="ReturningItemsToDesktop" xml:space="preserve"><value>A devolver {0} itens ao Desktop…</value></data>
   <data name="RemoveFenceConfirmTitle" xml:space="preserve"><value>Remover fence</value></data>

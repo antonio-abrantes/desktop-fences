@@ -350,7 +350,7 @@ public partial class FenceWindow : Window
     {
         _host?.NotifyScreenLeftDown();
         _dropConsumed = false;
-        _pressOnFence = ContainsScreenPoint(x, y);
+        _pressOnFence = _host?.AnyFenceContainsScreenPoint(x, y) ?? ContainsScreenPoint(x, y);
         _downX = x;
         _downY = y;
         _pressIcons = null;
@@ -486,7 +486,7 @@ public partial class FenceWindow : Window
 
     private void OnOleDragEntered()
     {
-        if (_draggingItems is { Count: > 0 } || ShouldIgnoreDesktopInbound())
+        if (_pressOnFence || _draggingItems is { Count: > 0 } || ShouldIgnoreDesktopInbound())
             return;
         ShowInboundGhost();
     }
@@ -583,7 +583,7 @@ public partial class FenceWindow : Window
         return new System.Drawing.Rectangle((int)Math.Round(topLeft.X), (int)Math.Round(topLeft.Y), width, height);
     }
 
-    private bool ContainsScreenPoint(int x, int y)
+    internal bool ContainsScreenPoint(int x, int y)
     {
         if (!IsVisible || WindowState == WindowState.Minimized)
             return false;

@@ -25,6 +25,8 @@ internal static class InstallerMaintenance
                 case InstallerMaintenanceMode.Finalize:
                     data.SetLanguage(arguments.Language);
                     StartupRegistration.RefreshPathIfEnabled();
+                    ExplorerNewMenu.RegisterFence();
+                    DesktopFenceStubCleaner.TryDeleteAllOnDesktop();
                     break;
                 case InstallerMaintenanceMode.Keep:
                     data.SetLanguage(arguments.Language);
@@ -34,10 +36,12 @@ internal static class InstallerMaintenance
                     break;
                 case InstallerMaintenanceMode.UninstallKeep:
                     StartupRegistration.RemoveForUninstall();
+                    ExplorerNewMenu.UnregisterFence();
                     break;
                 case InstallerMaintenanceMode.Remove:
                     StartupRegistration.RemoveForUninstall();
                     data.RemoveAfterRelease();
+                    ExplorerNewMenu.UnregisterFence();
                     break;
             }
 

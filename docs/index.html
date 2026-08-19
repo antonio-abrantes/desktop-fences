@@ -433,8 +433,20 @@
       white-space: nowrap;
     }
 
-    .soon {
-      opacity: 0.85;
+    .demo-frame {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--stroke);
+      background: #000;
+      overflow: hidden;
+    }
+
+    .demo-frame video {
+      display: block;
+      width: 100%;
+      max-height: 560px;
+      object-fit: contain;
+      background: #000;
     }
 
     footer {
@@ -470,6 +482,7 @@
       DesktopFences
     </a>
     <nav>
+      <a href="#demo">Demo</a>
       <a href="#mvp">MVP 3</a>
       <a href="#safety">Safety</a>
       <a href="https://github.com/antonio-abrantes/desktop-fences/releases">Download</a>
@@ -480,11 +493,12 @@
   <main id="top">
     <section class="hero">
       <div>
-        <div class="badge"><i></i> MVP 3 · v0.6.3</div>
+        <div class="badge"><i></i> MVP 3 · v0.6.5</div>
         <h1>The real desktop icons go in the glass. Not a copy.</h1>
         <p class="lede">Native Windows 11 fences with safer custody. Your icons return on drag-out, pause, or exit — with their positions remembered.</p>
         <div class="cta">
           <a class="btn btn-primary" href="https://github.com/antonio-abrantes/desktop-fences/releases">Download</a>
+          <a class="btn btn-ghost" href="#demo">Watch demo</a>
           <a class="btn btn-ghost" href="https://github.com/antonio-abrantes/desktop-fences">GitHub</a>
         </div>
         <p class="note">Portable zip with independent recovery · win-x64 / win-arm64 · C# / .NET 8 / WPF · no admin required.</p>
@@ -518,6 +532,17 @@
       </div>
     </section>
 
+    <section id="demo">
+      <h2>In action</h2>
+      <p class="section-lede">A short walkthrough of DesktopFences on Windows 11: real icons in glass, drag, and fences on the desktop.</p>
+      <div class="demo-frame">
+        <video controls playsinline preload="metadata">
+          <source src="assets/presentation.mp4" type="video/mp4" />
+          Your browser cannot play this video. <a href="assets/presentation.mp4">Download the MP4</a>.
+        </video>
+      </div>
+    </section>
+
     <section id="safety">
       <div class="split">
         <article class="card">
@@ -544,12 +569,14 @@
         <div class="feat"><b>Multi-monitor startup</b><span>Fences remember their display. If a screen is late at logon, they wait on the primary and move back when the monitor appears.</span></div>
         <div class="feat"><b>Default look for new fences</b><span>Set theme and title alignment once in Settings; every new fence inherits that appearance.</span></div>
         <div class="feat"><b>Safer remove</b><span>Removing a fence with items asks for confirmation, shows progress, and waits for icons to land on the desktop before closing.</span></div>
+        <div class="feat"><b>New fence from the desktop</b><span>Installed setups add New fence to the desktop context menu and New → Fence. One click creates a fence with the default look; no stub file. On Windows 11 the classic item may live under Show more options.</span></div>
+        <div class="feat"><b>Steady overlapping glass</b><span>Idle z-order no longer reshuffles stacked fences every second, so overlapping panels stop blinking. Dragging a fence over another is not treated as a file drop.</span></div>
       </div>
     </section>
 
     <section id="next">
       <h2>Next</h2>
-      <p class="section-lede">Distribution is in place. Remaining work is manual validation on Windows 11 and polish outside this cycle.</p>
+      <p class="section-lede">Safer in-place upgrades when the app is already running come next. Theme packs and double-click to create a fence stay out of this cycle.</p>
       <div class="roadmap">
         <div class="step">
           <div class="n">Setup</div>
@@ -558,6 +585,14 @@
             <p>Per-user x64/ARM64 setup, safe updates, language choice, and uninstall with keep-or-remove settings.</p>
           </div>
           <span class="tag">shipped · v0.6.0</span>
+        </div>
+        <div class="step">
+          <div class="n">Upgrade</div>
+          <div>
+            <h3>Safer updates</h3>
+            <p>Close the running app without dumping icons, retry if busy, and offer Recovery instead of trapping the wizard.</p>
+          </div>
+          <span class="tag">next</span>
         </div>
         <div class="step soon">
           <div class="n">Polish</div>

@@ -2,7 +2,7 @@
 
 > Recorte: duas fences layered WPF a sobrepor-se “piscam” no vidro. Causa provável no código actual: `SetWindowPos` de z-order em **todas** as fences, **todas as segundos**, mesmo quando a ordem já está correcta.
 >
-> **Status:** implementado no código (`v0.6.3`, skip de `SetWindowPos` redundante); gate Windows 11 pendente.
+> **Status:** implementado no código (`v0.6.3`; skip corrigido na `v0.6.5`: host do Desktop abaixo / banda do Desktop acima); gate Windows 11 pendente.
 >
 > Fora: tirar o timer de 1 s, `HWND_TOPMOST`, `GWL_HWNDPARENT` no Progman, debounce de Win+D, CacheMode/BitmapCache em todas as fences.
 
@@ -26,13 +26,19 @@ Win+D / “Mostrar ambiente de trabalho” **precisa** deste reancoramento quand
 
 ## 2. Decisão (impacto baixo)
 
-Em `TryPlaceAboveDesktop`, depois de calcular `insertAfter`:
+Em `TryPlaceAboveDesktop`, **não** comparar o vizinho imediato com `insertAfter`. Essa regra falhava no Windows real:
 
-1. Ler o vizinho actual: `GetWindow(hwnd, GW_HWNDNEXT)` (a janela imediatamente **abaixo** no Z-order; constante `GW_HWNDNEXT = 2`, já há `GetWindow` + `GW_HWNDPREV`).
-2. Se esse vizinho **é** o `insertAfter` pretendido (e a fence não está iconic/cloaked/invisível — esses casos já passam por `ShowWindow` antes), **return true sem `SetWindowPos`**.
-3. Caso contrário, `SetWindowPos` como hoje.
+- `SetWindowPos(hwnd, insertAfter)` coloca a fence **abaixo** de `insertAfter`; o vizinho de cima é `GW_HWNDPREV`, não `GW_HWNDNEXT`.
+- `HWND_TOP` no Win32 é `0`. A regra “0 = mover sempre” fazia `SetWindowPos` em idle no caso mais comum (só fences acima do Desktop).
+- Todas as fences visavam o **mesmo** `insertAfter` (a primeira janela que não é fence). A 1 Hz cada uma saltava para cima das irmãs → o DWM recompunha a sobreposição sem parar.
 
-Caminho Win+D: se o Explorer escondeu/reordenou, o vizinho **não** bate certo → `SetWindowPos` corre. Sem debounce, sem atraso.
+Skip correcto, sem reordenar irmãs:
+
+1. Caminhar `GW_HWNDNEXT` (para baixo), saltando outras fences e `Progman`/`WorkerW`. Se o host actual do Desktop (`SHELLDLL_DefView`) aparecer **antes** de um app normal, a fence já está acima do wallpaper.
+2. Caminhar `GW_HWNDPREV` (para cima), saltando outras fences. Se a primeira janela não-fence for `Progman`/`WorkerW`, o Win+D pôs o Desktop por cima → `SetWindowPos`.
+3. Só então calcular `insertAfter` e chamar `SetWindowPos`. Irmãs acima ou abaixo **não** obrigam movimento.
+
+Caminho Win+D: banda do Desktop acima da fence → `SetWindowPos` corre. Sem debounce, sem atraso.
 
 `DwmGetWindowAttribute(CLOAKED)` e `IsIconic` no `KeepOnDesktop` mantêm-se: são baratos e não invalidam composição.
 
@@ -59,7 +65,7 @@ Se, no Windows 11 real, as piscadelas **continuarem** com este skip, a causa é 
 
 Native/App.Tests (hwnds reais são frágeis em CI): extrair a regra pura se fizer sentido:
 
-- `NeedsZOrderMove(currentBelow, desiredInsertAfter)` → false quando iguais e não-zero; true quando diferem.
+- `NeedsZOrderMove(hostBelow, bandAbove)` → false só com host abaixo e sem banda do Desktop por cima; true no Win+D e quando a fence está por baixo do wallpaper.
 
 Gate Windows 11:
 

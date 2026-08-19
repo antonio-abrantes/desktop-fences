@@ -57,7 +57,7 @@ public sealed class FenceHost
     internal DesktopSnapshot CaptureDesktop(IDesktopSnapshotSource source) =>
         _custody.CaptureDesktop(source);
 
-    public void Start()
+    public int Start()
     {
         LayoutDocument doc = _store.LoadOrEmpty();
         // O estado que o usuário vê no Desktop é capturado antes de qualquer
@@ -76,6 +76,7 @@ public sealed class FenceHost
         _defaultTitleAlignment = doc.DefaultTitleAlignment;
         _defaultTheme = doc.DefaultTheme?.Normalized();
         UiLocale.Apply(UiLanguage);
+        int existingCount = doc.Fences.Count;
         FenceLayoutRules.EnsureAtLeastOne(
             doc.Fences,
             Loc.T("DefaultFenceTitle"),
@@ -91,6 +92,7 @@ public sealed class FenceHost
         _explorerWatch = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _explorerWatch.Tick += OnExplorerWatch;
         _explorerWatch.Start();
+        return existingCount;
     }
 
     private void SaveRecoverySnapshot(LayoutDocument document)
@@ -380,6 +382,17 @@ public sealed class FenceHost
         ClearDropHighlights();
     }
 
+    internal bool AnyFenceContainsScreenPoint(int x, int y)
+    {
+        foreach (FenceWindow window in _windows)
+        {
+            if (window.ContainsScreenPoint(x, y))
+                return true;
+        }
+
+        return false;
+    }
+
     internal void BeginFenceItemDrag(FenceWindow source)
     {
         _itemDragSource = source;
@@ -502,6 +515,9 @@ public sealed class FenceHost
     {
         if (_returningItemsToDesktop > 0)
             return false;
+        candidates = candidates
+            .Where(item => !DesktopFenceStubRules.ForbidsCustody(item.Name, item.Path, item.OriginalPath))
+            .ToList();
         if (candidates.Count == 0)
             return true;
         IReadOnlyList<DesktopCustodyPlan> plans;

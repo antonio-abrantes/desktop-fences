@@ -70,8 +70,7 @@ public partial class SettingsWindow : Window
         BtnNewFence.Content = Loc.T("NewFence");
         BtnRemove.Content = Loc.T("Remove");
         BtnRemove.ToolTip = Loc.T("RemoveLastTooltip");
-        BtnResetTheme.Content = Loc.T("ResetTheme");
-        BtnResetTheme.ToolTip = Loc.T("ResetThemeTooltip");
+        ApplyResetThemeButtonStrings();
         BtnSetDefaultLayout.Content = Loc.T("SetDefaultLayout");
         BtnSetDefaultLayout.ToolTip = Loc.T("SetDefaultLayoutTooltip");
         StartWithWindows.Content = Loc.T("StartWithWindows");
@@ -250,6 +249,13 @@ public partial class SettingsWindow : Window
 
     private bool ApplyToAll => ApplyAllCheck.IsChecked == true;
 
+    private void ApplyResetThemeButtonStrings()
+    {
+        bool all = ApplyToAll;
+        BtnResetTheme.Content = Loc.T(all ? "ResetThemeAll" : "ResetTheme");
+        BtnResetTheme.ToolTip = Loc.T(all ? "ResetThemeAllTooltip" : "ResetThemeTooltip");
+    }
+
     private void ResetTheme_Click(object sender, RoutedEventArgs e)
     {
         if (ApplyToAll)
@@ -286,6 +292,7 @@ public partial class SettingsWindow : Window
 
     private void ApplyAllCheck_Changed(object sender, RoutedEventArgs e)
     {
+        ApplyResetThemeButtonStrings();
         if (_syncing || FenceList.SelectedItem is not FenceRow row)
             return;
         if (!ApplyToAll)
