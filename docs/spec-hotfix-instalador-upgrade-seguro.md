@@ -2,7 +2,7 @@
 
 > Recorte: o setup e o desinstalador **nunca** deixam o utilizador num beco sem saída, **nunca** apagam layout/store/Recovery porque uma manutenção falhou, e o upgrade com “usar configurações existentes” **não** despeja os ícones no Desktop só para trocar o `.exe`. Encerrar a instância em execução é pedido pelo pipe, com UI e retry — não `taskkill` como caminho principal.
 >
-> **Status:** pronta; **não autorizada**. Não implementar até o desenvolvedor marcar o gate no `SESSION-HEADER.md` **e** pedir explicitamente esta etapa. O polish de flicker/Settings da `v0.6.5` já fechou; esta spec é a **próxima versão** (tag nova, não `v0.6.5`).
+> **Status:** implementado no código (`v0.6.6`); caminho keep com app aberto validado no Windows 11. Restante da §12 pendente.
 >
 > **Prioridade absoluta:** não perder dados. Tudo o resto (UX, retry, Recovery, logs) é secundário. Se uma escolha puder apagar `layout.json`, o store ou o Recovery para “desbloquear” o setup, essa escolha está **fora**.
 
@@ -250,8 +250,8 @@ Automatizado:
 
 Gate humano (obrigatório; o incidente foi isto):
 
-- [ ] Upgrade com app **aberto**, “usar configurações”: pede saída, **não** despeja ícones, fences iguais depois de abrir o app novo
-- [ ] Recusar fechar o app → setup cancela; dados e fences intactos; retry depois de fechar pela bandeja funciona
+- [x] Upgrade com app **aberto**, “usar configurações”: pede saída, **não** despeja ícones, fences iguais depois de abrir o app novo
+- [x] Recusar fechar o app → setup cancela; dados e fences intactos; retry depois de fechar (bandeja / no aviso) funciona
 - [ ] `reset`: devolve itens, arquivo em Backups, fences novas
 - [ ] Desinstalar com falha simulada de devolução: **sem** runtime error Inno; Recovery e layout presentes; `{app}` não apagado
 - [ ] `CustodyBlocked` (journal pendente de teste): setup oferece Recovery; recusar Recovery não apaga nada; arquivo em Backups se o copy correu

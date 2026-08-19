@@ -2,7 +2,7 @@
 
 Mapa curto do ciclo. O detalhe operacional está em [`plano-implementacao.md`](plano-implementacao.md). Cada fase pede autorização no `SESSION-HEADER.md` **e** pedido explícito.
 
-**MVP 2** (`v0.3.1`) = Fases 1 + 2. As Fases 3–6 e o hotfix `v0.5.1` estão fechados. A Fase 7 está implementada para a `v0.6.0`, com gate manual pendente. O hotfix `v0.6.3` fecha arranque multi-monitor, layout padrão, flicker e remover fence; gates Windows 11 pendentes. A `v0.6.4` acrescenta Novo → Fence no Explorer (instalação); gate Windows 11 pendente. A `v0.6.5` corrige flicker em sobreposição (skip de z-order) e inbound ao mover fence. O hotfix do instalador está speccado para a versão seguinte.
+**MVP 2** (`v0.3.1`) = Fases 1 + 2. As Fases 3–6 e o hotfix `v0.5.1` estão fechados. A Fase 7 está implementada para a `v0.6.0`, com gate manual pendente. O hotfix `v0.6.3` fecha arranque multi-monitor, layout padrão, flicker e remover fence; gates Windows 11 pendentes. A `v0.6.4` acrescenta Novo → Fence no Explorer (instalação); gate Windows 11 pendente. A `v0.6.5` corrige flicker em sobreposição (skip de z-order) e inbound ao mover fence. A `v0.6.6` corrige upgrade/desinstalação com o app aberto.
 
 ---
 

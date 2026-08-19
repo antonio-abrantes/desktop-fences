@@ -12,7 +12,7 @@ App Windows 11 que agrupa ícones **reais** da área de trabalho em fences retan
 | `DesktopFences.Native` | SysListView32, COM Shell, OLE drop, DWM, âncora | Sim, e só aqui |
 | `DesktopFences.App` | XAML, fence, bandeja, ghost | Só via serviços Native |
 
-**Estado:** Fases 1–6 e hotfix `v0.5.1` fechados. A Fase 7 está implementada para a `v0.6.0`, com instaladores por usuário x64/ARM64, manutenção segura e desinstalação; gate manual no Windows 11 pendente. O hotfix `v0.6.3` acrescenta arranque multi-monitor, layout padrão, flicker em sobreposição e remover fence com confirmação. A `v0.6.4` acrescenta **Nova fence** no menu do desktop (instalação). A `v0.6.5` corrige o skip de z-order e o inbound ao mover fence. A spec de upgrade seguro do instalador está documentada e **fora** desta versão. Duplo clique no desktop, packs de tema e empurrar vizinhos estão **fora** deste ciclo. Detalhe: [plano-implementacao.md](plano-implementacao.md).
+**Estado:** Fases 1–6 e hotfix `v0.5.1` fechados. A Fase 7 está implementada para a `v0.6.0`, com instaladores por usuário x64/ARM64, manutenção segura e desinstalação; gate manual no Windows 11 pendente. O hotfix `v0.6.3` acrescenta arranque multi-monitor, layout padrão, flicker em sobreposição e remover fence com confirmação. A `v0.6.4` acrescenta **Nova fence** no menu do desktop (instalação). A `v0.6.5` corrige o skip de z-order e o inbound ao mover fence. A `v0.6.6` corrige upgrade keep (sem libertar custódia) e o desinstalador sem runtime error. Duplo clique no desktop, packs de tema e empurrar vizinhos estão **fora** deste ciclo. Detalhe: [plano-implementacao.md](plano-implementacao.md).
 
 ---
 
@@ -139,7 +139,7 @@ Coordenadas da fence em **DIPs** WPF; posições de ícone em **pixels** do List
 - Hotfix `v0.6.3`: arranque multi-monitor, layout padrão de novas fences, flicker em sobreposição e remover fence com confirmação + barreira; gates Windows 11 pendentes. Specs em `docs/spec-hotfix-*.md` e `docs/spec-layout-padrao-nova-fence.md`.
 - `v0.6.4`: **Nova fence** no menu de contexto do desktop (`Directory\Background`, `DesktopBackground\shell`, `ShellNew\Command` sem `NullFile`, `--create-fence`). Gate Windows 11 pendente. Contrato em [spec-nova-fence-menu-novo.md](spec-nova-fence-menu-novo.md).
 - `v0.6.5`: skip de `SetWindowPos` só com host do Desktop abaixo e sem banda do Desktop acima; clique que começa numa fence não dispara inbound; layout das Configurações. Contrato do skip em [spec-hotfix-flicker-sobreposição.md](spec-hotfix-flicker-sobreposição.md).
-- Próxima versão (não nesta tag): [spec-hotfix-instalador-upgrade-seguro.md](spec-hotfix-instalador-upgrade-seguro.md) — pronta, não autorizada.
+- `v0.6.6`: upgrade com “usar configurações” não devolve ícones; pipe `prepare-exit-upgrade`; falhas `InstanceBusy` vs `CustodyBlocked`; uninstall sem `RaiseException`. Contrato em [spec-hotfix-instalador-upgrade-seguro.md](spec-hotfix-instalador-upgrade-seguro.md).
 - **Fora do ciclo:** empurrar a fence de baixo ao expandir; duplo clique no vazio do desktop cria fence; packs de tema.
 - **Stand-by da auditoria:** itens externos ao Desktop, OneDrive/redirected Desktop, progresso/cancelamento, ampliação geral de `IFileOperation` e demais melhorias não selecionadas para a Fase 6.
 

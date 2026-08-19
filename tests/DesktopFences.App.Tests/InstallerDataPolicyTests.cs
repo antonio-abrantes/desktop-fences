@@ -72,6 +72,39 @@ public sealed class InstallerDataPolicyTests : IDisposable
     }
 
     [Fact]
+    public void SetLanguageIfCurrentSchema_SkipsLegacyLayoutWithoutThrowing()
+    {
+        InstallerDataPaths paths = Paths();
+        Directory.CreateDirectory(paths.RoamingRoot);
+        const string original = """{"version":1,"revision":1,"fences":[]}""";
+        File.WriteAllText(paths.LayoutPath, original);
+
+        new InstallerDataPolicy(paths).Invoking(p => p.SetLanguageIfCurrentSchema("en"))
+            .Should().NotThrow();
+
+        File.ReadAllText(paths.LayoutPath).Should().Be(original);
+    }
+
+    [Fact]
+    public void TryArchiveWithoutDelete_LeavesSourceIntact()
+    {
+        InstallerDataPaths paths = Paths();
+        Directory.CreateDirectory(paths.RoamingRoot);
+        Directory.CreateDirectory(paths.LocalRoot);
+        File.WriteAllText(Path.Combine(paths.RoamingRoot, "layout.json"), "keep-me");
+        File.WriteAllText(Path.Combine(paths.LocalRoot, "item.bin"), "payload");
+
+        string? archive = new InstallerDataPolicy(paths).TryArchiveWithoutDelete();
+
+        archive.Should().NotBeNullOrWhiteSpace();
+        File.ReadAllText(Path.Combine(paths.RoamingRoot, "layout.json")).Should().Be("keep-me");
+        File.ReadAllText(Path.Combine(paths.LocalRoot, "item.bin")).Should().Be("payload");
+        File.ReadAllText(Path.Combine(archive!, "Roaming", "layout.json")).Should().Be("keep-me");
+        File.ReadAllText(Path.Combine(archive!, "Local", "item.bin")).Should().Be("payload");
+        Path.GetFileName(archive!).Should().StartWith("MaintenanceFail-");
+    }
+
+    [Fact]
     public void RemoveDeletesOnlyTheConfiguredDataRoots()
     {
         InstallerDataPaths paths = Paths();

@@ -48,13 +48,13 @@ O hide/restore do MVP 1, mais várias fences no mesmo desktop:
 - Se um item devolvido ao Desktop for apagado enquanto o app estiver fechado, no próximo arranque somente sua referência é removida da fence; os demais itens continuam normalmente. Estados inacessíveis ou ambíguos permanecem bloqueados por segurança.
 - Snapshot atômico das posições dos ícones no arranque e `DesktopFences.Recovery.exe` separado para recuperação por um clique. A ferramenta copia os dados sem apagar o store e nunca sobrescreve um arquivo do Desktop.
 
-Explorer reiniciado, DPI e Win+D foram validados no Windows 11. A `v0.6.0` acrescenta instaladores x64/ARM64, idioma inicial e desinstalação segura; o gate manual dos setups ainda precisa ser feito. A `v0.6.3` acrescenta arranque multi-monitor (espera o ecrã gravado no logon), layout padrão para novas fences (tema + alinhamento do título), flicker em sobreposição e remoção de fence com confirmação + barreira. A `v0.6.4` acrescenta **Nova fence** no menu de contexto do desktop (setup instalado; no Windows 11 o item clássico pode aparecer só em Mostrar mais opções; Novo → Fence usa `ShellNew\Command` sem criar ficheiro). A `v0.6.5` corrige o skip de z-order (fences sobrepostas deixam de piscar em idle porque o timer já não chama `SetWindowPos` à toa), deixa de tratar o arrastar de uma fence como drop de ficheiro, e reorganiza os botões das Configurações. O hotfix do instalador (upgrade com o app aberto) fica para a versão seguinte. Duplo clique no vazio do desktop não faz parte deste ciclo.
+Explorer reiniciado, DPI e Win+D foram validados no Windows 11. A `v0.6.0` acrescenta instaladores x64/ARM64, idioma inicial e desinstalação segura; o gate manual dos setups ainda precisa ser feito. A `v0.6.3` acrescenta arranque multi-monitor (espera o ecrã gravado no logon), layout padrão para novas fences (tema + alinhamento do título), flicker em sobreposição e remoção de fence com confirmação + barreira. A `v0.6.4` acrescenta **Nova fence** no menu de contexto do desktop (setup instalado; no Windows 11 o item clássico pode aparecer só em Mostrar mais opções; Novo → Fence usa `ShellNew\Command` sem criar ficheiro). A `v0.6.5` corrige o skip de z-order (fences sobrepostas deixam de piscar em idle porque o timer já não chama `SetWindowPos` à toa), deixa de tratar o arrastar de uma fence como drop de ficheiro, e reorganiza os botões das Configurações. A `v0.6.6` corrige o upgrade com o app aberto: **usar configurações existentes** troca os binários **sem** devolver os ícones ao Desktop; se a manutenção falhar, o setup distingue “app ainda aberto” de “custódia bloqueada”, oferece Recovery, e o desinstalador já não mostra runtime error do Inno. Duplo clique no vazio do desktop não faz parte deste ciclo.
 
 ## Instalação e desinstalação
 
 Baixe o setup da sua arquitetura em [Releases](https://github.com/antonio-abrantes/desktop-fences/releases). A instalação é por usuário, sem administrador, e Português vem selecionado por padrão; Inglês também pode ser escolhido e o idioma continua alterável nas Configurações.
 
-Ao encontrar dados anteriores, o setup oferece usar as configurações existentes ou começar com novas depois de devolver os itens ao Desktop e arquivar o estado antigo em `%LocalAppData%\DesktopFences.Backups`. Na desinstalação, é possível manter as configurações ou remover tudo. Se a devolução dos itens falhar, a limpeza é cancelada e o aplicativo, Recovery e store são preservados.
+Ao encontrar dados anteriores, o setup oferece usar as configurações existentes (o programa é substituído e os itens **ficam no store**) ou começar com novas depois de devolver os itens ao Desktop e arquivar o estado antigo em `%LocalAppData%\DesktopFences.Backups`. Se o DesktopFences estiver aberto, o setup pede para sair sem mexer nos ícones; podes cancelar e os dados ficam. Se a custódia estiver partida, o setup **não** apaga nada e oferece o Recovery. Na desinstalação, é possível manter as configurações ou remover tudo. Se a devolução dos itens falhar, a limpeza é cancelada e o aplicativo, Recovery e store são preservados.
 
 ## Requisitos
 
@@ -98,8 +98,8 @@ dotnet test DesktopFences.sln
 O GitHub Action **não** roda em push de branch. Só em tag `v*`:
 
 ```powershell
-git tag -a v0.6.5 -m "DesktopFences v0.6.5"
-git push origin v0.6.5
+git tag -a v0.6.6 -m "DesktopFences v0.6.6"
+git push origin v0.6.6
 ```
 
 Isso publica, para `win-x64` e `win-arm64`, um setup e um zip portable self-contained, ambos com o aplicativo e o executável independente de recuperação. Download: [Releases](https://github.com/antonio-abrantes/desktop-fences/releases).

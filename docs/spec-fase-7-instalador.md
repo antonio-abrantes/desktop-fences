@@ -56,14 +56,16 @@ Itens do Desktop Público continuam sendo devolvidos ao Desktop gravável do usu
 O aplicativo principal expõe um canal local apenas enquanto está em execução. O modo de manutenção do executável:
 
 1. tenta obter exclusividade pelo mutex já existente;
-2. se o app estiver aberto, pede `PrepareExit` pelo canal local;
-3. aguarda a liberação do mutex por tempo limitado;
-4. carrega o melhor layout válido e reconcilia journals pendentes;
-5. devolve os payloads ao Desktop pela transação de saída vigente, mantendo o layout quando solicitado;
-6. atualiza a inicialização automática e o idioma;
-7. somente no modo destrutivo, arquiva ou remove dados após sucesso completo.
+2. se o app estiver aberto: `prepare-exit-upgrade` no upgrade keep (grava e sai **sem** devolver ícones); `prepare-exit` em reset/desinstalação (devolve e sai);
+3. aguarda a liberação do mutex por tempo limitado (timeout de upgrade curto; timeout de restore ~60 s);
+4. upgrade keep **não** liberta custódia; reset/uninstall keep/remove libertam antes de arquivar ou apagar;
+5. falhas distinguem instância ocupada (`InstanceBusy`) de journal/devolução (`CustodyBlocked`); o resultado vai para `%LocalAppData%\DesktopFences\maintenance-last.log`;
+6. `CustodyBlocked` arquiva uma cópia em `DesktopFences.Backups\MaintenanceFail-…` **sem** apagar a origem e oferece o Recovery;
+7. o desinstalador aborta com mensagem se a manutenção falhar — **sem** `RaiseException` / runtime error do Inno.
 
 O protocolo não cria polling contínuo. Fora de instalação, atualização ou desinstalação, o único custo é um servidor local bloqueado aguardando conexão, sem trabalho por frame e sem I/O periódico.
+
+Emenda: [spec-hotfix-instalador-upgrade-seguro.md](spec-hotfix-instalador-upgrade-seguro.md).
 
 ---
 

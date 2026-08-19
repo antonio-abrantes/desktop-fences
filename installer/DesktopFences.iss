@@ -1,5 +1,5 @@
 #ifndef MyVersion
-  #define MyVersion "0.6.5"
+  #define MyVersion "0.6.6"
 #endif
 #ifndef MyArch
   #define MyArch "win-x64"
@@ -53,13 +53,16 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [CustomMessages]
 portuguese.DataPageTitle=Configuração existente
 portuguese.DataPageDescription=Escolha como esta instalação deve tratar as configurações já encontradas.
-portuguese.DataPageSubCaption=Se houver itens dentro das fences, eles serão devolvidos ao Desktop com segurança antes da atualização.
+portuguese.DataPageSubCaption=Usar as configurações existentes troca o programa sem devolver os ícones ao Desktop. Começar de novo devolve os itens e arquiva o estado anterior.
 portuguese.KeepData=Usar as configurações existentes (recomendado)
 portuguese.ResetData=Começar com configurações novas (o estado anterior será arquivado)
-portuguese.MaintenanceFailed=A manutenção segura não foi concluída. A instalação foi cancelada e os dados existentes foram preservados. Se uma versão antiga ou portable estiver aberta, feche-a pela bandeja e tente novamente.
+portuguese.MaintenanceFailed=A manutenção segura não foi concluída. A instalação foi cancelada e os dados existentes foram preservados.
+portuguese.MaintenanceInstanceBusy=O DesktopFences está aberto (ícone na bandeja). O setup pede para sair sem mexer nos teus ícones.%n%nFecha-o pela bandeja se o pedido falhar, depois tenta outra vez.%n%nTentar novamente / Cancelar: os dados ficam intactos.
+portuguese.MaintenanceCustodyBlocked=A manutenção não foi concluída com segurança (journal ou devolução). Os teus dados estão no sítio; o programa não foi removido.%n%nSIM: abrir Recovery%nNÃO: tentar outra vez%nCANCELAR: cancelar sem apagar nada
 portuguese.FinalizeFailed=O programa foi instalado, mas não foi possível finalizar o idioma e o caminho de inicialização.
-portuguese.UninstallQuestion=Como deseja desinstalar?%n%nSIM: remover o programa e manter configurações.%nNÃO: devolver os itens ao Desktop e remover tudo.%nCANCELAR: não desinstalar.
-portuguese.UninstallFailed=Não foi possível devolver todos os itens ao Desktop com segurança. A desinstalação foi cancelada; programa, Recovery e dados foram preservados.
+portuguese.UninstallQuestion=Como deseja desinstalar?%n%nSIM: remover o programa e manter configurações.%nNÃO: devolver os itens ao Desktop e remover tudo.%nCANCELAR: não desinstalar.%n%nSe a devolução falhar, nada é apagado e podes usar o Recovery.
+portuguese.UninstallFailed=Não foi possível concluir a desinstalação com segurança. O programa, o Recovery e os dados foram preservados. Não houve erro interno do instalador.
+portuguese.UninstallOpenRecovery=Abrir o DesktopFences Recovery agora? (pede confirmação antes de copiar para o Desktop)
 portuguese.DowngradeBlocked=Há uma versão mais nova do DesktopFences instalada. O downgrade foi bloqueado para proteger os dados.
 portuguese.DesktopIcon=Criar um atalho na Área de Trabalho
 portuguese.LaunchApp=Abrir o DesktopFences
@@ -69,13 +72,16 @@ portuguese.RestartHint=Recomendado: reinicie o Windows depois de clicar em Concl
 portuguese.FinishedContinue=Pode abrir o DesktopFences já; o reinício só atualiza o menu Novo do Explorer.
 english.DataPageTitle=Existing configuration
 english.DataPageDescription=Choose how this installation should handle the configuration already found.
-english.DataPageSubCaption=If fences contain items, they will be safely returned to the Desktop before the update.
+english.DataPageSubCaption=Keeping your configuration replaces the program without returning icons to the Desktop. Starting fresh returns items and archives the previous state.
 english.KeepData=Use existing configuration (recommended)
 english.ResetData=Start with a new configuration (the previous state will be archived)
-english.MaintenanceFailed=Safe maintenance did not complete. Installation was cancelled and existing data was preserved. If an older or portable version is open, close it from the tray and try again.
+english.MaintenanceFailed=Safe maintenance did not complete. Installation was cancelled and existing data was preserved.
+english.MaintenanceInstanceBusy=DesktopFences is open (tray icon). Setup will ask it to exit without moving your icons.%n%nIf that request fails, close it from the tray, then try again.%n%nRetry / Cancel: your data stays intact.
+english.MaintenanceCustodyBlocked=Maintenance could not finish safely (journal or return to Desktop). Your data is still in place; the program was not removed.%n%nYES: open Recovery%nNO: try again%nCANCEL: cancel without deleting anything
 english.FinalizeFailed=The program was installed, but language and startup path finalization failed.
-english.UninstallQuestion=How do you want to uninstall?%n%nYES: remove the program and keep settings.%nNO: return items to the Desktop and remove everything.%nCANCEL: do not uninstall.
-english.UninstallFailed=Not every item could be returned safely to the Desktop. Uninstall was cancelled; the program, Recovery, and data were preserved.
+english.UninstallQuestion=How do you want to uninstall?%n%nYES: remove the program and keep settings.%nNO: return items to the Desktop and remove everything.%nCANCEL: do not uninstall.%n%nIf returning items fails, nothing is deleted and you can use Recovery.
+english.UninstallFailed=Uninstall could not finish safely. The program, Recovery, and data were preserved. This is not an installer internal crash.
+english.UninstallOpenRecovery=Open DesktopFences Recovery now? (it asks for confirmation before copying to the Desktop)
 english.DowngradeBlocked=A newer DesktopFences version is installed. Downgrade was blocked to protect your data.
 english.DesktopIcon=Create a Desktop shortcut
 english.LaunchApp=Open DesktopFences
@@ -259,10 +265,36 @@ begin
   WizardForm.RunList.Top := WizardForm.FinishedLabel.Top + WizardForm.FinishedLabel.Height + ScaleY(8);
 end;
 
-function RunMaintenance(const Executable, Mode: String; IncludeLanguage: Boolean): Boolean;
+function MaintenanceLogPath: String;
+begin
+  Result := ExpandConstant('{localappdata}\DesktopFences\maintenance-last.log');
+end;
+
+function ReadMaintenanceKind: String;
+var
+  Lines: TArrayOfString;
+  I: Integer;
+  Line: String;
+begin
+  Result := '';
+  if not LoadStringsFromFile(MaintenanceLogPath, Lines) then
+    Exit;
+  for I := 0 to GetArrayLength(Lines) - 1 do
+  begin
+    Line := Lines[I];
+    if Pos('kind=', Line) = 1 then
+    begin
+      Result := Copy(Line, 6, MaxInt);
+      StringChangeEx(Result, #13, '', True);
+      StringChangeEx(Result, #10, '', True);
+      Exit;
+    end;
+  end;
+end;
+
+function RunMaintenanceEx(const Executable, Mode: String; IncludeLanguage: Boolean; var ExitCode: Integer): Boolean;
 var
   Parameters: String;
-  ExitCode: Integer;
 begin
   Parameters := '--maintenance=' + Mode;
   if IncludeLanguage then
@@ -271,22 +303,111 @@ begin
             (ExitCode = 0);
 end;
 
+function RunMaintenance(const Executable, Mode: String; IncludeLanguage: Boolean): Boolean;
+var
+  ExitCode: Integer;
+begin
+  Result := RunMaintenanceEx(Executable, Mode, IncludeLanguage, ExitCode);
+end;
+
+function OpenRecoveryTool: Boolean;
+var
+  Recovery: String;
+  Code: Integer;
+begin
+  Result := False;
+  Recovery := ExpandConstant('{app}\DesktopFences.Recovery.exe');
+  if not FileExists(Recovery) then
+  begin
+    try
+      ExtractTemporaryFile('DesktopFences.Recovery.exe');
+      Recovery := ExpandConstant('{tmp}\DesktopFences.Recovery.exe');
+    except
+      Recovery := '';
+    end;
+  end;
+  if (Recovery <> '') and FileExists(Recovery) then
+  begin
+    Exec(Recovery, '', '', SW_SHOWNORMAL, ewWaitUntilTerminated, Code);
+    Result := True;
+  end;
+end;
+
+function IsInstanceBusy(ExitCode: Integer; const Kind: String): Boolean;
+begin
+  Result := (Kind = 'InstanceBusy') or ((Kind = '') and (ExitCode = 1));
+end;
+
+function IsCustodyBlocked(ExitCode: Integer; const Kind: String): Boolean;
+begin
+  Result := (Kind = 'CustodyBlocked') or (ExitCode = 3);
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   Mode: String;
   Helper: String;
+  ExitCode: Integer;
+  Tries: Integer;
+  Kind: String;
+  Choice: Integer;
 begin
   Result := '';
+  NeedsRestart := False;
   if not HasExistingData and not FileExists(ExpandConstant('{app}\DesktopFences.exe')) then
     Exit;
 
   ExtractTemporaryFile('DesktopFences.exe');
   Helper := ExpandConstant('{tmp}\DesktopFences.exe');
-  Mode := 'keep';
+  Mode := 'upgradekeep';
   if Assigned(DataPage) and (DataPage.SelectedValueIndex = 1) then
     Mode := 'reset';
-  if not RunMaintenance(Helper, Mode, True) then
-    Result := ExpandConstant('{cm:MaintenanceFailed}');
+
+  for Tries := 1 to 3 do
+  begin
+    if RunMaintenanceEx(Helper, Mode, True, ExitCode) then
+      Exit;
+
+    Kind := ReadMaintenanceKind;
+    if WizardSilent then
+    begin
+      if IsCustodyBlocked(ExitCode, Kind) then
+        Result := ExpandConstant('{cm:MaintenanceCustodyBlocked}')
+      else if IsInstanceBusy(ExitCode, Kind) then
+        Result := ExpandConstant('{cm:MaintenanceInstanceBusy}')
+      else
+        Result := ExpandConstant('{cm:MaintenanceFailed}');
+      Exit;
+    end;
+
+    if IsInstanceBusy(ExitCode, Kind) then
+    begin
+      Choice := MsgBox(ExpandConstant('{cm:MaintenanceInstanceBusy}'), mbConfirmation, MB_RETRYCANCEL);
+      if Choice = IDCANCEL then
+      begin
+        Result := ExpandConstant('{cm:MaintenanceInstanceBusy}');
+        Exit;
+      end;
+    end
+    else if IsCustodyBlocked(ExitCode, Kind) then
+    begin
+      Choice := MsgBox(ExpandConstant('{cm:MaintenanceCustodyBlocked}'), mbError, MB_YESNOCANCEL);
+      if Choice = IDYES then
+        OpenRecoveryTool
+      else if Choice = IDCANCEL then
+      begin
+        Result := ExpandConstant('{cm:MaintenanceCustodyBlocked}');
+        Exit;
+      end;
+    end
+    else
+    begin
+      Result := ExpandConstant('{cm:MaintenanceFailed}');
+      Exit;
+    end;
+  end;
+
+  Result := ExpandConstant('{cm:MaintenanceFailed}');
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -316,15 +437,48 @@ begin
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  ExitCode: Integer;
+  Tries: Integer;
+  Kind: String;
+  Choice: Integer;
 begin
-  if CurUninstallStep = usUninstall then
+  if CurUninstallStep <> usUninstall then
+    Exit;
+
+  for Tries := 1 to 3 do
   begin
-    if not RunMaintenance(ExpandConstant('{app}\DesktopFences.exe'), UninstallMode, False) then
+    if RunMaintenanceEx(ExpandConstant('{app}\DesktopFences.exe'), UninstallMode, False, ExitCode) then
     begin
-      MsgBox(ExpandConstant('{cm:UninstallFailed}'), mbError, MB_OK);
-      RaiseException(ExpandConstant('{cm:UninstallFailed}'));
+      if UninstallMode = 'remove' then
+        RegDeleteKeyIncludingSubkeys(HKCU, 'Software\DesktopFences');
+      Exit;
     end;
-    if UninstallMode = 'remove' then
-      RegDeleteKeyIncludingSubkeys(HKCU, 'Software\DesktopFences');
+
+    Kind := ReadMaintenanceKind;
+    MsgBox(ExpandConstant('{cm:UninstallFailed}'), mbError, MB_OK);
+
+    if IsCustodyBlocked(ExitCode, Kind) then
+    begin
+      Choice := MsgBox(ExpandConstant('{cm:MaintenanceCustodyBlocked}'), mbError, MB_YESNOCANCEL);
+      if Choice = IDYES then
+        OpenRecoveryTool
+      else if Choice = IDCANCEL then
+        Abort;
+    end
+    else if IsInstanceBusy(ExitCode, Kind) then
+    begin
+      Choice := MsgBox(ExpandConstant('{cm:MaintenanceInstanceBusy}'), mbConfirmation, MB_RETRYCANCEL);
+      if Choice = IDCANCEL then
+        Abort;
+    end
+    else
+    begin
+      if MsgBox(ExpandConstant('{cm:UninstallOpenRecovery}'), mbConfirmation, MB_YESNO) = IDYES then
+        OpenRecoveryTool;
+      Abort;
+    end;
   end;
+
+  Abort;
 end;

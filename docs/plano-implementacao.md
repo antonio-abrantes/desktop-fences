@@ -7,7 +7,7 @@ Convenção:
 - `[x]` feito no repositório (agente) e/ou confirmado pelo desenvolvedor na sessão.
 - `[ ]` pendente — **não implementar** sem o gate no `SESSION-HEADER.md` **e** pedido explícito.
 - A Fase 1 abaixo está **fechada**. N fences, Configurações, cores por fence, Sobre, iniciar com o Windows (portable), mutex.
-- As Fases 1–6 e o hotfix `v0.5.1` estão fechados. A Fase 7 foi implementada para a `v0.6.0`; o hotfix `v0.6.3` acrescenta arranque multi-monitor, layout padrão, flicker sobreposição e remover fence com confirmação. A `v0.6.4` acrescenta Nova fence no menu de contexto do desktop. A `v0.6.5` fecha o skip correcto de z-order, o inbound ao mover fence e o layout das Settings. Gates Windows 11 pendentes. O hotfix do instalador está speccado e **não** entra nesta versão.
+- As Fases 1–6 e o hotfix `v0.5.1` estão fechados. A Fase 7 foi implementada para a `v0.6.0`; o hotfix `v0.6.3` acrescenta arranque multi-monitor, layout padrão, flicker sobreposição e remover fence com confirmação. A `v0.6.4` acrescenta Nova fence no menu de contexto do desktop. A `v0.6.5` fecha o skip correcto de z-order, o inbound ao mover fence e o layout das Settings. A `v0.6.6` fecha o hotfix de upgrade/desinstalação seguros. Gates Windows 11 pendentes.
 
 ---
 
@@ -461,13 +461,21 @@ Contrato: [spec-nova-fence-menu-novo.md](spec-nova-fence-menu-novo.md).
 - [x] Clique que começa em qualquer fence: `_pressOnFence` via `AnyFenceContainsScreenPoint`; OLE inbound não trata arrastar a fence como drop de ficheiro
 - [x] Settings: Nova fence / Remover na lista; Restaurar esta fence | Restaurar todas e Definir como padrão na linha de aparência
 - [x] Demo `docs/assets/presentation.mp4` no site e ligação no README
-- [x] Spec do instalador escrita (`spec-hotfix-instalador-upgrade-seguro.md`); **não implementada**
+- [x] Spec do instalador escrita (`spec-hotfix-instalador-upgrade-seguro.md`); **não implementada** na `v0.6.5`
 
 ---
 
-## Próximo (outra versão, não autorizado)
+## v0.6.6 — upgrade/desinstalação seguros
 
-Contrato: [spec-hotfix-instalador-upgrade-seguro.md](spec-hotfix-instalador-upgrade-seguro.md). Upgrade keep sem `ReleaseCustody`; pipe de saída sem devolver ícones; sem `RaiseException` no wizard; Recovery em vez de beco. **Não implementar** até o SESSION-HEADER marcar o gate **e** o desenvolvedor pedir.
+**Status:** implementado; caminho keep com app aberto validado no Windows 11. Restantes itens da spec §12 pendentes. Contrato: [spec-hotfix-instalador-upgrade-seguro.md](spec-hotfix-instalador-upgrade-seguro.md).
+
+- [x] `--maintenance=upgradekeep` (setup “usar configurações”); `keep` também **não** liberta custódia
+- [x] Pipe `prepare-exit-upgrade` + flag OnExit sem `RestoreAllIcons`; `prepare-exit` e `create-fence` intactos
+- [x] `MaintenanceFailureKind` + log `%LocalAppData%\DesktopFences\maintenance-last.log`; exit 1 busy / 3 blocked
+- [x] Arquivo `MaintenanceFail-…` sem delete; reset continua a arquivar e apagar só depois da devolução
+- [x] Inno: retry InstanceBusy; Recovery em CustodyBlocked; uninstall `Abort` sem `RaiseException`; Finished/Novo **não** mexidos
+- [x] Gate Windows 11 (parcial): upgrade keep com app aberto — aviso, cancelar, fechar e repetir; fences/config intactas
+- [ ] Restante da spec §12: reset, uninstall keep/remove, CustodyBlocked + Recovery, portable+setup
 
 ---
 

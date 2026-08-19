@@ -6,17 +6,21 @@ using System.Windows.Threading;
 
 namespace DesktopFences.App.Services;
 
-internal readonly record struct MaintenanceDispatch(bool Success, bool Shutdown);
+internal readonly record struct MaintenanceDispatch(bool Success, bool Shutdown, bool LeaveCustody);
 
 internal static class MaintenanceProtocol
 {
     public const string PrepareExit = "prepare-exit";
+    public const string PrepareExitUpgrade = "prepare-exit-upgrade";
     public const string CreateFence = "create-fence";
     public const string Success = "ok";
     public const string Failed = "failed";
 
     public static bool IsPrepareExitCommand(string? command) =>
         string.Equals(command, PrepareExit, StringComparison.Ordinal);
+
+    public static bool IsPrepareExitUpgradeCommand(string? command) =>
+        string.Equals(command, PrepareExitUpgrade, StringComparison.Ordinal);
 
     public static bool IsCreateFenceCommand(string? command) =>
         string.Equals(command, CreateFence, StringComparison.Ordinal);
@@ -27,28 +31,34 @@ internal static class MaintenanceProtocol
     public static MaintenanceDispatch Dispatch(
         string? command,
         Func<bool> prepareExit,
+        Func<bool> prepareUpgradeExit,
         Func<bool> createFence)
     {
         if (IsPrepareExitCommand(command))
         {
             bool ok = prepareExit();
-            return new MaintenanceDispatch(ok, Shutdown: ok);
+            return new MaintenanceDispatch(ok, Shutdown: ok, LeaveCustody: false);
+        }
+
+        if (IsPrepareExitUpgradeCommand(command))
+        {
+            bool ok = prepareUpgradeExit();
+            return new MaintenanceDispatch(ok, Shutdown: ok, LeaveCustody: ok);
         }
 
         if (IsCreateFenceCommand(command))
-            return new MaintenanceDispatch(createFence(), Shutdown: false);
+            return new MaintenanceDispatch(createFence(), Shutdown: false, LeaveCustody: false);
 
-        return new MaintenanceDispatch(false, Shutdown: false);
+        return new MaintenanceDispatch(false, Shutdown: false, LeaveCustody: false);
     }
 
-    public static string PipeName
+    public static readonly string PipeName = CreatePipeName();
+
+    private static string CreatePipeName()
     {
-        get
-        {
-            string identity = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(identity.ToUpperInvariant()));
-            return "DesktopFences.Maintenance." + Convert.ToHexString(hash.AsSpan(0, 8));
-        }
+        string identity = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(identity.ToUpperInvariant()));
+        return "DesktopFences.Maintenance." + Convert.ToHexString(hash.AsSpan(0, 8));
     }
 }
 
@@ -56,19 +66,22 @@ internal sealed class MaintenancePipeServer : IDisposable
 {
     private readonly Dispatcher _dispatcher;
     private readonly Func<bool> _prepareExit;
+    private readonly Func<bool> _prepareUpgradeExit;
     private readonly Func<bool> _createFence;
-    private readonly Action _shutdown;
+    private readonly Action<bool> _shutdown;
     private readonly CancellationTokenSource _cancel = new();
     private readonly Task _listener;
 
     public MaintenancePipeServer(
         Dispatcher dispatcher,
         Func<bool> prepareExit,
+        Func<bool> prepareUpgradeExit,
         Func<bool> createFence,
-        Action shutdown)
+        Action<bool> shutdown)
     {
         _dispatcher = dispatcher;
         _prepareExit = prepareExit;
+        _prepareUpgradeExit = prepareUpgradeExit;
         _createFence = createFence;
         _shutdown = shutdown;
         _listener = Task.Run(ListenAsync);
@@ -96,10 +109,11 @@ internal sealed class MaintenancePipeServer : IDisposable
                 MaintenanceDispatch result = MaintenanceProtocol.Dispatch(
                     command,
                     () => SafeInvoke(_prepareExit),
+                    () => SafeInvoke(_prepareUpgradeExit),
                     () => SafeInvoke(_createFence));
                 await writer.WriteLineAsync(result.Success ? MaintenanceProtocol.Success : MaintenanceProtocol.Failed);
                 if (result.Shutdown)
-                    _ = _dispatcher.BeginInvoke(_shutdown, DispatcherPriority.Background);
+                    _ = _dispatcher.BeginInvoke(() => _shutdown(result.LeaveCustody), DispatcherPriority.Background);
             }
             catch (OperationCanceledException) when (_cancel.IsCancellationRequested)
             {
@@ -135,8 +149,14 @@ internal sealed class MaintenancePipeServer : IDisposable
 
 internal static class MaintenancePipeClient
 {
+    public static readonly TimeSpan RestoreTimeout = TimeSpan.FromSeconds(60);
+    public static readonly TimeSpan UpgradeTimeout = TimeSpan.FromSeconds(15);
+
     public static bool RequestPrepareExit(TimeSpan timeout) =>
         Request(MaintenanceProtocol.PrepareExit, timeout);
+
+    public static bool RequestPrepareExitUpgrade(TimeSpan timeout) =>
+        Request(MaintenanceProtocol.PrepareExitUpgrade, timeout);
 
     public static bool RequestCreateFence(TimeSpan timeout) =>
         Request(MaintenanceProtocol.CreateFence, timeout);

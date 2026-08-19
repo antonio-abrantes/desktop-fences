@@ -29,6 +29,7 @@ public sealed class FenceHost
     private int _returningItemsToDesktop;
     private long _layoutRevision;
     private bool _payloadReleased;
+    private bool _leaveCustodyInStore;
     private LayoutDocument? _startupCustody;
     private TitleAlignment? _defaultTitleAlignment;
     private FenceTheme? _defaultTheme;
@@ -173,6 +174,8 @@ public sealed class FenceHost
 
     public void RestoreAllIcons()
     {
+        if (_leaveCustodyInStore)
+            return;
         if (_startupCustody is not null)
         {
             if (ReleaseStartupDocument(_startupCustody))
@@ -183,7 +186,11 @@ public sealed class FenceHost
             _payloadReleased = true;
     }
 
-    public bool PrepareExit()
+    public bool PrepareExit() => PrepareExitCore(releaseCustody: true);
+
+    public bool PrepareUpgradeExit() => PrepareExitCore(releaseCustody: false);
+
+    private bool PrepareExitCore(bool releaseCustody)
     {
         if (_returningItemsToDesktop > 0)
             return false;
@@ -196,9 +203,15 @@ public sealed class FenceHost
         }
 
         SaveAll();
-        if (!_payloadReleased && !ReleaseAll(CustodyOperationKind.Shutdown))
-            return false;
-        _payloadReleased = true;
+        if (releaseCustody)
+        {
+            if (!_payloadReleased && !ReleaseAll(CustodyOperationKind.Shutdown))
+                return false;
+            _payloadReleased = true;
+        }
+        else
+            _leaveCustodyInStore = true;
+
         foreach (FenceWindow window in _windows.ToList())
         {
             window.LayoutChanged -= OnWindowLayoutChanged;

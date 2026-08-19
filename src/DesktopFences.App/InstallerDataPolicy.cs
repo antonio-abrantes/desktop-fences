@@ -38,6 +38,8 @@ internal sealed class InstallerDataPolicy
         _paths = paths ?? InstallerDataPaths.Default();
     }
 
+    public string MaintenanceLogPath => Path.Combine(_paths.LocalRoot, "maintenance-last.log");
+
     public void SetLanguage(string? language)
     {
         if (string.IsNullOrWhiteSpace(language))
@@ -55,9 +57,20 @@ internal sealed class InstallerDataPolicy
         store.Save(document);
     }
 
+    public void SetLanguageIfCurrentSchema(string? language)
+    {
+        if (string.IsNullOrWhiteSpace(language))
+            return;
+        var store = new LayoutStore(_paths.LayoutPath);
+        LayoutDocument document = store.LoadOrEmpty();
+        if (document.Version != LayoutDocument.CurrentVersion)
+            return;
+        SetLanguage(language);
+    }
+
     public string ResetAfterRelease(string? language)
     {
-        string archive = ArchiveCurrentState();
+        string archive = ArchiveCurrentState("Reset");
         DeleteDataRoots();
         SetLanguage(language ?? UiLanguageCodes.Portuguese);
         return archive;
@@ -65,11 +78,23 @@ internal sealed class InstallerDataPolicy
 
     public void RemoveAfterRelease() => DeleteDataRoots();
 
-    private string ArchiveCurrentState()
+    public string? TryArchiveWithoutDelete(string prefix = "MaintenanceFail")
+    {
+        try
+        {
+            return ArchiveCurrentState(prefix);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public string ArchiveCurrentState(string prefix)
     {
         string archive = Path.Combine(
             _paths.BackupRoot,
-            $"Reset-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}");
+            $"{prefix}-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}");
         Directory.CreateDirectory(archive);
         CopyTree(_paths.RoamingRoot, Path.Combine(archive, "Roaming"));
         CopyTree(_paths.LocalRoot, Path.Combine(archive, "Local"));

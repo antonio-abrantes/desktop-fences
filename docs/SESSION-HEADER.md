@@ -7,8 +7,8 @@
 ## Contexto da Sessão ou fase
 
 **Projeto:** DesktopFences 1.0
-**Etapa atual:** `v0.6.5` fechada no código (flicker real, mover fence, Settings, vídeo). **Próxima (não começar):** `docs/spec-hotfix-instalador-upgrade-seguro.md`.
-**Objetivo desta sessão:** validar docs, alinhar versão `0.6.5` / tag `v0.6.5`, commit + push + tag. Sem implementar o instalador.
+**Etapa atual:** `v0.6.6` fechada (upgrade keep testado no Windows 11: aviso com app aberto, retry após fechar, configurações intactas). Sem próxima etapa autorizada.
+**Objetivo desta sessão:** commit, push e tag `v0.6.6`.
 
 ---
 
@@ -38,7 +38,7 @@ Apoio (quando o assunto for relevante):
    - `docs/spec-hotfix-flicker-sobreposição.md` — skip de `SetWindowPos` só com host do Desktop abaixo e sem banda do Desktop acima (`v0.6.5` corrigiu a regra `GW_HWNDNEXT`/`HWND_TOP`)
    - Remover fence com itens: confirmação (Yes/No) + barreira outbound/posicionamento antes de fechar a janela
 10. `docs/spec-nova-fence-menu-novo.md` — Nova fence: `Directory\Background` + `DesktopBackground\shell` + `ShellNew\Command` (sem `NullFile`), `--create-fence`, IPC no pipe existente
-11. `docs/spec-hotfix-instalador-upgrade-seguro.md` — **pronta, não autorizada.** Não implementar até gate + pedido explícito. Será outra versão.
+11. `docs/spec-hotfix-instalador-upgrade-seguro.md` — upgrade keep sem libertar custódia; pipe `prepare-exit-upgrade`; uninstall sem `RaiseException`; Recovery em `CustodyBlocked`
 
 > Não inicie nenhuma implementação antes de confirmar que leu todos os documentos obrigatórios acima.
 
@@ -49,9 +49,8 @@ Apoio (quando o assunto for relevante):
 A Fase 6 e o hotfix `v0.5.1` foram concluídos e salvos. A Fase 7 foi implementada para a `0.6.0`. Hotfix dos ícones de sistema: CLSID canónico no Registro. Ajuste seguinte: o lote só notifica a Shell (`UPDATEDIR` se moveu ficheiro, `ASSOCCHANGED` se o hide de namespace mudou). Resume no-op no arranque/hibernação deixa de mandar `ASSOCCHANGED`. Reancoramento/Win+D não foram alterados.
 
 ```
-ETAPA FECHADA  : v0.6.5 (flicker skip correcto · não inbound ao mover fence · Settings · demo)
-ETAPA SEGUINTE : spec instalador upgrade seguro (documentada; NÃO autorizada; outra tag)
-GATE PENDENTE  : Nova fence no Explorer + flicker idle + v0.6.3 + Fase 7 + ícones sistema + hibernar
+ETAPA FECHADA  : v0.6.6 hotfix instalador (upgrade keep sem despejar ícones; retry InstanceBusy)
+GATE PENDENTE  : reset/uninstall/CustodyBlocked da spec instalador · Nova fence · flicker idle · v0.6.3 · Fase 7 · ícones sistema · hibernar
 FORA DO CICLO  : duplo clique no vazio do desktop · packs de tema · empurrar fence de baixo ao expandir
 ```
 
@@ -111,9 +110,17 @@ FORA DO CICLO  : duplo clique no vazio do desktop · packs de tema · empurrar f
 - [x] Versão do aplicativo alinhada para `0.6.4` / tag `v0.6.4`
 - [x] Clique que começa noutra fence não dispara inbound (ghost de ficheiro ao arrastar a alça)
 - [x] Settings: Nova fence / Remover na lista; Restaurar + Definir como padrão na linha de aparência
-- [x] Spec `docs/spec-hotfix-instalador-upgrade-seguro.md` escrita; **não implementada**
+- [x] Spec `docs/spec-hotfix-instalador-upgrade-seguro.md` implementada (`upgradekeep`, log, pipe, Inno)
 - [x] Demo `docs/assets/presentation.mp4` no site (`docs/index.html` #demo) e ligação no README
 - [x] Versão do aplicativo alinhada para `0.6.5` / tag `v0.6.5`
+- [x] Upgrade keep: `--maintenance=upgradekeep` **não** chama `ReleaseCustody`; `keep` idem
+- [x] Pipe `prepare-exit-upgrade`: SaveAll + fechar fences **sem** restore; `App.OnExit` respeita `_skipIconRestoreOnExit`
+- [x] Falhas classificadas (`InstanceBusy` vs `CustodyBlocked`); `maintenance-last.log`; exit 1/3
+- [x] Arquivo `DesktopFences.Backups\MaintenanceFail-…` **sem** apagar origem
+- [x] Inno: retry InstanceBusy; Recovery em CustodyBlocked; uninstall usa `Abort` (sem `RaiseException`)
+- [x] Versão do aplicativo alinhada para `0.6.6` / tag `v0.6.6`
+- [x] Desenvolvedor validou no Windows 11: upgrade com app aberto — aviso InstanceBusy; cancelar deixa dados; fechar o app no aviso e repetir instala; configurações e ordem das fences intactas
+- [ ] Desenvolvedor validar reset, uninstall keep/remove, CustodyBlocked + Recovery, portable+setup
 - [ ] Desenvolvedor validar Nova fence no menu do desktop (clássico aceite; Novo → Fence; um clique cria a fence; sem ficheiro; app aberto/fechado; perfil vazio = 1 fence)
 - [ ] Desenvolvedor validar arranque multi-monitor (3 ecrãs, logon, Iniciar com o Windows)
 - [ ] Desenvolvedor validar layout padrão de novas fences
@@ -121,7 +128,6 @@ FORA DO CICLO  : duplo clique no vazio do desktop · packs de tema · empurrar f
 - [ ] Desenvolvedor validar a Fase 7 no Windows 11
 - [ ] Desenvolvedor validar hide/restore de Este Computador, Rede e Lixeira (incl. reinício Explorer / novo arranque)
 - [ ] Desenvolvedor validar hibernar/acordar: ícones soltos no Desktop mantêm a posição; Pausar/Sair/drop/Win+D inalterados
-- [ ] Não implementar `docs/spec-hotfix-instalador-upgrade-seguro.md` sem gate no SESSION-HEADER **e** pedido explícito (próxima versão)
 - [ ] Não implementar duplo clique no vazio do desktop, packs de tema, nem empurrar a fence de baixo ao expandir
 
 Se qualquer inconsistência for encontrada na revisão, reporte antes de sugerir qualquer ação.

@@ -6,6 +6,7 @@ internal enum InstallerMaintenanceMode
 {
     Finalize,
     Keep,
+    UpgradeKeep,
     Reset,
     UninstallKeep,
     Remove

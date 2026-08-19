@@ -15,6 +15,7 @@ public partial class App : Application
     private SettingsWindow? _settings;
     private MaintenancePipeServer? _maintenancePipe;
     private bool _paused;
+    private bool _skipIconRestoreOnExit;
     private bool _startRecoveryOnExit;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -97,8 +98,14 @@ public partial class App : Application
         _maintenancePipe = new MaintenancePipeServer(
             Dispatcher,
             () => _host?.PrepareExit() == true,
+            () => _host?.PrepareUpgradeExit() == true,
             () => _host?.TryAddNew() == true,
-            () => Shutdown());
+            leaveCustody =>
+            {
+                if (leaveCustody)
+                    _skipIconRestoreOnExit = true;
+                Shutdown();
+            });
     }
 
     private void Pause()
@@ -153,7 +160,7 @@ public partial class App : Application
     {
         _maintenancePipe?.Dispose();
         _maintenancePipe = null;
-        if (!_paused)
+        if (!_paused && !_skipIconRestoreOnExit)
             _host?.RestoreAllIcons();
 
         _tray?.Dispose();
