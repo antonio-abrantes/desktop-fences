@@ -16,6 +16,9 @@ public sealed class FenceItemVm : INotifyPropertyChanged
     public string? StorageName { get; set; }
     public string? Path { get; set; }
     public string? OriginalPath { get; set; }
+    public string? NamespaceKey { get; set; }
+    public string? ReleasedPath { get; set; }
+    public string? ReleasedIdentity { get; set; }
     public ImageSource? Icon { get; init; }
     public int? OriginalX { get; init; }
     public int? OriginalY { get; init; }
@@ -56,6 +59,9 @@ public sealed class FenceItemVm : INotifyPropertyChanged
         Name = Name,
         StorageName = Kind == FenceItemKind.Stored ? StorageName : null,
         OriginalPath = OriginalPath,
+        NamespaceKey = NamespaceKey,
+        ReleasedPath = ReleasedPath,
+        ReleasedIdentity = ReleasedIdentity,
         OriginalX = OriginalX,
         OriginalY = OriginalY
     };

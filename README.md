@@ -98,8 +98,8 @@ dotnet test DesktopFences.sln
 O GitHub Action **não** roda em push de branch. Só em tag `v*`:
 
 ```powershell
-git tag -a v0.6.6 -m "DesktopFences v0.6.6"
-git push origin v0.6.6
+git tag -a v0.6.7 -m "DesktopFences v0.6.7"
+git push origin v0.6.7
 ```
 
 Isso publica, para `win-x64` e `win-arm64`, um setup e um zip portable self-contained, ambos com o aplicativo e o executável independente de recuperação. Download: [Releases](https://github.com/antonio-abrantes/desktop-fences/releases).

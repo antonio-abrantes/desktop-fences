@@ -7,6 +7,7 @@ public interface ICustodyRecoveryActions
     bool Exists(string path);
     bool Move(string source, string destination);
     bool SetNamespaceHidden(string key, bool hidden);
+    string? Identity(string path) => null;
 }
 
 public sealed record RecoveryReport(int Recovered, int Pending, IReadOnlyList<string> Errors)
@@ -36,8 +37,8 @@ public sealed class TransactionRecovery
         {
             bool rollForward = transaction.State is CustodyTransactionState.LayoutCommitted
                 or CustodyTransactionState.Completed
-                || (transaction.LayoutRevisionAfter > 0
-                    && layout.Revision >= transaction.LayoutRevisionAfter);
+                || (transaction.State == CustodyTransactionState.PayloadChanged
+                    && transaction.LayoutRevisionAfter > 0 && layout.Revision >= transaction.LayoutRevisionAfter);
             bool ok = true;
             foreach (CustodyTransactionItem item in transaction.Items)
             {
@@ -77,13 +78,21 @@ public sealed class TransactionRecovery
         string other = destinationWanted ? item.SourcePath : item.DestinationPath;
         bool wantedExists = _actions.Exists(wanted);
         bool otherExists = _actions.Exists(other);
+        string? destinationIdentity = item.DestinationIdentity ?? item.SourceIdentity;
+        string? wantedIdentity = destinationWanted ? destinationIdentity : item.SourceIdentity;
+        string? otherIdentity = destinationWanted ? item.SourceIdentity : destinationIdentity;
+        if (string.Equals(wanted, other, StringComparison.OrdinalIgnoreCase))
+            return wantedExists && Matches(wanted, wantedIdentity);
         if (wantedExists && otherExists)
             return false;
         if (wantedExists)
-            return true;
-        if (!otherExists)
+            return Matches(wanted, wantedIdentity);
+        if (!otherExists || !Matches(other, otherIdentity))
             return false;
         return _actions.Move(other, wanted);
     }
+
+    private bool Matches(string path, string? identity) =>
+        identity is null || string.Equals(_actions.Identity(path), identity, StringComparison.Ordinal);
 
 }

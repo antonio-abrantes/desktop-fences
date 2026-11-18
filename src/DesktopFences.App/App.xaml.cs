@@ -2,6 +2,7 @@ using System.Windows;
 using System.Diagnostics;
 using System.IO;
 using DesktopFences.App.Services;
+using DesktopFences.App.Localization;
 using DesktopFences.Core.Fences;
 using Application = System.Windows.Application;
 
@@ -77,7 +78,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            _host.RestoreAllIcons();
+            _skipIconRestoreOnExit = true;
             MessageBoxResult choice = System.Windows.MessageBox.Show(
                 $"O DesktopFences não pôde recuperar os itens com segurança e não será iniciado.\n\n{ex.Message}\n\nDados preservados em: {DesktopFences.Core.FenceItemStore.Root()}\n\nDeseja abrir a recuperação de emergência?",
                 "DesktopFences",
@@ -105,7 +106,12 @@ public partial class App : Application
                 if (leaveCustody)
                     _skipIconRestoreOnExit = true;
                 Shutdown();
-            });
+            },
+            () => _host is { IsReturningItemsToDesktop: false } ? _host.LastCustodyError : null);
+        if (_host.StartupWarnings.Count > 0)
+            System.Windows.MessageBox.Show(
+                Loc.Format("CustodyStartupDeferred", string.Join(Environment.NewLine, _host.StartupWarnings)),
+                "DesktopFences", MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
     private void Pause()
@@ -151,8 +157,21 @@ public partial class App : Application
 
     private void ExitApp()
     {
-        if (_host is not null && !_host.PrepareExit())
-            return;
+        if (_host is not null && !_host.PrepareUserExit())
+        {
+            string detail = _host.LastCustodyError ?? Loc.T("CustodyReleaseFailed");
+            if (_host.IsReturningItemsToDesktop)
+            {
+                System.Windows.MessageBox.Show(detail, "DesktopFences", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            MessageBoxResult choice = System.Windows.MessageBox.Show(
+                Loc.Format("CustodyExitPreservingData", detail),
+                "DesktopFences", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+            if (choice != MessageBoxResult.Yes || !_host.PrepareUpgradeExit())
+                return;
+            _skipIconRestoreOnExit = true;
+        }
         Shutdown();
     }
 

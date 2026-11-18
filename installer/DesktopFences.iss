@@ -1,5 +1,5 @@
 #ifndef MyVersion
-  #define MyVersion "0.6.6"
+  #define MyVersion "0.6.7"
 #endif
 #ifndef MyArch
   #define MyArch "win-x64"

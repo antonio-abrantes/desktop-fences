@@ -4,6 +4,7 @@ using DesktopFences.Core.Models;
 using DesktopFences.Core.Occupancy;
 using DesktopFences.Core.Persistence;
 using DesktopFences.Core.Recovery;
+using DesktopFences.Core.Transactions;
 
 namespace DesktopFences.Native;
 
@@ -36,7 +37,9 @@ public sealed record EmergencyRecoveryReport(
     int ConflictsPreserved,
     int PositionsRestored,
     string RecoverySessionPath,
-    IReadOnlyList<string> Errors);
+    IReadOnlyList<string> Errors,
+    int NamespaceRestored,
+    int NamespacePending);
 
 /// <summary>
 /// Restauração independente e não destrutiva: o Store nunca é removido e
@@ -45,13 +48,46 @@ public sealed record EmergencyRecoveryReport(
 public sealed class EmergencyRecoveryService
 {
     private readonly EmergencyRecoveryOptions _options;
+    private readonly bool _usesLiveDesktop;
 
     public EmergencyRecoveryService(EmergencyRecoveryOptions? options = null)
     {
         _options = options ?? EmergencyRecoveryOptions.Default();
+        _usesLiveDesktop = options is null;
+    }
+
+    public IReadOnlyList<string> PendingLegacyNamespace()
+    {
+        var items = new List<FenceItemState>();
+        var snapshots = new List<DesktopRecoveryItem>();
+        var journal = new List<CustodyTransactionItem>();
+        var pending = new List<string>();
+        ReadPreviousNamespaceEvidence("", items, snapshots, journal, pending);
+        foreach (CustodyTransactionItem entry in journal.Where(entry => entry.NamespaceItem))
+            if (!items.Any(item => item.ItemId == entry.ItemId))
+                items.Add(new FenceItemState { ItemId = entry.ItemId, Kind = FenceItemKind.Namespace, Name = entry.Name });
+        foreach (FenceItemState item in items)
+        {
+            string? key = DesktopCustodyBatch.ResolveNamespaceKey(item, journal, snapshots);
+            if (key is null || !DesktopVisibility.IsNamespaceStateSet(key, hidden: false))
+                pending.Add(item.Name);
+        }
+        return pending;
     }
 
     public EmergencyRecoveryReport RestoreAll(bool restorePositions = false)
+    {
+        var icons = _usesLiveDesktop ? new DesktopIconService() : null;
+        DesktopLayoutProtection? protection = icons?.CaptureLayoutProtection([]);
+        try { return RestoreAllCore(restorePositions, protection is not null ? icons : null); }
+        finally
+        {
+            try { icons?.PreserveDesktopLayout(protection); }
+            catch { /* A recuperação dos arquivos pode terminar mesmo sem acesso à vista do Explorer. */ }
+        }
+    }
+
+    private EmergencyRecoveryReport RestoreAllCore(bool restorePositions, DesktopIconService? icons)
     {
         string session = Path.Combine(
             _options.RecoveryRoot,
@@ -86,14 +122,28 @@ public sealed class EmergencyRecoveryService
         ArchiveFile(_options.SnapshotPath, session, errors);
         ArchiveFile(_options.SnapshotPath + ".bak", session, errors);
 
+        List<FenceItemState> namespaceItems = layout.Fences.SelectMany(fence => fence.Items)
+            .Where(item => item.Kind == FenceItemKind.Namespace).ToList();
+        var evidence = new List<CustodyTransactionItem>();
+        var snapshotEvidence = new List<DesktopRecoveryItem>(snapshot?.Items ?? []);
+        ReadNamespaceEvidence(_options.TransactionsRoot, evidence);
+        if (namespaceItems.Count == 0)
+            ReadPreviousNamespaceEvidence(session, namespaceItems, snapshotEvidence, evidence, errors);
+        foreach (CustodyTransactionItem item in evidence.Where(item => item.NamespaceItem))
+        {
+            if (namespaceItems.Any(existing => existing.ItemId == item.ItemId))
+                continue;
+            namespaceItems.Add(new FenceItemState
+            {
+                ItemId = item.ItemId, Kind = FenceItemKind.Namespace, Name = item.Name
+            });
+        }
+
         var handled = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (FenceItemState item in layout.Fences.SelectMany(fence => fence.Items))
         {
             if (item.Kind == FenceItemKind.Namespace)
-            {
-                RevealNamespace(item.OriginalPath ?? item.Path ?? item.Name);
                 continue;
-            }
 
             string? source = SourceFor(item);
             if (string.IsNullOrWhiteSpace(source) || !Exists(source))
@@ -121,11 +171,28 @@ public sealed class EmergencyRecoveryService
         }
 
         RestoreUnreferencedStore(snapshot, handled, stats, errors);
-        if (snapshot is not null)
+        int namespaceRestored = 0;
+        int namespacePending = 0;
+        bool namespaceChanged = false;
+        var restoredKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (FenceItemState item in namespaceItems)
         {
-            foreach (DesktopRecoveryItem item in snapshot.Items.Where(item => item.Kind == FenceItemKind.Namespace))
-                RevealNamespace(item.OriginalPath ?? item.Name);
+            string? key = DesktopCustodyBatch.ResolveNamespaceKey(item, evidence, snapshotEvidence);
+            if (key is not null && restoredKeys.Contains(key))
+                continue;
+            if (key is not null && DesktopVisibility.SetNamespaceHidden(key, hidden: false, out bool changed))
+            {
+                namespaceChanged |= changed;
+                restoredKeys.Add(key);
+                namespaceRestored++;
+                continue;
+            }
+            namespacePending++;
+            errors.Add(key is null
+                ? $"Não foi possível identificar o ícone de sistema: {item.Name}"
+                : $"Não foi possível restaurar a visibilidade de {item.Name} ({key}).");
         }
+        DesktopCustodyBatch.FlushShell(new ShellNotifyRequest(false, namespaceChanged), _options.DesktopFolders);
 
         int positioned = 0;
         if (errors.Count == 0)
@@ -133,9 +200,8 @@ public sealed class EmergencyRecoveryService
             try
             {
                 QuarantineTransactionsAndResetLayout(layoutStore, layout, session);
-                FlushShell();
-                if (restorePositions)
-                    positioned = RestorePositions(snapshot, layout);
+                if (restorePositions && icons is not null)
+                    positioned = RestorePositions(snapshot, layout, stats, icons);
             }
             catch (Exception ex)
             {
@@ -143,7 +209,7 @@ public sealed class EmergencyRecoveryService
             }
         }
 
-        try { WriteReceipt(session, stats, positioned, errors); }
+        try { WriteReceipt(session, stats, positioned, namespaceRestored, namespacePending, errors); }
         catch (Exception ex) { errors.Add("Falha ao gravar o recibo da recuperação: " + ex.Message); }
         return new EmergencyRecoveryReport(
             errors.Count == 0,
@@ -153,7 +219,9 @@ public sealed class EmergencyRecoveryService
             stats.Conflicts,
             positioned,
             session,
-            errors);
+            errors,
+            namespaceRestored,
+            namespacePending);
     }
 
     private string? SourceFor(FenceItemState item)
@@ -235,10 +303,10 @@ public sealed class EmergencyRecoveryService
             return;
         try
         {
-            if (Directory.Exists(source))
-                CopyDirectory(source, destination, stats);
-            else if (File.Exists(source))
-                CopyFile(source, destination, stats);
+            string? created = Directory.Exists(source) ? CopyDirectory(source, destination, stats)
+                : File.Exists(source) ? CopyFile(source, destination, stats) : null;
+            if (created is not null && DesktopFileIdentity.Read(created) is { } identity)
+                stats.Created[Normalize(destination)] = (created, identity);
         }
         catch (Exception ex)
         {
@@ -246,7 +314,7 @@ public sealed class EmergencyRecoveryService
         }
     }
 
-    private static void CopyDirectory(string source, string destination, CopyStats stats)
+    private static string? CopyDirectory(string source, string destination, CopyStats stats)
     {
         if ((File.GetAttributes(source) & FileAttributes.ReparsePoint) != 0)
             throw new IOException("Ponto de nova análise não é copiado automaticamente.");
@@ -255,6 +323,7 @@ public sealed class EmergencyRecoveryService
             destination = UniqueRecoveryName(destination);
             stats.Conflicts++;
         }
+        bool newDirectory = !Directory.Exists(destination);
         Directory.CreateDirectory(destination);
         stats.Directories++;
         foreach (string directory in Directory.EnumerateDirectories(source))
@@ -267,9 +336,10 @@ public sealed class EmergencyRecoveryService
             File.SetAttributes(destination, File.GetAttributes(source) & ~FileAttributes.ReparsePoint);
         }
         catch { }
+        return newDirectory ? destination : null;
     }
 
-    private static void CopyFile(string source, string destination, CopyStats stats)
+    private static string? CopyFile(string source, string destination, CopyStats stats)
     {
         string final = destination;
         if (File.Exists(destination))
@@ -277,7 +347,7 @@ public sealed class EmergencyRecoveryService
             if (FilesEqual(source, destination))
             {
                 stats.Identical++;
-                return;
+                return null;
             }
             final = UniqueRecoveryName(destination);
             stats.Conflicts++;
@@ -296,6 +366,7 @@ public sealed class EmergencyRecoveryService
         }
         catch { }
         stats.Files++;
+        return final;
     }
 
     private void QuarantineTransactionsAndResetLayout(LayoutStore store, LayoutDocument layout, string session)
@@ -347,7 +418,8 @@ public sealed class EmergencyRecoveryService
         }
     }
 
-    private int RestorePositions(DesktopRecoverySnapshot? snapshot, LayoutDocument layout)
+    private static int RestorePositions(DesktopRecoverySnapshot? snapshot, LayoutDocument layout,
+        CopyStats stats, DesktopIconService icons)
     {
         IEnumerable<DesktopRecoveryItem> items = snapshot?.Items
             ?? layout.Fences.SelectMany(fence => fence.Items)
@@ -359,45 +431,66 @@ public sealed class EmergencyRecoveryService
                     X = item.OriginalX!.Value,
                     Y = item.OriginalY!.Value
                 });
-        List<DesktopPlacement> placements = items
-            .Where(item => item.Kind == FenceItemKind.Stored)
-            .Select(item => new DesktopPlacement(item.OriginalPath ?? item.Name, item.X, item.Y, null, null))
-            .ToList();
+        var placements = new List<DesktopPlacement>();
+        foreach (DesktopRecoveryItem item in items)
+        {
+            if (item.Kind != FenceItemKind.Stored || item.OriginalPath is not { } original ||
+                !Path.IsPathFullyQualified(original) || !stats.Created.TryGetValue(Normalize(original), out var copy))
+                continue;
+            placements.Add(new DesktopPlacement(copy.Path, item.X, item.Y, null, null, copy.Identity,
+                VerifyFileIdentity: true));
+        }
         if (placements.Count == 0)
             return 0;
 
-        var icons = new DesktopIconService();
+        var handled = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         int best = 0;
         for (int attempt = 0; attempt < 8 && best < placements.Count; attempt++)
         {
             if (attempt > 0)
                 Thread.Sleep(250);
-            best = Math.Max(best, icons.PlaceRevealedItems(placements));
+            best = Math.Max(best, icons.PlaceRevealedItems(placements, handled));
         }
         return best;
     }
 
-    private static void RevealNamespace(string? value)
-    {
-        if (DesktopHide.TryNamespaceKey(value, out string key))
-            DesktopVisibility.SetNamespaceHidden(key, hidden: false);
-    }
+    private static void ReadNamespaceEvidence(string folder, List<CustodyTransactionItem> evidence) =>
+        evidence.AddRange(new TransactionJournalStore(folder).LoadReadable().SelectMany(journal => journal.Items));
 
-    private void FlushShell()
+    private void ReadPreviousNamespaceEvidence(
+        string currentSession, List<FenceItemState> items, List<DesktopRecoveryItem> snapshots,
+        List<CustodyTransactionItem> evidence, List<string> errors)
     {
-        foreach (string folder in _options.DesktopFolders.Where(Directory.Exists))
+        try
         {
-            NativeMethods.SHChangeNotify(
-                NativeMethods.SHCNE_UPDATEDIR,
-                NativeMethods.SHCNF_PATHW | NativeMethods.SHCNF_FLUSHNOWAIT,
-                folder,
-                IntPtr.Zero);
+            if (!Directory.Exists(_options.RecoveryRoot))
+                return;
+            foreach (string previous in Directory.EnumerateDirectories(_options.RecoveryRoot, "Emergency-*")
+                .Where(folder => folder != currentSession).OrderByDescending(folder => folder, StringComparer.Ordinal))
+            {
+                string receipt = Path.Combine(previous, "recovery-result.txt");
+                if (!File.Exists(receipt))
+                    continue;
+                string[] lines = File.ReadAllLines(receipt);
+                if (!lines.Contains("errors=0"))
+                    continue;
+                if (lines.Any(line => line.StartsWith("namespaceRestored=", StringComparison.Ordinal)))
+                    return;
+
+                var archived = new LayoutStore(Path.Combine(previous, Path.GetFileName(_options.LayoutPath)));
+                items.AddRange(archived.LoadOrEmpty().Fences.SelectMany(fence => fence.Items)
+                    .Where(item => item.Kind == FenceItemKind.Namespace));
+                var previousSnapshot = new DesktopRecoverySnapshotStore(
+                    Path.Combine(previous, Path.GetFileName(_options.SnapshotPath))).Load();
+                snapshots.AddRange(previousSnapshot?.Items ?? []);
+                ReadNamespaceEvidence(Path.Combine(previous, "Transactions"), evidence);
+                return;
+            }
         }
-        NativeMethods.SHChangeNotify(
-            NativeMethods.SHCNE_ASSOCCHANGED,
-            NativeMethods.SHCNF_IDLIST | NativeMethods.SHCNF_FLUSHNOWAIT,
-            IntPtr.Zero,
-            IntPtr.Zero);
+        catch (Exception ex)
+        {
+            errors.Add("Falha ao verificar a recuperação anterior: " + ex.Message);
+        }
     }
 
     private string UserDesktop() => _options.DesktopFolders.FirstOrDefault(Directory.Exists)
@@ -445,7 +538,8 @@ public sealed class EmergencyRecoveryService
         catch (Exception ex) { errors.Add("Falha ao arquivar " + path + ": " + ex.Message); }
     }
 
-    private static void WriteReceipt(string session, CopyStats stats, int positioned, IReadOnlyList<string> errors)
+    private static void WriteReceipt(string session, CopyStats stats, int positioned,
+        int namespaceRestored, int namespacePending, IReadOnlyList<string> errors)
     {
         string[] lines =
         [
@@ -455,6 +549,8 @@ public sealed class EmergencyRecoveryService
             $"identical={stats.Identical}",
             $"conflicts={stats.Conflicts}",
             $"positions={positioned}",
+            $"namespaceRestored={namespaceRestored}",
+            $"namespacePending={namespacePending}",
             $"errors={errors.Count}",
             .. errors.Select(error => "error=" + error)
         ];
@@ -478,6 +574,7 @@ public sealed class EmergencyRecoveryService
 
     private sealed class CopyStats
     {
+        public Dictionary<string, (string Path, string Identity)> Created { get; } = new(StringComparer.OrdinalIgnoreCase);
         public int Files;
         public int Directories;
         public int Identical;

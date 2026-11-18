@@ -30,7 +30,6 @@ public sealed class FenceHost
     private long _layoutRevision;
     private bool _payloadReleased;
     private bool _leaveCustodyInStore;
-    private LayoutDocument? _startupCustody;
     private TitleAlignment? _defaultTitleAlignment;
     private FenceTheme? _defaultTheme;
 
@@ -52,6 +51,8 @@ public sealed class FenceHost
     public bool IsReturningItemsToDesktop => _returningItemsToDesktop > 0;
 
     public bool BlocksDesktopInbound => _blockDesktopInbound || IsReturningItemsToDesktop;
+    public string? LastCustodyError { get; private set; }
+    public IReadOnlyList<string> StartupWarnings { get; private set; } = [];
 
     internal const int ReturnToDesktopMarginMs = 250;
 
@@ -61,17 +62,20 @@ public sealed class FenceHost
     public int Start()
     {
         LayoutDocument doc = _store.LoadOrEmpty();
+        _custody.RepairNamespaceKeys(doc, _recoverySnapshots.Load());
         // O estado que o usuário vê no Desktop é capturado antes de qualquer
         // reconciliação capaz de mover payload ou alterar posições na Shell.
         SaveRecoverySnapshot(doc);
-        RecoveryReport recovery = _custody.Recover(doc);
+        RecoveryReport recovery = _custody.Recover(doc, preserveDesktop: !_recoveryIcons.IsManualArrangement());
         if (!recovery.Complete)
             throw new InvalidDataException(string.Join(Environment.NewLine, recovery.Errors));
         if (doc.Version == 1)
+        {
             doc = _custody.MigrateV1(doc);
+            _custody.RepairNamespaceKeys(doc, _recoverySnapshots.Load());
+        }
         doc = EnsureCustodyBeforeUi(doc);
         _custody.RecordOrphans(doc);
-        _startupCustody = doc;
         _layoutRevision = doc.Revision;
         UiLanguage = UiLanguageCodes.Normalize(doc.UiLanguage);
         _defaultTitleAlignment = doc.DefaultTitleAlignment;
@@ -85,7 +89,6 @@ public sealed class FenceHost
             _defaultTheme);
         foreach (FenceState state in doc.Fences)
             Spawn(state);
-        _startupCustody = null;
 
         SaveAll();
         FencesChanged?.Invoke();
@@ -150,6 +153,7 @@ public sealed class FenceHost
             return false;
         if (_paused)
             return true;
+        LastCustodyError = null;
         if (!ReleaseAll(CustodyOperationKind.Pause))
             return false;
         _paused = true;
@@ -176,23 +180,27 @@ public sealed class FenceHost
     {
         if (_leaveCustodyInStore)
             return;
-        if (_startupCustody is not null)
-        {
-            if (ReleaseStartupDocument(_startupCustody))
-                _startupCustody = null;
-            return;
-        }
         if (!_payloadReleased && ReleaseAll(CustodyOperationKind.Shutdown))
             _payloadReleased = true;
     }
 
     public bool PrepareExit() => PrepareExitCore(releaseCustody: true);
 
+    internal bool PrepareUserExit() => PrepareExitCore(releaseCustody: true, allowDeferred: true);
+
     public bool PrepareUpgradeExit() => PrepareExitCore(releaseCustody: false);
 
-    private bool PrepareExitCore(bool releaseCustody)
+    private bool PrepareExitCore(bool releaseCustody, bool allowDeferred = false)
     {
+        LastCustodyError = null;
         if (_returningItemsToDesktop > 0)
+        {
+            LastCustodyError = Loc.T("CustodyOperationInProgress");
+            return false;
+        }
+
+        SaveAll();
+        if (releaseCustody && !_payloadReleased && !ReleaseAll(CustodyOperationKind.Shutdown, allowDeferred))
             return false;
 
         if (_explorerWatch is not null)
@@ -202,13 +210,8 @@ public sealed class FenceHost
             _explorerWatch = null;
         }
 
-        SaveAll();
         if (releaseCustody)
-        {
-            if (!_payloadReleased && !ReleaseAll(CustodyOperationKind.Shutdown))
-                return false;
             _payloadReleased = true;
-        }
         else
             _leaveCustodyInStore = true;
 
@@ -258,6 +261,11 @@ public sealed class FenceHost
         IReadOnlyList<DesktopCustodyPlan> plans;
         try { plans = _custody.PlanOutbound(items.Select(ToCustodyItem)); }
         catch { return false; }
+        var states = items.Select(item => item.ToState()).ToList();
+        var snapshot = _recoverySnapshots.Load();
+        var reservation = _recoveryIcons.ReserveReturnPositions(BuildReleasedPlacements(states, plans, snapshot));
+        if (plans.Any(plan => !CanReturn(plan, reservation)))
+            return false;
 
         bool restoreBarrier = items.Count > 0;
         if (restoreBarrier)
@@ -267,14 +275,15 @@ public sealed class FenceHost
         {
             if (!_custody.CommitOutbound(
                     before, after, CustodyOperationKind.RemoveFence, plans,
-                    () => window.ApplyOutbound(items, plans), out _))
+                    () => window.ApplyOutbound(items, plans), out _, notifyDesktopDirectory: false))
                 return false;
 
             _layoutRevision = after.Revision;
 
             if (restoreBarrier)
             {
-                await window.PlaceRestoredItemsAsync(items).ConfigureAwait(true);
+                PlaceReleasedItems(reservation,
+                    BuildReleasedPlacements(items.Select(item => item.ToState()).ToList(), plans, snapshot));
                 await Task.Delay(ReturnToDesktopMarginMs).ConfigureAwait(true);
             }
 
@@ -395,15 +404,13 @@ public sealed class FenceHost
         ClearDropHighlights();
     }
 
-    internal bool AnyFenceContainsScreenPoint(int x, int y)
+    internal void CancelFenceItemDrag(FenceWindow source)
     {
-        foreach (FenceWindow window in _windows)
-        {
-            if (window.ContainsScreenPoint(x, y))
-                return true;
-        }
-
-        return false;
+        if (!ReferenceEquals(_itemDragSource, source))
+            return;
+        _itemDragSource = null;
+        _blockDesktopInbound = false;
+        ClearDropHighlights();
     }
 
     internal void BeginFenceItemDrag(FenceWindow source)
@@ -438,8 +445,10 @@ public sealed class FenceHost
         }
 
         if (drop.Kind == FenceItemDropKind.Eject)
-            EjectItems(source, items, screenX, screenY);
-
+        {
+            if (!EjectItems(source, items, screenX, screenY))
+                source.ShowCustodyError(LastCustodyError);
+        }
         else
             source.PersistLayout();
     }
@@ -531,6 +540,10 @@ public sealed class FenceHost
         candidates = candidates
             .Where(item => !DesktopFenceStubRules.ForbidsCustody(item.Name, item.Path, item.OriginalPath))
             .ToList();
+        var knownNamespace = _windows.SelectMany(window => window.Items)
+            .Select(item => item.NamespaceKey).OfType<string>().ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (candidates.Any(item => item.NamespaceKey is { } key && !knownNamespace.Add(key)))
+            return false;
         if (candidates.Count == 0)
             return true;
         IReadOnlyList<DesktopCustodyPlan> plans;
@@ -543,6 +556,7 @@ public sealed class FenceHost
             item.Kind = plan.Kind;
             item.StorageName = plan.StorageName;
             item.OriginalPath = plan.OriginalPath;
+            item.NamespaceKey = plan.NamespaceKey;
         }
 
         LayoutDocument before = CaptureDocument();
@@ -553,7 +567,7 @@ public sealed class FenceHost
         state.Items.AddRange(candidates.Select(i => i.ToState()));
         if (!_custody.CommitInbound(
                 before, after, CustodyOperationKind.Inbound, plans,
-                () => target.ApplyInbound(candidates, plans), out _))
+                () => target.ApplyInbound(candidates, plans), out _, notifyDesktopDirectory: false))
             return false;
         _layoutRevision = after.Revision;
         return true;
@@ -565,98 +579,134 @@ public sealed class FenceHost
         int? screenX,
         int? screenY)
     {
+        LastCustodyError = null;
         if (_returningItemsToDesktop > 0)
             return false;
         IReadOnlyList<DesktopCustodyPlan> plans;
         try { plans = _custody.PlanOutbound(items.Select(ToCustodyItem)); }
-        catch { return false; }
+        catch (Exception ex) { LastCustodyError = ex.Message; return false; }
+        var snapshot = _recoverySnapshots.Load();
+        DesktopReturnReservation reservation = _recoveryIcons.ReserveReturnPositions(
+            BuildReleasedPlacements(items.Select(item => item.ToState()).ToList(), plans, snapshot, screenX, screenY));
+        var accepted = plans.Where(plan => CanReturn(plan, reservation)).ToList();
+        if (accepted.Count != plans.Count)
+            LastCustodyError = Loc.Format("DesktopReturnDeferred", plans.Count - accepted.Count);
+        if (accepted.Count == 0)
+            return false;
         LayoutDocument before = CaptureDocument();
         LayoutDocument after = LayoutStore.Clone(before);
         FenceState? state = after.Fences.FirstOrDefault(f => f.Id == source.FenceId);
         if (state is null)
             return false;
-        HashSet<Guid> ids = items.Select(i => i.ItemId).ToHashSet();
+        HashSet<Guid> ids = accepted.Select(plan => plan.ItemId).ToHashSet();
+        var returned = items.Where(item => ids.Contains(item.ItemId)).ToList();
         state.Items.RemoveAll(i => ids.Contains(i.ItemId));
         if (!_custody.CommitOutbound(
-                before, after, CustodyOperationKind.Outbound, plans,
-                () => source.ApplyOutbound(items, plans, screenX, screenY), out _))
+                before, after, CustodyOperationKind.Outbound, accepted,
+                () => source.ApplyOutbound(returned, accepted), out string? error, notifyDesktopDirectory: false))
+        {
+            LastCustodyError = error;
             return false;
+        }
         _layoutRevision = after.Revision;
-        source.PlaceRestoredItems(items, screenX, screenY);
+        _ = PlaceAfterEjectAsync(reservation,
+            BuildReleasedPlacements(returned.Select(item => item.ToState()).ToList(), accepted, snapshot));
+        if (LastCustodyError is not null)
+            source.ShowCustodyError(LastCustodyError);
         return true;
+    }
+
+    private async Task PlaceAfterEjectAsync(DesktopReturnReservation reservation, IReadOnlyList<DesktopPlacement> placements)
+    {
+        if (placements.Count == 0)
+            return;
+        Interlocked.Increment(ref _returningItemsToDesktop);
+        try
+        {
+            var handled = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            const int attempts = 20;
+            int consecutive = 0;
+            for (int attempt = 0; attempt < attempts; attempt++)
+            {
+                int confirmed = 0;
+                try { confirmed = _recoveryIcons.PlaceReservedItems(reservation, placements, handled); }
+                catch { /* Os arquivos devolvidos já estão no Desktop. */ }
+                consecutive = confirmed >= placements.Count ? consecutive + 1 : 0;
+                if (consecutive >= 3)
+                    break;
+                if (attempt < attempts - 1)
+                    await Task.Delay(120).ConfigureAwait(true);
+            }
+        }
+        finally { Interlocked.Decrement(ref _returningItemsToDesktop); }
     }
 
     internal bool RemoveItems(FenceWindow source, IReadOnlyList<FenceItemVm> items) =>
         EjectItems(source, items, null, null);
 
-    private bool ReleaseAll(CustodyOperationKind operation)
+    private bool ReleaseAll(CustodyOperationKind operation, bool allowDeferred = false)
     {
         List<FenceItemVm> items = _windows.SelectMany(w => w.Items).ToList();
         if (items.Count == 0)
             return true;
         IReadOnlyList<DesktopCustodyPlan> plans;
         try { plans = _custody.PlanOutbound(items.Select(ToCustodyItem)); }
-        catch { return false; }
+        catch (Exception ex) { LastCustodyError = ex.Message; return false; }
+        var snapshot = _recoverySnapshots.Load();
+        var states = items.Select(item => item.ToState()).ToList();
+        DesktopReturnReservation reservation =
+            _recoveryIcons.ReserveReturnPositions(BuildReleasedPlacements(states, plans, snapshot));
+        var accepted = plans.Where(plan => CanReturn(plan, reservation)).ToList();
+        if (accepted.Count != plans.Count)
+        {
+            LastCustodyError = Loc.Format("DesktopReturnDeferred", plans.Count - accepted.Count);
+            if (!allowDeferred)
+                return false;
+        }
+        if (accepted.Count == 0)
+            return true;
         LayoutDocument before = CaptureDocument();
         LayoutDocument after = LayoutStore.Clone(before);
         if (!_custody.CommitOutbound(
-                before, after, operation, plans,
+                before, after, operation, accepted,
                 () =>
                 {
                     foreach (FenceWindow window in _windows)
-                        window.ApplyReleasedPaths(plans);
-                }, out _))
+                        window.ApplyReleasedPaths(after);
+                }, out string? error, notifyDesktopDirectory: false))
+        {
+            LastCustodyError = error;
             return false;
+        }
         _layoutRevision = after.Revision;
-        PlaceReleasedItems(BuildReleasedPlacements(
-            items.Select(item => item.ToState()).ToList(),
-            plans,
-            _recoverySnapshots.Load()));
+        var acceptedIds = accepted.Select(plan => plan.ItemId).ToHashSet();
+        PlaceReleasedItems(reservation, BuildReleasedPlacements(
+            items.Where(item => acceptedIds.Contains(item.ItemId)).Select(item => item.ToState()).ToList(),
+            accepted, snapshot));
         return true;
     }
 
-    private bool ReleaseStartupDocument(LayoutDocument document)
-    {
-        List<DesktopCustodyItem> items = document.Fences.SelectMany(f => f.Items).Select(item =>
-            new DesktopCustodyItem(
-                item.ItemId,
-                item.Kind,
-                item.Name,
-                item.Kind == FenceItemKind.Stored && !string.IsNullOrWhiteSpace(item.StorageName)
-                    ? FenceItemStore.PayloadPath(item.ItemId, item.StorageName)
-                    : item.OriginalPath ?? item.Name,
-                item.OriginalPath,
-                item.StorageName)).ToList();
-        if (items.Count == 0)
-            return true;
-        IReadOnlyList<DesktopCustodyPlan> plans;
-        try { plans = _custody.PlanOutbound(items); }
-        catch { return false; }
-        LayoutDocument after = LayoutStore.Clone(document);
-        bool released = _custody.CommitOutbound(
-            document, after, CustodyOperationKind.Shutdown, plans, null, out _);
-        if (released)
-        {
-            PlaceReleasedItems(BuildReleasedPlacements(
-                document.Fences.SelectMany(fence => fence.Items).ToList(),
-                plans,
-                _recoverySnapshots.Load()));
-        }
-        return released;
-    }
+    internal static bool CanReturn(DesktopCustodyPlan plan, DesktopReturnReservation reservation) =>
+        !plan.CanPlaceAfterRelease || reservation.HasCell(ReturnPlacementKey(plan));
 
-    private void PlaceReleasedItems(IReadOnlyList<DesktopPlacement> placements)
+    private static string ReturnPlacementKey(DesktopCustodyPlan plan) =>
+        (plan.Kind == FenceItemKind.Stored ? plan.DestinationPath : plan.NamespaceKey) ?? plan.Name;
+
+    private void PlaceReleasedItems(DesktopReturnReservation reservation, IReadOnlyList<DesktopPlacement> placements)
     {
+        var handled = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         RunPlacementRetries(
-            () => _recoveryIcons.PlaceRevealedItems(placements),
+            () => _recoveryIcons.PlaceReservedItems(reservation, placements, handled),
             placements.Count,
-            wait: () => Thread.Sleep(120));
+            settlePasses: 3);
     }
 
     internal static IReadOnlyList<DesktopPlacement> BuildReleasedPlacements(
         IReadOnlyList<FenceItemState> items,
         IReadOnlyList<DesktopCustodyPlan> plans,
-        DesktopRecoverySnapshot? snapshot)
+        DesktopRecoverySnapshot? snapshot,
+        int? screenX = null,
+        int? screenY = null)
     {
         Dictionary<Guid, DesktopCustodyPlan> plansById = plans.ToDictionary(plan => plan.ItemId);
         Dictionary<Guid, DesktopRecoveryItem> recoveryById = snapshot?.Items
@@ -669,16 +719,18 @@ public sealed class FenceHost
         foreach (FenceItemState item in items)
         {
             plansById.TryGetValue(item.ItemId, out DesktopCustodyPlan? plan);
+            if (plan is not null && !plan.CanPlaceAfterRelease)
+                continue;
             recoveryById.TryGetValue(item.ItemId, out DesktopRecoveryItem? recovery);
-            string nameOrPath = plan?.Kind == FenceItemKind.Stored
-                ? plan.DestinationPath ?? item.OriginalPath ?? item.Name
-                : item.Name;
+            string nameOrPath = plan is null ? item.OriginalPath ?? item.Name : ReturnPlacementKey(plan);
             result.Add(new DesktopPlacement(
                 nameOrPath,
                 item.OriginalX ?? recovery?.X,
                 item.OriginalY ?? recovery?.Y,
-                null,
-                null));
+                screenX,
+                screenY,
+                item.ReleasedIdentity ?? DesktopFileIdentity.Read(plan?.DestinationPath),
+                VerifyFileIdentity: item.Kind == FenceItemKind.Stored));
         }
 
         return result;
@@ -687,27 +739,28 @@ public sealed class FenceHost
     internal static int RunPlacementRetries(
         Func<int> place,
         int expectedCount,
-        int maxAttempts = 8,
-        Action? wait = null)
+        int maxAttempts = 20,
+        Action? wait = null,
+        int settlePasses = 1)
     {
         if (expectedCount <= 0 || maxAttempts <= 0)
             return 0;
 
-        int best = 0;
+        int placed = 0;
+        int consecutive = 0;
         for (int attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            try { best = Math.Max(best, place()); }
-            catch { /* posição é best-effort; o payload já voltou ao Desktop */ }
+            try { placed = place(); }
+            catch { placed = 0; }
 
-            // Uma segunda passagem estabiliza os índices depois que o Explorer
-            // materializa os itens e resolve colisões na grade do Desktop.
-            if (attempt >= 2 && best >= expectedCount)
+            consecutive = placed >= expectedCount ? consecutive + 1 : 0;
+            if (attempt >= 2 && consecutive >= settlePasses)
                 break;
             if (attempt < maxAttempts)
                 (wait ?? (() => Thread.Sleep(120)))();
         }
 
-        return best;
+        return placed;
     }
 
     private bool ConcealAll(CustodyOperationKind operation)
@@ -726,7 +779,7 @@ public sealed class FenceHost
                 {
                     foreach (FenceWindow window in _windows)
                         window.ApplyStoredPaths(plans);
-                }, out _))
+                }, out _, notifyDesktopDirectory: false))
             return false;
         _layoutRevision = after.Revision;
         return true;
@@ -741,24 +794,36 @@ public sealed class FenceHost
             doc = reconciliation.Document;
         }
 
-        List<DesktopCustodyItem> items = doc.Fences.SelectMany(f => f.Items).Select(item =>
+        bool manual = _recoveryIcons.IsManualArrangement();
+        var items = new List<DesktopCustodyItem>();
+        var pending = new List<string>();
+        foreach (FenceItemState item in doc.Fences.SelectMany(fence => fence.Items))
         {
-            string? runtime = item.Kind == FenceItemKind.Stored && !string.IsNullOrWhiteSpace(item.StorageName)
-                ? FenceItemStore.PayloadPath(item.ItemId, item.StorageName)
-                : item.OriginalPath ?? item.Name;
-            if (item.Kind == FenceItemKind.Stored
-                && !string.IsNullOrWhiteSpace(item.OriginalPath)
-                && !File.Exists(runtime) && !Directory.Exists(runtime))
-                runtime = item.OriginalPath;
-            return new DesktopCustodyItem(
-                item.ItemId, item.Kind, item.Name, runtime, item.OriginalPath, item.StorageName);
-        }).ToList();
+            if (item.Kind == FenceItemKind.Namespace)
+            {
+                if (item.NamespaceKey is not null && (manual || DesktopCustodyBatch.IsNamespaceAlreadyHidden(item.NamespaceKey)))
+                    items.Add(DesktopCustodyItem.FromState(item));
+                else
+                    pending.Add(item.Name);
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(item.StorageName))
+                continue;
+            string storedPath = FenceItemStore.PayloadPath(item.ItemId, item.StorageName);
+            bool alreadyStored = File.Exists(storedPath) || Directory.Exists(storedPath);
+            if (alreadyStored || (manual && DesktopFileIdentity.Matches(item.ReleasedPath, item.ReleasedIdentity)))
+                items.Add(DesktopCustodyItem.FromState(item));
+            else
+                pending.Add(item.Name);
+        }
+        StartupWarnings = pending;
         if (items.Count == 0)
             return doc;
         IReadOnlyList<DesktopCustodyPlan> plans = _custody.PlanInbound(items);
         LayoutDocument after = LayoutStore.Clone(doc);
         if (!_custody.CommitInbound(
-                doc, after, CustodyOperationKind.Resume, plans, null, out string? error))
+                doc, after, CustodyOperationKind.Resume, plans, null, out string? error, notifyDesktopDirectory: false))
             throw new IOException(error ?? "Falha ao recuperar a custódia do Desktop.");
         return after;
     }
@@ -775,7 +840,7 @@ public sealed class FenceHost
 
     private static DesktopCustodyItem ToCustodyItem(FenceItemVm item) => new(
         item.ItemId, item.Kind, item.Name, item.Path,
-        item.OriginalPath, item.StorageName);
+        item.OriginalPath, item.StorageName, item.NamespaceKey, item.ReleasedPath, item.ReleasedIdentity);
 }
 
 public sealed record FenceSummary(Guid Id, string Title, TitleAlignment TitleAlignment);

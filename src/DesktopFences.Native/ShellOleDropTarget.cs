@@ -14,13 +14,15 @@ namespace DesktopFences.Native;
 /// </summary>
 public sealed class ShellOleDropTarget : IDisposable
 {
-    public event Action<IReadOnlyList<string>>? FilesDropped;
-    public event Action? DragEntered;
+    public Func<IReadOnlyList<string>, int, int, bool>? AcceptsItems { get; set; }
+    public Func<IReadOnlyList<string>, int, int, bool>? FilesDropped { get; set; }
+    public event Action<IReadOnlyList<string>, int, int>? DragMoved;
     public event Action? DragLeft;
 
     private readonly DropTarget _com;
     private readonly List<IntPtr> _hwnds = [];
     private IntPtr _helperHwnd;
+    private bool _oleInitialized;
 
     public ShellOleDropTarget()
     {
@@ -29,7 +31,7 @@ public sealed class ShellOleDropTarget : IDisposable
 
     public void Attach(IntPtr hwnd)
     {
-        _ = OleInitialize(IntPtr.Zero);
+        _oleInitialized = OleInitialize(IntPtr.Zero) >= 0;
         _helperHwnd = hwnd;
         Register(hwnd);
     }
@@ -51,15 +53,16 @@ public sealed class ShellOleDropTarget : IDisposable
             _ = RevokeDragDrop(hwnd);
         _hwnds.Clear();
         _helperHwnd = IntPtr.Zero;
+        if (_oleInitialized)
+        {
+            OleUninitialize();
+            _oleInitialized = false;
+        }
     }
 
     public void Dispose() => Detach();
 
-    private void OnEnter() => DragEntered?.Invoke();
-
     private void OnLeave() => DragLeft?.Invoke();
-
-    private void OnDrop(IReadOnlyList<string> paths) => FilesDropped?.Invoke(paths);
 
     [ComVisible(true)]
     [ClassInterface(ClassInterfaceType.None)]
@@ -67,12 +70,13 @@ public sealed class ShellOleDropTarget : IDisposable
     {
         private const int Ok = 0;
         private const int DropEffectCopy = 1;
-        private const int DropEffectMove = 2;
         private const int DropEffectLink = 4;
         private const short CfHdrop = 15;
 
         private readonly ShellOleDropTarget _owner;
         private readonly IDropTargetHelper? _helper;
+        private IReadOnlyList<string> _paths = [];
+        private int _allowed;
 
         public DropTarget(ShellOleDropTarget owner)
         {
@@ -89,22 +93,25 @@ public sealed class ShellOleDropTarget : IDisposable
 
         public int DragEnter(IComDataObject pDataObj, int grfKeyState, PointL pt, ref int pdwEffect)
         {
-            pdwEffect = ChooseEffect(pdwEffect);
+            _paths = ExtractPaths(pDataObj);
+            _allowed = pdwEffect;
+            pdwEffect = EffectAt(pt);
             NotifyHelperEnter(pDataObj, pt, pdwEffect);
-            _owner.OnEnter();
+            UpdatePreview(pt, pdwEffect);
             return Ok;
         }
 
         public int DragOver(int grfKeyState, PointL pt, ref int pdwEffect)
         {
-            pdwEffect = ChooseEffect(pdwEffect);
+            pdwEffect = EffectAt(pt);
+            UpdatePreview(pt, pdwEffect);
             if (_helper is not null)
             {
                 PointL point = pt;
                 try
                 {
                     _helper.DragOver(ref point, pdwEffect);
-                    _helper.Show(false);
+                    _helper.Show(pdwEffect == 0);
                 }
                 catch { }
             }
@@ -116,13 +123,23 @@ public sealed class ShellOleDropTarget : IDisposable
         {
             try { _helper?.DragLeave(); }
             catch { }
+            _paths = [];
+            _allowed = 0;
             _owner.OnLeave();
             return Ok;
         }
 
         public int Drop(IComDataObject pDataObj, int grfKeyState, PointL pt, ref int pdwEffect)
         {
-            pdwEffect = ChooseEffect(pdwEffect);
+            try
+            {
+                _paths = ExtractPaths(pDataObj);
+                _allowed &= pdwEffect;
+                pdwEffect = EffectAt(pt);
+                if (pdwEffect != 0 && _owner.FilesDropped?.Invoke(_paths, pt.X, pt.Y) != true)
+                    pdwEffect = 0;
+            }
+            catch { pdwEffect = 0; }
             if (_helper is not null)
             {
                 PointL point = pt;
@@ -130,8 +147,8 @@ public sealed class ShellOleDropTarget : IDisposable
                 catch { }
             }
 
-            IReadOnlyList<string> paths = ExtractPaths(pDataObj);
-            _owner.OnDrop(paths);
+            _paths = [];
+            _allowed = 0;
             _owner.OnLeave();
             return Ok;
         }
@@ -146,33 +163,108 @@ public sealed class ShellOleDropTarget : IDisposable
             try
             {
                 _helper.DragEnter(hwnd, data, ref point, effect);
-                _helper.Show(false);
+                _helper.Show(effect == 0);
             }
             catch { }
         }
 
-        private static int ChooseEffect(int allowed)
+        private int EffectAt(PointL point)
         {
-            const int wanted = DropEffectCopy | DropEffectMove | DropEffectLink;
-            int available = allowed & wanted;
-            if ((available & DropEffectCopy) != 0)
+            if (_paths.Count == 0 || _owner.AcceptsItems?.Invoke(_paths, point.X, point.Y) != true)
+                return 0;
+            if ((_allowed & DropEffectCopy) != 0)
                 return DropEffectCopy;
-            if ((available & DropEffectLink) != 0)
+            if ((_allowed & DropEffectLink) != 0)
                 return DropEffectLink;
-            if ((available & DropEffectMove) != 0)
-                return DropEffectMove;
-            return DropEffectCopy;
+            return 0;
+        }
+
+        private void UpdatePreview(PointL point, int effect)
+        {
+            if (effect == 0)
+                _owner.OnLeave();
+            else
+                _owner.DragMoved?.Invoke(_paths, point.X, point.Y);
         }
 
         private static IReadOnlyList<string> ExtractPaths(IComDataObject data)
         {
             var paths = new List<string>();
-            TryHdrop(data, paths);
+            TryShellItems(data, paths);
+            if (paths.Count == 0)
+                TryHdrop(data, paths);
             if (paths.Count == 0)
                 TryFormat(data, "FileNameW", paths);
             if (paths.Count == 0)
                 TryFormat(data, "FileName", paths);
             return paths;
+        }
+
+        private static void TryShellItems(IComDataObject data, List<string> paths)
+        {
+            FORMATETC format = new()
+            {
+                cfFormat = unchecked((short)RegisterClipboardFormat("Shell IDList Array")),
+                dwAspect = DVASPECT.DVASPECT_CONTENT,
+                lindex = -1,
+                tymed = TYMED.TYMED_HGLOBAL
+            };
+            STGMEDIUM medium = new();
+            try
+            {
+                if (data.QueryGetData(ref format) != 0)
+                    return;
+                data.GetData(ref format, out medium);
+                IntPtr pointer = GlobalLock(medium.unionmember);
+                if (pointer == IntPtr.Zero)
+                    return;
+                try
+                {
+                    ulong bytes = GlobalSize(medium.unionmember).ToUInt64();
+                    if (bytes < 12 || bytes > int.MaxValue)
+                        return;
+                    int count = Marshal.ReadInt32(pointer);
+                    if (count <= 0 || count > ((int)bytes - 8) / 4)
+                        return;
+                    int header = (count + 2) * 4;
+                    int parent = Marshal.ReadInt32(pointer, 4);
+                    if (!ValidPidl(pointer, parent, header, (int)bytes))
+                        return;
+                    var decoded = new List<string>();
+                    for (int i = 0; i < count; i++)
+                    {
+                        int child = Marshal.ReadInt32(pointer, (i + 2) * 4);
+                        if (!ValidPidl(pointer, child, header, (int)bytes))
+                            return;
+                        string? path = ShellDesktopNamespace.GetDropItem(pointer + parent, pointer + child);
+                        if (path is null)
+                            return;
+                        decoded.Add(path);
+                    }
+                    paths.AddRange(decoded);
+                }
+                finally { GlobalUnlock(medium.unionmember); }
+            }
+            catch { }
+            finally
+            {
+                if (medium.unionmember != IntPtr.Zero || medium.pUnkForRelease is not null)
+                    ReleaseStgMedium(ref medium);
+            }
+        }
+
+        private static bool ValidPidl(IntPtr pointer, int offset, int header, int size)
+        {
+            while (offset >= header && offset <= size - 2)
+            {
+                int length = unchecked((ushort)Marshal.ReadInt16(pointer, offset));
+                if (length == 0)
+                    return true;
+                if (length < 2 || length > size - offset)
+                    return false;
+                offset += length;
+            }
+            return false;
         }
 
         private static void TryHdrop(IComDataObject data, List<string> paths)
@@ -306,6 +398,9 @@ public sealed class ShellOleDropTarget : IDisposable
     private static extern int OleInitialize(IntPtr pvReserved);
 
     [DllImport("ole32.dll")]
+    private static extern void OleUninitialize();
+
+    [DllImport("ole32.dll")]
     private static extern int RegisterDragDrop(IntPtr hwnd, IDropTarget pDropTarget);
 
     [DllImport("ole32.dll")]
@@ -325,4 +420,7 @@ public sealed class ShellOleDropTarget : IDisposable
 
     [DllImport("kernel32.dll")]
     private static extern bool GlobalUnlock(IntPtr hMem);
+
+    [DllImport("kernel32.dll")]
+    private static extern UIntPtr GlobalSize(IntPtr hMem);
 }
