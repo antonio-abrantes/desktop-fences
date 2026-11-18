@@ -60,6 +60,74 @@ internal static class ShellDesktopNamespace
         return FindDesktopChild(nameOrPath.Trim())?.ParsingName;
     }
 
+    public static string RequireKey(DesktopCustodyItem item) =>
+        ResolveKey(item.NamespaceKey, item.OriginalPath, item.RuntimePath)
+        ?? ResolveDisplayName(item.Name)
+        ?? throw new InvalidOperationException($"Não foi possível identificar o ícone de sistema (namespace): {item.Name}");
+
+    public static string? ResolveKey(params string?[] candidates)
+    {
+        foreach (string? candidate in candidates)
+            if (!string.IsNullOrWhiteSpace(candidate) && LooksLikeParsingName(candidate)
+                && DesktopHide.TryNamespaceKey(candidate, out string key))
+                return key;
+        return null;
+    }
+
+    public static string? ResolveDisplayName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return null;
+        DesktopChild? child = FindDesktopChild(name);
+        if (child is not null)
+            return ResolveKey(child.ParsingName);
+        if (DesktopFences.Core.DesktopPaths.ResolveExisting(name) is not null)
+            return null;
+
+        // The desktop view can omit disabled system icons even with INCLUDEHIDDEN.
+        Guid[] knownDesktopIcons = [DesktopHide.RecycleBin, DesktopHide.ThisPc, DesktopHide.Network];
+        string[] matches = knownDesktopIcons.Select(DesktopHide.FormatClsid)
+            .Where(key => DesktopVisibility.IsNamespaceStateSet(key, hidden: true)
+                && NamesMatch(name, GetNamespaceLabel(key) ?? ""))
+            .ToArray();
+        return matches.Length == 1 ? matches[0] : null;
+    }
+
+    internal static string? GetDropItem(IntPtr parent, IntPtr child)
+    {
+        IntPtr pidl = ILCombine(parent, child);
+        if (pidl == IntPtr.Zero)
+            return null;
+        try
+        {
+            string? path = GetShellName(pidl, 0x80058000);
+            if (path is not null)
+                return path;
+            string? parsing = GetShellName(pidl, 0x80028000);
+            string? key = ResolveKey(parsing);
+            return key is not null && string.Equals(parsing, DesktopHide.ToShellParsingName(key),
+                StringComparison.OrdinalIgnoreCase) ? DesktopHide.ToShellParsingName(key) : null;
+        }
+        finally { ILFree(pidl); }
+    }
+
+    internal static string? GetShellName(IntPtr pidl, uint kind)
+    {
+        if (SHGetNameFromIDList(pidl, kind, out IntPtr value) != 0)
+            return null;
+        try { return Marshal.PtrToStringUni(value); }
+        finally { Marshal.FreeCoTaskMem(value); }
+    }
+
+    public static string? GetNamespaceLabel(string key)
+    {
+        IntPtr pidl = GetAbsolutePidl(DesktopHide.ToShellParsingName(key));
+        if (pidl == IntPtr.Zero)
+            return null;
+        try { return GetShellName(pidl, 0); }
+        finally { ILFree(pidl); }
+    }
+
     public static IntPtr GetAbsolutePidl(string nameOrPath)
     {
         if (string.IsNullOrWhiteSpace(nameOrPath))
@@ -100,6 +168,7 @@ internal static class ShellDesktopNamespace
             if (hr != 0 || enumerator is null)
                 return null;
 
+            DesktopChild? match = null;
             while (enumerator.Next(1, out IntPtr relative, out uint fetched) == 0 && fetched == 1)
             {
                 try
@@ -110,13 +179,16 @@ internal static class ShellDesktopNamespace
                         continue;
 
                     string parsing = GetDisplayName(desktop, relative, ShgdnForParsing);
-                    return new DesktopChild(infolder, parsing);
+                    if (match is not null && !string.Equals(match.ParsingName, parsing, StringComparison.OrdinalIgnoreCase))
+                        return null;
+                    match = new DesktopChild(infolder, parsing);
                 }
                 finally
                 {
                     ILFree(relative);
                 }
             }
+            return match;
         }
         catch
         {
@@ -129,7 +201,6 @@ internal static class ShellDesktopNamespace
             Marshal.ReleaseComObject(desktop);
         }
 
-        return null;
     }
 
     private static string GetDisplayName(IShellFolder folder, IntPtr pidl, uint flags)
@@ -183,6 +254,12 @@ internal static class ShellDesktopNamespace
 
     [DllImport("shell32.dll")]
     private static extern void ILFree(IntPtr pidl);
+
+    [DllImport("shell32.dll")]
+    private static extern IntPtr ILCombine(IntPtr parent, IntPtr child);
+
+    [DllImport("shell32.dll")]
+    private static extern int SHGetNameFromIDList(IntPtr pidl, uint kind, out IntPtr name);
 
     [DllImport("shlwapi.dll", CharSet = CharSet.Unicode, EntryPoint = "StrRetToBufW")]
     private static extern int StrRetToBuf(IntPtr pstr, IntPtr pidl, StringBuilder pszBuf, uint cchBuf);

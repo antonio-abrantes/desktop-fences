@@ -45,6 +45,8 @@ public sealed class CustodyTransactionItem
     public string Name { get; set; } = string.Empty;
     public string? SourcePath { get; set; }
     public string? DestinationPath { get; set; }
+    public string? SourceIdentity { get; set; }
+    public string? DestinationIdentity { get; set; }
     public bool NamespaceItem { get; set; }
     public string? NamespaceKey { get; set; }
     public bool DestinationNamespaceHidden { get; set; }

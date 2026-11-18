@@ -1,6 +1,7 @@
 using DesktopFences.Core;
 using DesktopFences.Core.Models;
 using DesktopFences.Core.Occupancy;
+using DesktopFences.Core.Recovery;
 using DesktopFences.Core.Transactions;
 
 namespace DesktopFences.Native;
@@ -11,7 +12,15 @@ public sealed record DesktopCustodyItem(
     string Name,
     string? RuntimePath,
     string? OriginalPath,
-    string? StorageName);
+    string? StorageName,
+    string? NamespaceKey = null,
+    string? ReleasedPath = null,
+    string? ReleasedIdentity = null)
+{
+    public static DesktopCustodyItem FromState(FenceItemState item) => new(
+        item.ItemId, item.Kind, item.Name, item.ReleasedPath ?? item.OriginalPath ?? item.Name,
+        item.OriginalPath, item.StorageName, item.NamespaceKey, item.ReleasedPath, item.ReleasedIdentity);
+}
 
 public sealed record DesktopCustodyPlan(
     Guid ItemId,
@@ -21,7 +30,14 @@ public sealed record DesktopCustodyPlan(
     string? DestinationPath,
     string? OriginalPath,
     string? StorageName,
-    string? NamespaceKey);
+    string? NamespaceKey,
+    bool RevealsNamespace = true,
+    string? SourceIdentity = null)
+{
+    public bool CanPlaceAfterRelease => Kind == FenceItemKind.Namespace
+        ? RevealsNamespace
+        : !string.Equals(SourcePath, DestinationPath, StringComparison.OrdinalIgnoreCase);
+}
 
 public readonly record struct ShellNotifyRequest(bool UpdateDirectory, bool AssocChanged)
 {
@@ -53,6 +69,26 @@ public interface IDesktopCustodyBatch
 
 public sealed class DesktopCustodyBatch : IDesktopCustodyBatch
 {
+    public static bool IsNamespaceAlreadyHidden(string key) =>
+        DesktopVisibility.IsNamespaceStateSet(key, hidden: true);
+
+    public static string? GetDropNamespaceKey(string value)
+    {
+        string? key = ShellDesktopNamespace.ResolveKey(value);
+        return key is not null && string.Equals(DesktopHide.ToShellParsingName(key), value, StringComparison.OrdinalIgnoreCase)
+            ? key : null;
+    }
+
+    public static bool IsEligibleDropItem(string value) =>
+        !string.IsNullOrWhiteSpace(value) &&
+        (Path.IsPathFullyQualified(value)
+            ? DesktopPaths.FolderList().Any(folder => IsUnder(folder, value))
+            : GetDropNamespaceKey(value) is not null);
+
+    public static string GetDropDisplayName(string value) =>
+        GetDropNamespaceKey(value) is string key
+            ? ShellDesktopNamespace.GetNamespaceLabel(key) ?? value
+            : DesktopPaths.VisibleName(value);
     public IReadOnlyList<DesktopCustodyPlan> PlanInbound(IEnumerable<DesktopCustodyItem> items)
     {
         IReadOnlyList<string> desktopFolders = DesktopPaths.FolderList();
@@ -64,11 +100,6 @@ public sealed class DesktopCustodyBatch : IDesktopCustodyBatch
                 string stableDestination = FenceItemStore.PayloadPath(item.ItemId, item.StorageName);
                 if (File.Exists(stableDestination) || Directory.Exists(stableDestination))
                 {
-                    if (!string.IsNullOrWhiteSpace(item.OriginalPath)
-                        && Exists(item.OriginalPath)
-                        && !SamePath(item.OriginalPath, stableDestination))
-                        throw new InvalidOperationException(
-                            $"Há duas cópias físicas para o mesmo ItemId: {item.Name}");
                     result.Add(new DesktopCustodyPlan(
                         item.ItemId, item.Kind, item.Name,
                         stableDestination, stableDestination, item.OriginalPath,
@@ -79,15 +110,18 @@ public sealed class DesktopCustodyBatch : IDesktopCustodyBatch
 
             if (item.Kind == FenceItemKind.Namespace)
             {
-                string raw = ShellDesktopNamespace.GetParsingName(item.RuntimePath ?? item.OriginalPath ?? item.Name)
-                             ?? item.RuntimePath ?? item.OriginalPath ?? item.Name;
-                string key = DesktopHide.RequireNamespaceKey(raw, item.Name);
+                string key = ShellDesktopNamespace.RequireKey(item);
                 result.Add(new DesktopCustodyPlan(
                     item.ItemId, item.Kind, item.Name, null, null, null, null, key));
                 continue;
             }
 
-            string? resolved = DesktopPaths.ResolveExisting(item.RuntimePath ?? item.Name);
+            string? source = item.RuntimePath ?? item.Name;
+            string? resolved = item.ReleasedPath is not null
+                ? DesktopFileIdentity.Matches(item.ReleasedPath, item.ReleasedIdentity) ? item.ReleasedPath : null
+                : Path.IsPathFullyQualified(source)
+                    ? Exists(source) ? source : null
+                    : DesktopPaths.ResolveExisting(source);
             if (resolved is not null && !desktopFolders.Any(folder => IsUnder(folder, resolved)))
                 throw new InvalidOperationException($"O item não pertence ao Desktop: {item.Name}");
             string? parsing = resolved is null
@@ -129,25 +163,22 @@ public sealed class DesktopCustodyBatch : IDesktopCustodyBatch
         {
             if (item.Kind == FenceItemKind.Namespace)
             {
-                string raw = item.RuntimePath ?? item.OriginalPath ?? item.Name;
-                string key = DesktopHide.RequireNamespaceKey(raw, item.Name);
+                string key = ShellDesktopNamespace.RequireKey(item);
                 result.Add(new DesktopCustodyPlan(
-                    item.ItemId, item.Kind, item.Name, null, null, null, null, key));
+                    item.ItemId, item.Kind, item.Name, null, null, null, null, key, IsNamespaceAlreadyHidden(key)));
                 continue;
             }
 
             if (string.IsNullOrWhiteSpace(item.StorageName))
                 throw new InvalidOperationException($"Item armazenado sem StorageName: {item.Name}");
             string source = FenceItemStore.PayloadPath(item.ItemId, item.StorageName);
-            if (!Exists(source)
-                && !string.IsNullOrWhiteSpace(item.RuntimePath)
-                && Exists(item.RuntimePath)
-                && !FenceItemStore.IsUnderRoot(item.RuntimePath))
+            if (!Exists(source))
             {
-                if (!desktopFolders.Any(folder => IsUnder(folder, item.RuntimePath)))
-                    throw new InvalidOperationException($"O item não pertence ao Desktop: {item.Name}");
+                if (item.ReleasedPath is null || !desktopFolders.Any(folder => IsUnder(folder, item.ReleasedPath))
+                    || !DesktopFileIdentity.Matches(item.ReleasedPath, item.ReleasedIdentity))
+                    throw new InvalidOperationException($"Não foi possível confirmar o arquivo no armazenamento ou no Desktop: {item.Name}");
                 result.Add(new DesktopCustodyPlan(
-                    item.ItemId, item.Kind, item.Name, item.RuntimePath, item.RuntimePath,
+                    item.ItemId, item.Kind, item.Name, item.ReleasedPath, item.ReleasedPath,
                     item.OriginalPath, item.StorageName, null));
                 continue;
             }
@@ -165,6 +196,26 @@ public sealed class DesktopCustodyBatch : IDesktopCustodyBatch
         return result;
     }
 
+    public static string? ResolveNamespaceKey(
+        FenceItemState item,
+        IEnumerable<CustodyTransactionItem> journal,
+        IEnumerable<DesktopRecoveryItem> snapshot)
+    {
+        string? explicitKey = ShellDesktopNamespace.ResolveKey(item.NamespaceKey, item.OriginalPath, item.Path);
+        if (explicitKey is not null)
+            return explicitKey;
+
+        string[] keys = journal.Where(entry => entry.NamespaceItem && entry.ItemId == item.ItemId)
+            .Select(entry => ShellDesktopNamespace.ResolveKey(entry.NamespaceKey))
+            .Concat(snapshot.Where(entry => entry.Kind == FenceItemKind.Namespace && entry.ItemId == item.ItemId)
+                .Select(entry => ShellDesktopNamespace.ResolveKey(entry.NamespaceKey, entry.OriginalPath)))
+            .OfType<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        return keys.Length == 0 ? ShellDesktopNamespace.ResolveDisplayName(item.Name)
+            : keys.Length == 1 ? keys[0] : null;
+    }
+
     public DesktopCustodyBatchResult ExecuteInbound(IReadOnlyList<DesktopCustodyPlan> plans) =>
         Execute(plans, forward: true, hideNamespace: true);
 
@@ -179,13 +230,16 @@ public sealed class DesktopCustodyBatch : IDesktopCustodyBatch
     }
 
     public void FlushShell(ShellNotifyRequest notify)
+        => FlushShell(notify, DesktopPaths.FolderList());
+
+    internal static void FlushShell(ShellNotifyRequest notify, IEnumerable<string> folders)
     {
         if (!notify.Any)
             return;
 
         if (notify.UpdateDirectory)
         {
-            foreach (string folder in DesktopPaths.FolderList())
+            foreach (string folder in folders)
             {
                 if (!Directory.Exists(folder))
                     continue;
@@ -233,6 +287,8 @@ public sealed class DesktopCustodyBatch : IDesktopCustodyBatch
             string? destination = forward ? plan.DestinationPath : plan.SourcePath;
             if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(destination))
                 return false;
+            if (forward && plan.SourceIdentity is not null && !DesktopFileIdentity.Matches(source, plan.SourceIdentity))
+                return false;
             if (!MoveExact(source, destination, out bool moved))
                 return false;
             if (moved)
@@ -260,7 +316,7 @@ public sealed class DesktopCustodyBatch : IDesktopCustodyBatch
         return new DesktopCustodyBatchResult(
             false,
             result.Applied,
-            $"Falha ao mover {result.FailedItem?.Name ?? "item"}.{suffix}",
+            $"Falha ao restaurar ou mover {result.FailedItem?.Name ?? "item"}.{suffix}",
             ShellNotifyRequest.None);
     }
 
@@ -329,12 +385,23 @@ public sealed class DesktopCustodyBatch : IDesktopCustodyBatch
     }
 }
 
-public sealed class DesktopCustodyRecoveryActions : ICustodyRecoveryActions
+public sealed class DesktopCustodyRecoveryActions(bool preserveDesktop = false) : ICustodyRecoveryActions
 {
     public bool Exists(string path) => File.Exists(path) || Directory.Exists(path);
+    public string? Identity(string path) => DesktopFileIdentity.Read(path);
 
-    public bool Move(string source, string destination) => DesktopCustodyBatch.MoveExact(source, destination);
+    public bool Move(string source, string destination)
+    {
+        if (preserveDesktop)
+        {
+            IReadOnlyList<string> folders = DesktopPaths.FolderList();
+            if (DesktopHide.IsUnderDesktopFolders(source, folders) || DesktopHide.IsUnderDesktopFolders(destination, folders))
+                return false;
+        }
+        return DesktopCustodyBatch.MoveExact(source, destination);
+    }
 
     public bool SetNamespaceHidden(string key, bool hidden) =>
-        DesktopVisibility.SetNamespaceHidden(key, hidden);
+        preserveDesktop ? DesktopVisibility.IsNamespaceStateSet(key, hidden)
+            : DesktopVisibility.SetNamespaceHidden(key, hidden);
 }

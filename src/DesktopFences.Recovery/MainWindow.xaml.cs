@@ -41,7 +41,8 @@ public partial class MainWindow : Window
             if (!report.Success)
             {
                 string error = string.Join(Environment.NewLine, report.Errors);
-                StatusText.Text = RecoveryText.Failed(error);
+                StatusText.Text = RecoveryText.Failed(error) + RecoveryText.NamespaceStatus(
+                    report.NamespaceRestored, report.NamespacePending);
                 MessageBox.Show(StatusText.Text, RecoveryText.Title, MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
@@ -52,7 +53,7 @@ public partial class MainWindow : Window
                 report.PositionsRestored,
                 report.ConflictsPreserved,
                 report.RecoverySessionPath,
-                restorePositions);
+                restorePositions) + RecoveryText.NamespaceStatus(report.NamespaceRestored, report.NamespacePending);
             MessageBox.Show(StatusText.Text, RecoveryText.Title, MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)

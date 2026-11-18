@@ -15,6 +15,7 @@ internal static class MaintenanceProtocol
     public const string CreateFence = "create-fence";
     public const string Success = "ok";
     public const string Failed = "failed";
+    public const string CustodyBlocked = "custody-blocked:";
 
     public static bool IsPrepareExitCommand(string? command) =>
         string.Equals(command, PrepareExit, StringComparison.Ordinal);
@@ -69,6 +70,7 @@ internal sealed class MaintenancePipeServer : IDisposable
     private readonly Func<bool> _prepareUpgradeExit;
     private readonly Func<bool> _createFence;
     private readonly Action<bool> _shutdown;
+    private readonly Func<string?> _custodyError;
     private readonly CancellationTokenSource _cancel = new();
     private readonly Task _listener;
 
@@ -77,13 +79,15 @@ internal sealed class MaintenancePipeServer : IDisposable
         Func<bool> prepareExit,
         Func<bool> prepareUpgradeExit,
         Func<bool> createFence,
-        Action<bool> shutdown)
+        Action<bool> shutdown,
+        Func<string?> custodyError)
     {
         _dispatcher = dispatcher;
         _prepareExit = prepareExit;
         _prepareUpgradeExit = prepareUpgradeExit;
         _createFence = createFence;
         _shutdown = shutdown;
+        _custodyError = custodyError;
         _listener = Task.Run(ListenAsync);
     }
 
@@ -111,7 +115,11 @@ internal sealed class MaintenancePipeServer : IDisposable
                     () => SafeInvoke(_prepareExit),
                     () => SafeInvoke(_prepareUpgradeExit),
                     () => SafeInvoke(_createFence));
-                await writer.WriteLineAsync(result.Success ? MaintenanceProtocol.Success : MaintenanceProtocol.Failed);
+                string reply = result.Success ? MaintenanceProtocol.Success : MaintenanceProtocol.Failed;
+                if (!result.Success && MaintenanceProtocol.IsPrepareExitCommand(command)
+                    && _dispatcher.Invoke(_custodyError) is { Length: > 0 } detail)
+                    reply = MaintenanceProtocol.CustodyBlocked + detail.Replace('\r', ' ').Replace('\n', ' ');
+                await writer.WriteLineAsync(reply);
                 if (result.Shutdown)
                     _ = _dispatcher.BeginInvoke(() => _shutdown(result.LeaveCustody), DispatcherPriority.Background);
             }
@@ -152,16 +160,22 @@ internal static class MaintenancePipeClient
     public static readonly TimeSpan RestoreTimeout = TimeSpan.FromSeconds(60);
     public static readonly TimeSpan UpgradeTimeout = TimeSpan.FromSeconds(15);
 
-    public static bool RequestPrepareExit(TimeSpan timeout) =>
-        Request(MaintenanceProtocol.PrepareExit, timeout);
+    public static bool RequestPrepareExit(TimeSpan timeout, out string? custodyError)
+    {
+        string? reply = Request(MaintenanceProtocol.PrepareExit, timeout);
+        custodyError = reply?.StartsWith(MaintenanceProtocol.CustodyBlocked, StringComparison.Ordinal) == true
+            ? reply[MaintenanceProtocol.CustodyBlocked.Length..]
+            : null;
+        return reply == MaintenanceProtocol.Success;
+    }
 
     public static bool RequestPrepareExitUpgrade(TimeSpan timeout) =>
-        Request(MaintenanceProtocol.PrepareExitUpgrade, timeout);
+        Request(MaintenanceProtocol.PrepareExitUpgrade, timeout) == MaintenanceProtocol.Success;
 
     public static bool RequestCreateFence(TimeSpan timeout) =>
-        Request(MaintenanceProtocol.CreateFence, timeout);
+        Request(MaintenanceProtocol.CreateFence, timeout) == MaintenanceProtocol.Success;
 
-    private static bool Request(string command, TimeSpan timeout)
+    private static string? Request(string command, TimeSpan timeout)
     {
         try
         {
@@ -177,11 +191,11 @@ internal static class MaintenancePipeClient
                 AutoFlush = true
             };
             writer.WriteLine(command);
-            return string.Equals(reader.ReadLine(), MaintenanceProtocol.Success, StringComparison.Ordinal);
+            return reader.ReadLine();
         }
         catch
         {
-            return false;
+            return null;
         }
     }
 }

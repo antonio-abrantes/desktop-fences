@@ -188,6 +188,27 @@ public sealed class EmergencyRecoveryServiceTests : IDisposable
         File.ReadAllText(Path.Combine(desktop, "dados.txt")).Should().Be("safe");
     }
 
+    [Fact]
+    public void RestoreAll_PreservesLayoutWhenNamespaceIdentityCannotBeRecovered()
+    {
+        string desktop = Path.Combine(_root, "Desktop");
+        string layoutPath = Path.Combine(_root, "layout.json");
+        string recovery = Path.Combine(_root, "Recovery");
+        Directory.CreateDirectory(desktop);
+        var store = new LayoutStore(layoutPath);
+        var item = new FenceItemState { ItemId = Guid.NewGuid(), Kind = FenceItemKind.Namespace, Name = "Unresolved" + Guid.NewGuid() };
+        store.Save(new LayoutDocument { Fences = [new FenceState { Items = [item] }] });
+
+        EmergencyRecoveryReport result = new EmergencyRecoveryService(new EmergencyRecoveryOptions(
+            layoutPath, Path.Combine(_root, "Items"), Path.Combine(_root, "Transactions"),
+            Path.Combine(recovery, "snapshot.json"), [desktop], recovery)).RestoreAll();
+
+        result.Success.Should().BeFalse();
+        result.NamespacePending.Should().Be(1);
+        result.Errors.Should().ContainSingle(error => error.Contains(item.Name));
+        store.LoadOrEmpty().Fences.Single().Items.Single().ItemId.Should().Be(item.ItemId);
+    }
+
     public void Dispose()
     {
         try { Directory.Delete(_root, recursive: true); } catch { }

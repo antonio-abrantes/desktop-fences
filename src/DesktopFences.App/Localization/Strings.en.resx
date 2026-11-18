@@ -95,4 +95,9 @@ Remove “{1}”?</value></data>
   <data name="DiagMoved" xml:space="preserve"><value>Moved '{0}' to ({1},{2}). Check the desktop.</value></data>
   <data name="DiagNothingToRestore" xml:space="preserve"><value>Nothing to restore.</value></data>
   <data name="DiagRestored" xml:space="preserve"><value>Restored to ({0},{1}).</value></data>
+  <data name="CustodyOperationInProgress" xml:space="preserve"><value>Items are being returned to the desktop. Try again when the operation finishes.</value></data>
+  <data name="CustodyReleaseFailed" xml:space="preserve"><value>Some items could not be returned to the desktop.</value></data>
+  <data name="DesktopReturnDeferred" xml:space="preserve"><value>{0} item(s) are still held in the fences. DesktopFences could not find safe positions for them without displacing other icons.</value></data>
+  <data name="CustodyExitPreservingData" xml:space="preserve"><value>{0}&#10;&#10;Exit while preserving the data and leave the pending items for later recovery?</value></data>
+  <data name="CustodyStartupDeferred" xml:space="preserve"><value>These items were deferred to preserve your desktop arrangement or because their identity could not be confirmed.&#10;&#10;{0}</value></data>
 </root>

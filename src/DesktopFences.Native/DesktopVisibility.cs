@@ -268,6 +268,17 @@ public sealed class DesktopVisibility
     internal static bool SetNamespaceHidden(string clsid, bool hidden) =>
         SetNamespaceHidden(clsid, hidden, out _);
 
+    internal static bool IsNamespaceStateSet(string key, bool hidden)
+    {
+        try
+        {
+            int expected = hidden ? 1 : 0;
+            return ReadDword(NewStartPanel, key) == expected && ReadDword(ClassicStartMenu, key) == expected
+                && !ValueExists(NewStartPanel, "::" + key) && !ValueExists(ClassicStartMenu, "::" + key);
+        }
+        catch { return false; }
+    }
+
     internal static bool SetNamespaceHidden(string clsid, bool hidden, out bool changed)
     {
         changed = false;

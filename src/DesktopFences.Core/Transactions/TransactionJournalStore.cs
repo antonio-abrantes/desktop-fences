@@ -70,6 +70,23 @@ public sealed class TransactionJournalStore : ITransactionJournalStore
         return result.OrderBy(t => t.CreatedUtc).ToList();
     }
 
+    public IEnumerable<CustodyTransaction> LoadReadable()
+    {
+        if (!Directory.Exists(DirectoryPath))
+            yield break;
+        foreach (string path in Directory.EnumerateFiles(DirectoryPath, "*.json"))
+        {
+            CustodyTransaction journal;
+            try { journal = ReadFile(path); }
+            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+            {
+                // Emergency Recovery archives the originals, including unreadable journals.
+                continue;
+            }
+            yield return journal;
+        }
+    }
+
     public void Delete(Guid operationId)
     {
         string path = PathFor(operationId);

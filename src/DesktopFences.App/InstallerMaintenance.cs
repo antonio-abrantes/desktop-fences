@@ -102,11 +102,14 @@ internal static class InstallerMaintenance
             TimeSpan timeout = upgradeExit
                 ? MaintenancePipeClient.UpgradeTimeout
                 : MaintenancePipeClient.RestoreTimeout;
+            string? custodyError = null;
             bool pipeOk = upgradeExit
                 ? MaintenancePipeClient.RequestPrepareExitUpgrade(timeout)
-                : MaintenancePipeClient.RequestPrepareExit(timeout);
+                : MaintenancePipeClient.RequestPrepareExit(timeout, out custodyError);
             if (!pipeOk)
             {
+                if (custodyError is not null)
+                    throw new MaintenanceFailedException(MaintenanceFailureKind.CustodyBlocked, OneLine(custodyError));
                 throw new MaintenanceFailedException(
                     MaintenanceFailureClassification.Classify(
                         mutexHeldByOther: true,
@@ -148,6 +151,8 @@ internal static class InstallerMaintenance
         var store = new LayoutStore();
         var coordinator = new CustodyCoordinator(store);
         LayoutDocument document = store.LoadOrEmpty();
+        DesktopRecoverySnapshot? snapshot = new DesktopRecoverySnapshotStore().Load();
+        coordinator.RepairNamespaceKeys(document, snapshot);
         RecoveryReport recovery = coordinator.Recover(document);
         if (!recovery.Complete)
         {
@@ -164,10 +169,24 @@ internal static class InstallerMaintenance
             document = coordinator.MigrateV1(document);
 
         List<FenceItemState> states = document.Fences.SelectMany(fence => fence.Items).ToList();
+        if (!states.Any(item => item.Kind == FenceItemKind.Namespace))
+        {
+            IReadOnlyList<string> pending = new EmergencyRecoveryService().PendingLegacyNamespace();
+            if (pending.Count > 0)
+                throw new MaintenanceFailedException(MaintenanceFailureKind.CustodyBlocked,
+                    "O Recovery precisa restaurar os ícones de sistema pendentes: " + string.Join(", ", pending));
+        }
         if (states.Count == 0)
             return;
-        List<DesktopCustodyItem> items = states.Select(ToCustodyItem).ToList();
+        List<DesktopCustodyItem> items = states.Select(DesktopCustodyItem.FromState).ToList();
         IReadOnlyList<DesktopCustodyPlan> plans = coordinator.PlanOutbound(items);
+        var icons = new DesktopIconService();
+        DesktopReturnReservation reservation =
+            icons.ReserveReturnPositions(FenceHost.BuildReleasedPlacements(states, plans, snapshot));
+        int deferred = plans.Count(plan => !FenceHost.CanReturn(plan, reservation));
+        if (deferred > 0)
+            throw new MaintenanceFailedException(MaintenanceFailureKind.CustodyBlocked,
+                $"Não foi possível confirmar posições seguras para {deferred} item(ns). Os dados foram preservados.");
         LayoutDocument after = LayoutStore.Clone(document);
         if (!coordinator.CommitOutbound(
                 document,
@@ -175,7 +194,8 @@ internal static class InstallerMaintenance
                 CustodyOperationKind.Shutdown,
                 plans,
                 null,
-                out string? error))
+                out string? error,
+                notifyDesktopDirectory: false))
         {
             throw new MaintenanceFailedException(
                 MaintenanceFailureClassification.Classify(
@@ -186,13 +206,12 @@ internal static class InstallerMaintenance
                 OneLine(error ?? "Não foi possível devolver todos os itens ao Desktop."));
         }
 
-        DesktopRecoverySnapshot? snapshot = new DesktopRecoverySnapshotStore().Load();
         IReadOnlyList<DesktopPlacement> placements = FenceHost.BuildReleasedPlacements(states, plans, snapshot);
-        var icons = new DesktopIconService();
+        var handled = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         FenceHost.RunPlacementRetries(
-            () => icons.PlaceRevealedItems(placements),
+            () => icons.PlaceReservedItems(reservation, placements, handled),
             placements.Count,
-            wait: () => Thread.Sleep(120));
+            settlePasses: 3);
     }
 
     private static void WriteLog(
@@ -230,23 +249,6 @@ internal static class InstallerMaintenance
         return message.Replace('\r', ' ').Replace('\n', ' ').Trim();
     }
 
-    private static DesktopCustodyItem ToCustodyItem(FenceItemState item)
-    {
-        string? runtime = item.Kind == FenceItemKind.Stored && !string.IsNullOrWhiteSpace(item.StorageName)
-            ? FenceItemStore.PayloadPath(item.ItemId, item.StorageName)
-            : item.OriginalPath ?? item.Name;
-        if (item.Kind == FenceItemKind.Stored
-            && !string.IsNullOrWhiteSpace(item.OriginalPath)
-            && !File.Exists(runtime) && !Directory.Exists(runtime))
-            runtime = item.OriginalPath;
-        return new DesktopCustodyItem(
-            item.ItemId,
-            item.Kind,
-            item.Name,
-            runtime,
-            item.OriginalPath,
-            item.StorageName);
-    }
 }
 
 internal sealed class MaintenanceFailedException : Exception

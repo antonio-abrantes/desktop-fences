@@ -179,6 +179,20 @@ public sealed class DesktopCustodyBatchTests : IDisposable
     }
 
     [Fact]
+    public void PlanOutbound_Namespace_UsesPersistedKeyAfterDisplayNameChanges()
+    {
+        const string key = "{20D04FE0-3AEA-1069-A2D8-08002B30309D}";
+        var item = new FenceItemState
+        {
+            ItemId = Guid.NewGuid(), Kind = FenceItemKind.Namespace,
+            Name = "Nome personalizado", NamespaceKey = key
+        };
+
+        new DesktopCustodyBatch().PlanOutbound([DesktopCustodyItem.FromState(item)])
+            .Should().ContainSingle().Which.NamespaceKey.Should().Be(key);
+    }
+
+    [Fact]
     public void PlanInbound_Namespace_RejectsUnnormalizableKey()
     {
         var item = new DesktopCustodyItem(

@@ -74,18 +74,19 @@ internal static class StartupCustodyReconciler
             if (stableState != StartupPathState.Missing)
                 continue;
 
+            string desktopPath = item.ReleasedPath ?? item.OriginalPath;
             string? resolved;
-            try { resolved = resolveExisting(item.OriginalPath); }
+            try { resolved = resolveExisting(desktopPath); }
             catch { continue; }
             if (!string.IsNullOrWhiteSpace(resolved))
                 continue;
 
-            StartupPathState originalState = probePath(item.OriginalPath);
+            StartupPathState originalState = probePath(desktopPath);
             if (originalState != StartupPathState.Missing)
                 continue;
 
             string? originalFolder;
-            try { originalFolder = Path.GetDirectoryName(Path.GetFullPath(item.OriginalPath)); }
+            try { originalFolder = Path.GetDirectoryName(Path.GetFullPath(desktopPath)); }
             catch { continue; }
             string? desktopFolder = desktopFolders.FirstOrDefault(folder => SamePath(folder, originalFolder));
             if (desktopFolder is null || !CanInspect(desktopFolder))

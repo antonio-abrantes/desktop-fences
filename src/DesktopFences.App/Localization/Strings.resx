@@ -95,4 +95,9 @@ Remover «{1}»?</value></data>
   <data name="DiagMoved" xml:space="preserve"><value>Movi '{0}' para ({1},{2}). Confira no desktop.</value></data>
   <data name="DiagNothingToRestore" xml:space="preserve"><value>Nada para restaurar.</value></data>
   <data name="DiagRestored" xml:space="preserve"><value>Restaurado para ({0},{1}).</value></data>
+  <data name="CustodyOperationInProgress" xml:space="preserve"><value>A devolução de itens está em andamento. Tente novamente quando terminar.</value></data>
+  <data name="CustodyReleaseFailed" xml:space="preserve"><value>Não foi possível devolver todos os itens à área de trabalho.</value></data>
+  <data name="DesktopReturnDeferred" xml:space="preserve"><value>{0} item(ns) continuam guardados nas fences. O DesktopFences não conseguiu confirmar posições seguras para devolvê-los sem deslocar outros ícones.</value></data>
+  <data name="CustodyExitPreservingData" xml:space="preserve"><value>{0}&#10;&#10;Deseja sair preservando os dados e deixar os itens pendentes para recuperação posterior?</value></data>
+  <data name="CustodyStartupDeferred" xml:space="preserve"><value>A retomada dos itens abaixo foi adiada para preservar a organização da área de trabalho ou porque a identidade ainda precisa ser confirmada.&#10;&#10;{0}</value></data>
 </root>

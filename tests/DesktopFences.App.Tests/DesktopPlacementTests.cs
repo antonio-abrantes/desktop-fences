@@ -87,6 +87,17 @@ public sealed class DesktopPlacementTests
     }
 
     [Fact]
+    public void BuildReleasedPlacements_UsesTheDropPointForEveryItemBeforeAllocatingCells()
+    {
+        var items = new[] { Item("A.txt", 1, 2).ToState(), Item("B.txt", 3, 4).ToState() };
+        IReadOnlyList<DesktopPlacement> placements =
+            FenceHost.BuildReleasedPlacements(items, [], null, screenX: 1200, screenY: 700);
+
+        placements.Should().HaveCount(2)
+            .And.OnlyContain(placement => placement.ScreenX == 1200 && placement.ScreenY == 700);
+    }
+
+    [Fact]
     public void BuildReleasedPlacements_UsesSnapshotWhenLayoutHasNoCoordinates()
     {
         Guid id = Guid.NewGuid();
@@ -120,6 +131,16 @@ public sealed class DesktopPlacementTests
     }
 
     [Fact]
+    public void BuildReleasedPlacements_ExcludesFileAlreadyOutsideTheFence()
+    {
+        var item = new FenceItemState { ItemId = Guid.NewGuid(), Name = "arquivo.txt" };
+        const string path = @"C:\Desktop\arquivo.txt";
+        var plan = new DesktopCustodyPlan(item.ItemId, FenceItemKind.Stored, item.Name, path, path, path, item.Name, null);
+
+        FenceHost.BuildReleasedPlacements([item], [plan], null).Should().BeEmpty();
+    }
+
+    [Fact]
     public void RunPlacementRetries_WaitsForExplorerAndStopsAfterSecondSuccessfulPass()
     {
         var results = new Queue<int>([0, 3]);
@@ -132,6 +153,17 @@ public sealed class DesktopPlacementTests
 
         positioned.Should().Be(3);
         waits.Should().Be(1);
+        results.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void RunPlacementRetries_RequiresConsecutiveConfirmationsWhenExplorerReflowsAgain()
+    {
+        var results = new Queue<int>([3, 3, 0, 3, 3, 3]);
+
+        FenceHost.RunPlacementRetries(() => results.Dequeue(), expectedCount: 3,
+            wait: () => { }, settlePasses: 3).Should().Be(3);
+
         results.Should().BeEmpty();
     }
 

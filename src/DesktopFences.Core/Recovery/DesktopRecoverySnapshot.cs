@@ -17,6 +17,7 @@ public sealed class DesktopRecoveryItem
     public FenceItemKind Kind { get; set; } = FenceItemKind.Stored;
     public string Name { get; set; } = string.Empty;
     public string? OriginalPath { get; set; }
+    public string? NamespaceKey { get; set; }
     public int X { get; set; }
     public int Y { get; set; }
 }
@@ -42,7 +43,7 @@ public static class DesktopRecoverySnapshotBuilder
 
         foreach (FenceItemState item in layout.Fences.SelectMany(fence => fence.Items))
         {
-            if (item.OriginalX is not int x || item.OriginalY is not int y)
+            if (item.Kind != FenceItemKind.Namespace && (!item.OriginalX.HasValue || !item.OriginalY.HasValue))
                 continue;
             var recovery = new DesktopRecoveryItem
             {
@@ -50,8 +51,9 @@ public static class DesktopRecoverySnapshotBuilder
                 Kind = item.Kind,
                 Name = item.Name,
                 OriginalPath = item.OriginalPath,
-                X = x,
-                Y = y
+                NamespaceKey = item.NamespaceKey,
+                X = item.OriginalX ?? 0,
+                Y = item.OriginalY ?? 0
             };
             byKey[Key(recovery.OriginalPath, recovery.Name)] = recovery;
         }
@@ -71,6 +73,7 @@ public static class DesktopRecoverySnapshotBuilder
                 Kind = known?.Kind ?? byName?.Kind ?? FenceItemKind.Stored,
                 Name = icon.Name,
                 OriginalPath = path ?? known?.OriginalPath ?? byName?.OriginalPath,
+                NamespaceKey = known?.NamespaceKey ?? byName?.NamespaceKey,
                 X = icon.X,
                 Y = icon.Y
             };
@@ -92,6 +95,7 @@ public static class DesktopRecoverySnapshotBuilder
         Kind = item.Kind,
         Name = item.Name,
         OriginalPath = item.OriginalPath,
+        NamespaceKey = item.NamespaceKey,
         X = item.X,
         Y = item.Y
     };

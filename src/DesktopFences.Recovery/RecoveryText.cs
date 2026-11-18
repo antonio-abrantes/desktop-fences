@@ -29,6 +29,9 @@ internal static class RecoveryText
     public static string Failed(string errors) => English
         ? "Recovery stopped safely. No Store payload was deleted.\n\n" + errors
         : "A recuperação parou com segurança. Nenhum payload do Store foi apagado.\n\n" + errors;
+    public static string NamespaceStatus(int restored, int pending) => English
+        ? $"\n\nSystem icons restored: {restored}. Pending: {pending}."
+        : $"\n\nÍcones de sistema restaurados: {restored}. Pendentes: {pending}.";
     public static string Completed(
         int files,
         int directories,

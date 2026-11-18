@@ -90,6 +90,24 @@ public sealed class TransactionJournalTests : IDisposable
         store.LoadAll().Should().ContainSingle();
     }
 
+    [Fact]
+    public void Recovery_DoesNotMoveUnrelatedFileAtTheExpectedDestination()
+    {
+        var store = new TransactionJournalStore(_dir);
+        CustodyTransaction transaction = Transaction(CustodyTransactionState.Prepared);
+        CustodyTransactionItem item = transaction.Items.Single();
+        item.SourceIdentity = "original";
+        var actions = new FakeActions(item.DestinationPath!);
+        actions.Identities[item.DestinationPath!] = "different";
+        store.Save(transaction);
+
+        RecoveryReport report = new TransactionRecovery(store, actions).Recover(new LayoutDocument());
+
+        report.Pending.Should().Be(1);
+        actions.Paths.Should().ContainSingle().Which.Should().Be(item.DestinationPath);
+        store.LoadAll().Should().ContainSingle();
+    }
+
     [Theory]
     [InlineData(CustodyTransactionState.Prepared, false)]
     [InlineData(CustodyTransactionState.LayoutCommitted, true)]
@@ -170,9 +188,11 @@ public sealed class TransactionJournalTests : IDisposable
     private sealed class FakeActions(params string[] paths) : ICustodyRecoveryActions
     {
         public HashSet<string> Paths { get; } = new(paths, StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, string> Identities { get; } = new(StringComparer.OrdinalIgnoreCase);
         public bool? LastNamespaceHidden { get; private set; }
 
         public bool Exists(string path) => Paths.Contains(path);
+        public string? Identity(string path) => Identities.GetValueOrDefault(path);
 
         public bool Move(string source, string destination)
         {

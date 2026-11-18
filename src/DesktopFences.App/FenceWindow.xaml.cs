@@ -44,20 +44,14 @@ public partial class FenceWindow : Window
     private FenceItemVm? _selected;
     private MouseButtonWatch? _mouseWatch;
     private ShellOleDropTarget? _oleDrop;
-    private InvisibleFileDropLayer? _oleHit;
-    private bool _pressOnFence;
-    private DesktopIcon? _pressIcon;
-    private List<DesktopIcon>? _pressIcons;
-    private bool _dropConsumed;
-    private bool _inboundOle;
     private int _downX;
     private int _downY;
     private System.Windows.Point _tileDragStart;
     private bool _tileDragArmed;
     private List<FenceItemVm>? _draggingItems;
+    private List<FenceItemVm>? _dragOriginalOrder;
     private FenceItemVm? _pendingSingleSelect;
     private DragGhostWindow? _ghost;
-    private DispatcherTimer? _cursorPump;
     private HwndSource? _hwndSource;
     private bool _renaming;
     private bool _dropBorderLit;
@@ -96,6 +90,7 @@ public partial class FenceWindow : Window
         _items.CollectionChanged += (_, _) => UpdateEmptyHint();
         UiLocale.Changed += OnUiLanguageChanged;
         ApplyChromeStrings();
+        PreviewKeyDown += OnDragKeyDown;
         StateChanged += OnStateChanged;
         DpiChanged += OnDpiChanged;
         IsVisibleChanged += OnIsVisibleChanged;
@@ -115,9 +110,8 @@ public partial class FenceWindow : Window
     {
         _stayOnDesktop = false;
         Hide();
-        EndInboundCursor();
-        _oleHit?.Withdraw();
-        _ghost?.HideGhost();
+        CancelItemDrag();
+        EndInboundDrag();
     }
 
     public void Resume()
@@ -299,15 +293,14 @@ public partial class FenceWindow : Window
     {
         IntPtr hwnd = new WindowInteropHelper(this).Handle;
         AllowDrop = false;
-        _oleDrop = new ShellOleDropTarget();
-        _oleDrop.FilesDropped += OnOverlayFilesDropped;
-        _oleDrop.DragEntered += OnOleDragEntered;
-        _oleDrop.DragLeft += OnOleDragLeft;
+        _oleDrop = new ShellOleDropTarget
+        {
+            AcceptsItems = CanAcceptDesktopDrop,
+            FilesDropped = OnDesktopFilesDropped
+        };
+        _oleDrop.DragMoved += OnOleDragMoved;
+        _oleDrop.DragLeft += EndInboundDrag;
         _oleDrop.Attach(hwnd);
-
-        _oleHit = new InvisibleFileDropLayer();
-        _oleHit.Prepare();
-        _oleDrop.Register(_oleHit.Handle);
 
         _mouseWatch = new MouseButtonWatch();
         _mouseWatch.LeftDown += OnScreenLeftDown;
@@ -326,17 +319,11 @@ public partial class FenceWindow : Window
             _mouseWatch = null;
         }
 
-        _oleHit?.Withdraw();
-        _oleHit?.Dispose();
-        _oleHit = null;
-
-        EndInboundCursor();
+        CancelItemDrag();
+        EndInboundDrag();
 
         if (_oleDrop is not null)
         {
-            _oleDrop.FilesDropped -= OnOverlayFilesDropped;
-            _oleDrop.DragEntered -= OnOleDragEntered;
-            _oleDrop.DragLeft -= OnOleDragLeft;
             _oleDrop.Dispose();
             _oleDrop = null;
         }
@@ -349,155 +336,31 @@ public partial class FenceWindow : Window
     private void OnScreenLeftDown(int x, int y)
     {
         _host?.NotifyScreenLeftDown();
-        _dropConsumed = false;
-        _pressOnFence = _host?.AnyFenceContainsScreenPoint(x, y) ?? ContainsScreenPoint(x, y);
         _downX = x;
         _downY = y;
-        _pressIcons = null;
-        if (_renaming && !_pressOnFence)
+        if (_renaming && !ContainsScreenPoint(x, y))
             EndRename();
-        if (_pressOnFence)
-        {
-            _pressIcon = null;
-            return;
-        }
-
-        _pressIcon = _desktop.HitTestScreen(x, y);
     }
 
     private void OnScreenLeftMove(int x, int y)
     {
+        if (_draggingItems is not null)
+        {
+            UpdateItemDrag(x, y);
+            return;
+        }
+
+        // Only the actual WPF item mouse-down can arm this gesture.
+        if (!_tileDragArmed || _collapsed || !IsVisible)
+            return;
         int dx = x - _downX;
         int dy = y - _downY;
         int threshold = DragThresholdPx();
-        bool moved = (dx * dx) + (dy * dy) >= threshold * threshold;
-
-        if (_draggingItems is { Count: > 0 })
-        {
-            UpdateItemDrag(x, y);
+        if (Math.Abs(dx) < threshold && Math.Abs(dy) < threshold)
             return;
-        }
-
-        if (_pressOnFence && _tileDragArmed && moved)
-        {
-            List<FenceItemVm> selected = SelectedItems();
-            if (selected.Count > 0)
-                BeginItemDrag(selected);
-            UpdateItemDrag(x, y);
-            return;
-        }
-
-        UpdateInboundDesktopDrag(x, y, moved);
+        BeginItemDrag(SelectedItems());
+        UpdateItemDrag(x, y);
     }
-
-    private void UpdateInboundDesktopDrag(int x, int y, bool moved)
-    {
-        if (ShouldIgnoreDesktopInbound())
-            return;
-        if (_pressOnFence || _collapsed || _oleHit is null)
-            return;
-        if (!moved && _pressIcon is null)
-            return;
-
-        if (!ContainsScreenPoint(x, y))
-        {
-            _oleHit.Withdraw();
-            if (_inboundOle)
-            {
-                _inboundOle = false;
-                _ghost?.HideGhost();
-                SetChromeBorder(drop: false);
-                EndInboundCursor();
-            }
-
-            return;
-        }
-
-        _oleHit.FollowCursor(x, y);
-        EnsureInboundPressSet();
-        ShowInboundGhost();
-        DragCursorOverride.Pulse();
-        _ghost?.FollowScreen(x, y, this);
-        if (_ghost is not null)
-        {
-            IntPtr ghostHwnd = new WindowInteropHelper(_ghost).Handle;
-            InvisibleOleWindow.RaiseTopMost(ghostHwnd);
-        }
-    }
-
-    private void EnsureInboundPressSet()
-    {
-        if (_pressIcons is not null)
-            return;
-
-        var selected = new List<DesktopIcon>();
-        if (_pressIcon is not null)
-        {
-            selected.AddRange(_desktop.GetSelectedIcons());
-            if (selected.TrueForAll(i => i.Index != _pressIcon.Index))
-                selected.Insert(0, _pressIcon);
-        }
-
-        _pressIcons = selected;
-    }
-
-    private void ShowInboundGhost()
-    {
-        if (_draggingItems is { Count: > 0 })
-            return;
-
-        EnsureInboundPressSet();
-        DesktopIcon? lead = _pressIcons is { Count: > 0 } ? _pressIcons[0] : _pressIcon;
-        string name = lead?.Name ?? "Arquivo";
-        ImageSource? icon = IconImageLoader.Load(name);
-        int extra = Math.Max(0, (_pressIcons?.Count ?? 0) - 1);
-        _ghost ??= new DragGhostWindow();
-        _ghost.ShowItems(icon, DesktopPaths.VisibleName(name), extra);
-        _inboundOle = true;
-        SetChromeBorder(drop: true);
-        BeginInboundCursor();
-    }
-
-    private void BeginInboundCursor()
-    {
-        DragCursorOverride.Begin();
-        _cursorPump ??= new DispatcherTimer(DispatcherPriority.Render)
-        {
-            Interval = TimeSpan.FromMilliseconds(1)
-        };
-        _cursorPump.Tick -= CursorPump_Tick;
-        _cursorPump.Tick += CursorPump_Tick;
-        if (!_cursorPump.IsEnabled)
-            _cursorPump.Start();
-    }
-
-    private void CursorPump_Tick(object? sender, EventArgs e) => DragCursorOverride.Pulse();
-
-    private void EndInboundCursor()
-    {
-        if (_cursorPump is not null)
-        {
-            _cursorPump.Stop();
-            _cursorPump.Tick -= CursorPump_Tick;
-        }
-
-        DragCursorOverride.End();
-    }
-
-    private void OnOleDragEntered()
-    {
-        if (_pressOnFence || _draggingItems is { Count: > 0 } || ShouldIgnoreDesktopInbound())
-            return;
-        ShowInboundGhost();
-    }
-
-    private void OnOleDragLeft()
-    {
-        // O hit window some ao sair da fence; o hook já esconde o ghost.
-    }
-
-    private bool ShouldIgnoreDesktopInbound() =>
-        _host is { BlocksDesktopInbound: true } && _draggingItems is null;
 
     private int DragThresholdPx()
     {
@@ -506,72 +369,46 @@ public partial class FenceWindow : Window
         return Math.Max(6, (int)Math.Round(6 * scale));
     }
 
-
     private void OnScreenLeftUp(int x, int y)
     {
-        SetChromeBorder(drop: false);
-
-        if (_draggingItems is { Count: > 0 })
-        {
-            EndItemDrag(x, y);
-            _pressIcon = null;
-            _pressOnFence = false;
-            _dropConsumed = false;
-            _tileDragArmed = false;
-            _inboundOle = false;
-            _pressIcons = null;
-            EndInboundCursor();
-            return;
-        }
-
-        if (_inboundOle)
-        {
-            _inboundOle = false;
-            _ghost?.HideGhost();
-        }
-
-        EndInboundCursor();
-        _oleHit?.Withdraw();
-
-        if (!_dropConsumed && !_pressOnFence && ContainsScreenPoint(x, y) && !ShouldIgnoreDesktopInbound())
-            AddInboundDesktopIcons();
-
-        _pressIcon = null;
-        _pressIcons = null;
-        _pressOnFence = false;
-        _dropConsumed = false;
         _tileDragArmed = false;
-        _inboundOle = false;
-        ApplyPendingSingleSelect();
+        if (_draggingItems is not null)
+            EndItemDrag(x, y);
+        else
+            ApplyPendingSingleSelect();
     }
 
-    private void OnOverlayFilesDropped(IReadOnlyList<string> files)
-    {
-        _dropConsumed = true;
-        if (ShouldIgnoreDesktopInbound())
-            return;
+    private bool CanAcceptDesktopDrop(IReadOnlyList<string> items, int x, int y)
+        => IsVisible && !_collapsed && _draggingItems is null
+           && _host is not { BlocksDesktopInbound: true }
+           && ContainsBodyScreenPoint(x, y)
+           && items.Count > 0
+           && items.All(DesktopCustodyBatch.IsEligibleDropItem);
 
-        var entries = files.Select(file => new InboundEntry(file, null, null)).ToList();
-        entries.AddRange(InboundDesktopEntries());
-        AddDesktopEntries(entries);
+    private void OnOleDragMoved(IReadOnlyList<string> items, int x, int y)
+    {
+        if (_ghost is null || !_ghost.IsVisible)
+        {
+            string lead = items[0];
+            string name = DesktopCustodyBatch.GetDropDisplayName(lead);
+            _ghost ??= new DragGhostWindow();
+            _ghost.ShowItems(IconImageLoader.Load(lead), name, items.Count - 1);
+            SetChromeBorder(drop: true);
+        }
+        _ghost.FollowScreen(x, y, this);
+        InvisibleOleWindow.RaiseTopMost(new WindowInteropHelper(_ghost).Handle);
+    }
+
+    private void EndInboundDrag()
+    {
+        if (_draggingItems is not null)
+            return;
+        _ghost?.HideGhost();
         SetChromeBorder(drop: false);
     }
 
-    private void AddInboundDesktopIcons()
-    {
-        AddDesktopEntries(InboundDesktopEntries());
-    }
-
-    private IReadOnlyList<InboundEntry> InboundDesktopEntries()
-    {
-        EnsureInboundPressSet();
-        if (_pressIcons is { Count: > 0 })
-            return _pressIcons.Select(icon => new InboundEntry(icon.Name, icon.X, icon.Y)).ToList();
-
-        if (_pressIcon is not null)
-            return [new InboundEntry(_pressIcon.Name, _pressIcon.X, _pressIcon.Y)];
-        return [];
-    }
+    private bool OnDesktopFilesDropped(IReadOnlyList<string> items, int x, int y) =>
+        CanAcceptDesktopDrop(items, x, y) && AddDesktopEntries(items);
 
     private System.Drawing.Rectangle FenceBodyScreenRect()
     {
@@ -731,39 +568,6 @@ public partial class FenceWindow : Window
         }
     }
 
-    private void OnPreviewDragOver(object sender, DragEventArgs e) => HandleDragOver(e);
-
-    private void OnDragOver(object sender, DragEventArgs e) => HandleDragOver(e);
-
-    private void HandleDragOver(DragEventArgs e)
-    {
-        e.Effects = ShellFileDrop.AcceptWhileDragging(e);
-        e.Handled = true;
-        SetChromeBorder(drop: true);
-    }
-
-    private void OnDragEnter(object sender, DragEventArgs e) => HandleDragOver(e);
-
-    private void OnDragLeave(object sender, DragEventArgs e)
-    {
-        SetChromeBorder(drop: false);
-    }
-
-    private void OnPreviewDrop(object sender, DragEventArgs e) => HandleDrop(e);
-
-    private void OnDrop(object sender, DragEventArgs e) => HandleDrop(e);
-
-    private void HandleDrop(DragEventArgs e)
-    {
-        SetChromeBorder(drop: false);
-        IReadOnlyList<string> files = ShellFileDrop.ExtractPaths(e.Data);
-        if (files.Count == 0)
-            return;
-
-        AddDesktopEntries(files.Select(file => new InboundEntry(file, null, null)));
-        e.Handled = true;
-    }
-
     private void Body_MouseDown(object sender, MouseButtonEventArgs e)
     {
         if (e.OriginalSource is FrameworkElement { DataContext: FenceItemVm })
@@ -843,6 +647,38 @@ public partial class FenceWindow : Window
             ApplyPendingSingleSelect();
     }
 
+    private void OnDragKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || (!_tileDragArmed && _draggingItems is null))
+            return;
+        CancelItemDrag();
+        e.Handled = true;
+    }
+
+    private void CancelItemDrag()
+    {
+        _tileDragArmed = false;
+        _pendingSingleSelect = null;
+        if (_draggingItems is null)
+            return;
+
+        _ghost?.HideGhost();
+        if (_dragOriginalOrder is { } original)
+        {
+            for (int index = 0; index < original.Count; index++)
+            {
+                FenceItemVm item = original[index];
+                item.IsDragging = false;
+                int current = _items.IndexOf(item);
+                if (current >= 0 && current != index)
+                    _items.Move(current, index);
+            }
+        }
+        _draggingItems = null;
+        _dragOriginalOrder = null;
+        _host?.CancelFenceItemDrag(this);
+    }
+
     private void BeginItemDrag(List<FenceItemVm> selected)
     {
         if (selected.Count == 0)
@@ -851,6 +687,7 @@ public partial class FenceWindow : Window
             return;
 
         _draggingItems = selected;
+        _dragOriginalOrder = _items.ToList();
         _pendingSingleSelect = null;
         _tileDragArmed = false;
         foreach (FenceItemVm item in _items)
@@ -881,6 +718,7 @@ public partial class FenceWindow : Window
 
         List<FenceItemVm> dragged = _draggingItems ?? [];
         _draggingItems = null;
+        _dragOriginalOrder = null;
         _pendingSingleSelect = null;
 
         if (dragged.Count == 0)
@@ -940,7 +778,8 @@ public partial class FenceWindow : Window
 
         if (_host is not null)
         {
-            _host.RemoveItems(this, [item]);
+            if (!_host.RemoveItems(this, [item]))
+                ShowCustodyError(_host.LastCustodyError);
             return;
         }
 
@@ -974,6 +813,8 @@ public partial class FenceWindow : Window
         // No restore o ActualHeight ainda é o default do XAML — não pode substituir a altura gravada.
         if (captureExpandedSize && ActualHeight > TitleBarHeight + 8)
             _expandedHeight = Math.Max(TitleBarHeight + 80, ActualHeight);
+        CancelItemDrag();
+        EndInboundDrag();
         _collapsed = true;
         BtnCollapseGlyph.Text = "▾";
         BodyHost.Visibility = Visibility.Collapsed;
@@ -1087,64 +928,49 @@ public partial class FenceWindow : Window
         BeginAnimation(HeightProperty, animation);
     }
 
-    private void AddFile(string path) => AddDesktopEntry(path, null, null);
-
-    private void AddDesktopEntry(string nameOrPath, int? originalX, int? originalY)
-        => AddDesktopEntries([new InboundEntry(nameOrPath, originalX, originalY)]);
-
-    private void AddDesktopEntries(IEnumerable<InboundEntry> sourceEntries)
+    private bool AddDesktopEntries(IReadOnlyList<string> entries)
     {
-        List<InboundEntry> entries = sourceEntries.ToList();
-        if (entries.Count == 0)
-            return;
-
-        DesktopSnapshot snap = _host?.CaptureDesktop(_desktop) ?? _desktop.Capture();
         var pending = new List<FenceItemVm>();
-        foreach (InboundEntry entry in entries)
+        foreach (string entry in entries)
         {
-            string? resolved = DesktopPaths.ResolveExisting(entry.NameOrPath);
-            DesktopIcon? desktopIcon = snap.Connected
-                ? DesktopIconMatcher.Find(snap.Icons, resolved ?? entry.NameOrPath)
-                  ?? DesktopIconMatcher.Find(snap.Icons, DesktopPaths.VisibleName(resolved ?? entry.NameOrPath))
-                : null;
-            string name = string.IsNullOrWhiteSpace(desktopIcon?.Name)
-                ? DesktopPaths.VisibleName(resolved ?? entry.NameOrPath)
-                : desktopIcon.Name;
-            if (_items.Concat(pending).Any(i => resolved is not null
-                    ? string.Equals(i.Path, resolved, StringComparison.OrdinalIgnoreCase)
-                      || string.Equals(i.OriginalPath, resolved, StringComparison.OrdinalIgnoreCase)
-                    : string.Equals(i.Name, name, StringComparison.OrdinalIgnoreCase)
-                      || string.Equals(i.Name, entry.NameOrPath, StringComparison.OrdinalIgnoreCase)))
+            if (!DesktopCustodyBatch.IsEligibleDropItem(entry))
+                return false;
+            bool stored = Path.IsPathFullyQualified(entry);
+            string? key = stored ? null : DesktopCustodyBatch.GetDropNamespaceKey(entry);
+            if (_items.Concat(pending).Any(item => stored
+                    ? string.Equals(item.Path, entry, StringComparison.OrdinalIgnoreCase)
+                      || string.Equals(item.OriginalPath, entry, StringComparison.OrdinalIgnoreCase)
+                      || string.Equals(item.ReleasedPath, entry, StringComparison.OrdinalIgnoreCase)
+                    : string.Equals(item.NamespaceKey, key, StringComparison.OrdinalIgnoreCase)))
                 continue;
 
-            string runtime = resolved ?? desktopIcon?.Name ?? entry.NameOrPath;
+            var position = _desktop.PositionOf(entry);
             pending.Add(new FenceItemVm
             {
                 ItemId = Guid.NewGuid(),
-                Kind = resolved is null ? FenceItemKind.Namespace : FenceItemKind.Stored,
-                Name = name,
-                StorageName = resolved is null ? null : Path.GetFileName(resolved),
-                Path = runtime,
-                OriginalPath = resolved is not null && !FenceItemStore.IsUnderRoot(resolved) ? resolved : null,
-                Icon = IconImageLoader.Load(runtime),
-                OriginalX = entry.OriginalX ?? desktopIcon?.X,
-                OriginalY = entry.OriginalY ?? desktopIcon?.Y
+                Kind = stored ? FenceItemKind.Stored : FenceItemKind.Namespace,
+                Name = DesktopCustodyBatch.GetDropDisplayName(entry),
+                StorageName = stored ? Path.GetFileName(entry) : null,
+                Path = entry,
+                OriginalPath = stored ? entry : null,
+                NamespaceKey = key,
+                Icon = IconImageLoader.Load(entry),
+                OriginalX = position?.X,
+                OriginalY = position?.Y
             });
         }
 
         if (pending.Count == 0)
-            return;
+            return false;
         if (_host is not null)
-        {
-            _host.AddItems(this, pending);
-            return;
-        }
+            return _host.AddItems(this, pending);
 
         foreach (FenceItemVm item in pending)
             _items.Add(item);
         HideDesktopCounterparts();
         SaveLayout();
         UpdateEmptyHint();
+        return true;
     }
 
     private void EjectToDesktop(FenceItemVm item, int screenX, int screenY)
@@ -1160,7 +986,8 @@ public partial class FenceWindow : Window
     {
         if (_host is not null)
         {
-            _host.RemoveItems(this, items);
+            if (!_host.RemoveItems(this, items))
+                ShowCustodyError(_host.LastCustodyError);
             return;
         }
         var leaving = new List<FenceItemVm>();
@@ -1228,6 +1055,10 @@ public partial class FenceWindow : Window
         UpdateEmptyHint();
     }
 
+    internal void ShowCustodyError(string? detail) =>
+        System.Windows.MessageBox.Show(this, detail ?? Loc.T("CustodyReleaseFailed"),
+            "DesktopFences", MessageBoxButton.OK, MessageBoxImage.Warning);
+
     internal int TransferInsertIndex(int screenX, int screenY) => InsertIndexAtScreen(screenX, screenY);
 
     internal void ApplyInbound(
@@ -1241,6 +1072,7 @@ public partial class FenceWindow : Window
             item.Kind = plan.Kind;
             item.StorageName = plan.StorageName;
             item.OriginalPath = plan.OriginalPath;
+            item.NamespaceKey = plan.NamespaceKey;
             item.Path = plan.Kind == FenceItemKind.Stored
                 ? plan.DestinationPath
                 : DesktopHide.ToShellParsingName(plan.NamespaceKey) is { Length: > 0 } parsing
@@ -1253,41 +1085,37 @@ public partial class FenceWindow : Window
 
     internal void ApplyOutbound(
         IReadOnlyList<FenceItemVm> items,
-        IReadOnlyList<DesktopCustodyPlan> plans,
-        int? screenX = null,
-        int? screenY = null)
+        IReadOnlyList<DesktopCustodyPlan> plans)
     {
         Dictionary<Guid, DesktopCustodyPlan> byId = plans.ToDictionary(p => p.ItemId);
         foreach (FenceItemVm item in items)
         {
             DesktopCustodyPlan plan = byId[item.ItemId];
             if (plan.Kind == FenceItemKind.Stored)
+            {
                 item.Path = plan.DestinationPath;
+                item.ReleasedIdentity = DesktopFileIdentity.Read(item.Path);
+            }
             _items.Remove(item);
         }
         UpdateEmptyHint();
     }
 
-    internal void PlaceRestoredItems(
-        IReadOnlyList<FenceItemVm> items,
-        int? screenX = null,
-        int? screenY = null) =>
-        _ = PlaceRestoredItemsAsync(items, screenX, screenY);
-
-    internal Task PlaceRestoredItemsAsync(
-        IReadOnlyList<FenceItemVm> items,
-        int? screenX = null,
-        int? screenY = null) =>
-        TryPlaceRestoredIconsAsync(items, screenX, screenY);
-
-    internal void ApplyReleasedPaths(IReadOnlyList<DesktopCustodyPlan> plans)
+    internal void ApplyReleasedPaths(LayoutDocument layout)
     {
-        Dictionary<Guid, DesktopCustodyPlan> byId = plans.ToDictionary(p => p.ItemId);
+        FenceState? fence = layout.Fences.FirstOrDefault(state => state.Id == _fenceId);
+        if (fence is null)
+            return;
+        var byId = fence.Items.ToDictionary(item => item.ItemId);
         foreach (FenceItemVm item in _items)
         {
-            byId.TryGetValue(item.ItemId, out DesktopCustodyPlan? plan);
-            if (plan?.Kind == FenceItemKind.Stored)
-                item.Path = plan.DestinationPath;
+            if (!byId.TryGetValue(item.ItemId, out FenceItemState? state))
+                continue;
+            item.NamespaceKey = state.NamespaceKey;
+            item.ReleasedPath = state.ReleasedPath;
+            item.ReleasedIdentity = state.ReleasedIdentity;
+            if (item.ReleasedPath is not null)
+                item.Path = item.ReleasedPath;
         }
     }
 
@@ -1297,8 +1125,12 @@ public partial class FenceWindow : Window
         foreach (FenceItemVm item in _items)
         {
             byId.TryGetValue(item.ItemId, out DesktopCustodyPlan? plan);
-            if (plan is not null)
-                item.Path = plan.Kind == FenceItemKind.Stored
+            if (plan is null)
+                continue;
+            item.ReleasedPath = null;
+            item.ReleasedIdentity = null;
+            item.NamespaceKey = plan.NamespaceKey;
+            item.Path = plan.Kind == FenceItemKind.Stored
                 ? plan.DestinationPath
                 : DesktopHide.ToShellParsingName(plan.NamespaceKey) is { Length: > 0 } parsing
                     ? parsing
@@ -1455,6 +1287,7 @@ public partial class FenceWindow : Window
             return Task.CompletedTask;
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handled = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         int attempts = 0;
         var retry = new DispatcherTimer(DispatcherPriority.Background)
         {
@@ -1473,7 +1306,7 @@ public partial class FenceWindow : Window
         void Attempt()
         {
             int positioned = 0;
-            try { positioned = _desktop.PlaceRevealedItems(placements); }
+            try { positioned = _desktop.PlaceRevealedItems(placements, handled); }
             catch { /* o Store e o layout já estão consistentes */ }
             attempts++;
             if (DesktopPlacementRetryRules.IsComplete(attempts, positioned, placements.Count))
@@ -1506,7 +1339,9 @@ public partial class FenceWindow : Window
                 item.OriginalX,
                 item.OriginalY,
                 targetX,
-                targetY));
+                targetY,
+                item.ReleasedIdentity,
+                VerifyFileIdentity: item.Kind == FenceItemKind.Stored));
         }
         return result;
     }
@@ -1845,8 +1680,10 @@ public partial class FenceWindow : Window
             foreach (FenceItemState item in state.Items)
             {
                 string? path = item.Kind == FenceItemKind.Stored && !string.IsNullOrWhiteSpace(item.StorageName)
-                    ? FenceItemStore.PayloadPath(item.ItemId, item.StorageName)
-                    : item.OriginalPath ?? item.Name;
+                    ? item.ReleasedPath ?? FenceItemStore.PayloadPath(item.ItemId, item.StorageName)
+                    : item.NamespaceKey is not null
+                        ? DesktopHide.ToShellParsingName(item.NamespaceKey)
+                        : item.OriginalPath ?? item.Name;
                 _items.Add(new FenceItemVm
                 {
                     ItemId = item.ItemId,
@@ -1855,6 +1692,9 @@ public partial class FenceWindow : Window
                     StorageName = item.StorageName,
                     Path = path,
                     OriginalPath = item.OriginalPath,
+                    NamespaceKey = item.NamespaceKey,
+                    ReleasedPath = item.ReleasedPath,
+                    ReleasedIdentity = item.ReleasedIdentity,
                     Icon = IconImageLoader.Load(path ?? item.Name),
                     OriginalX = item.OriginalX,
                     OriginalY = item.OriginalY
@@ -1875,5 +1715,4 @@ public partial class FenceWindow : Window
         catch { }
     }
 
-    private sealed record InboundEntry(string NameOrPath, int? OriginalX, int? OriginalY);
 }
